@@ -113,6 +113,8 @@ def _policy_hash(spec):
             rel = x.relative_to(ROOT).as_posix()
             if any(part in rel for part in ("__pycache__", ".pytest_cache", ".ruff_cache")):
                 continue
+            if rel in ("ci/baseline_snapshot.json", "ci/spec.json.bak"):
+                continue
             h.update(x.read_text(encoding="utf-8", errors="replace").encode("utf-8"))
     return h.hexdigest()
 
