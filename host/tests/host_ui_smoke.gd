@@ -11,7 +11,8 @@ func _run() -> void:
 	await _check_spawn_hud()
 	await _check_scope()
 	await _check_buy_menu()
-	await _check_loadout()
+	await _check_match_economy_and_weapons()
+	await _check_mouse_lock()
 	finish("HOST_UI_SMOKE")
 
 
@@ -132,3 +133,83 @@ func _check_loadout() -> void:
 	await process_frame
 	if bool(main.loadout_page.visible):
 		failures.append("物品栏页面未关闭")
+
+
+## 模块 7 回归：5v5 演示局出生金钱够买步枪/狙击；2 号(M4)/3 号(AWP) 购买后内核/手模/HUD/倍镜一致。
+func _check_match_economy_and_weapons() -> void:
+	main.call("_start_match")
+	for i in 3:
+		await physics_frame
+	if int(main.sim.get_money(0)) != 16000:
+		failures.append("演示局出生金钱应为 16000，实际 %d" % int(main.sim.get_money(0)))
+	if not bool(main.purchase.on_purchase("m4a4", 3100)):
+		failures.append("买 M4A4 应成功")
+	main.sim.tick()
+	main._update_view()
+	main._update_hud()
+	if int(main.sim.get_weapon_id(0)) != 2:
+		failures.append("买 M4 后内核武器应为 2，实际 %d" % int(main.sim.get_weapon_id(0)))
+	if main.viewmodel.current_id != "m4":
+		failures.append("买 M4 后手模应为 m4，实际 %s" % main.viewmodel.current_id)
+	if not main.hud.weapon_label.text.contains("M4A4"):
+		failures.append("买 M4 后 HUD 应显示 M4A4，实际 %s" % main.hud.weapon_label.text)
+	if not bool(main.purchase.on_purchase("awp", 4750)):
+		failures.append("买 AWP 应成功")
+	main.sim.tick()
+	main._update_view()
+	main._update_hud()
+	if int(main.sim.get_weapon_id(0)) != 3:
+		failures.append("买 AWP 后内核武器应为 3，实际 %d" % int(main.sim.get_weapon_id(0)))
+	if main.viewmodel.current_id != "awp":
+		failures.append("买 AWP 后手模应为 awp，实际 %s" % main.viewmodel.current_id)
+	if absf(float(main.weapon_magnification()) - 4.0) > 0.01:
+		failures.append("AWP 内核倍率应为 4.0，实际 %.2f" % float(main.weapon_magnification()))
+
+
+## 回归：页面/瞄准不锁死输入；菜单关闭后鼠标模式自愈为抓取（针对"瞄准后转不动视角"报告）。
+func _check_mouse_lock() -> void:
+	main.call("_start_match")
+	for i in 3:
+		await physics_frame
+	if main._ui_page_open():
+		failures.append("对局中不应有页面打开")
+	if int(main.want_mouse_mode()) != Input.MOUSE_MODE_CAPTURED:
+		failures.append("对局中鼠标应为抓取模式")
+	if not bool(main.playing):
+		failures.append("对局应处于 playing")
+	main.purchase.toggle()
+	await physics_frame
+	if not main._ui_page_open():
+		failures.append("打开购买菜单后 ui_page_open 应为真")
+	if int(main.want_mouse_mode()) != Input.MOUSE_MODE_VISIBLE:
+		failures.append("菜单打开时鼠标应可见")
+	var fires: int = int(main.sim.get_fire_count(0))
+	_press_mouse(MOUSE_BUTTON_LEFT)
+	for i in 3:
+		await physics_frame
+	_release_mouse(MOUSE_BUTTON_LEFT)
+	if int(main.sim.get_fire_count(0)) != fires:
+		failures.append("菜单打开时点击不应开火")
+	main.buy_menu.close()
+	await physics_frame
+	await physics_frame
+	if main._ui_page_open():
+		failures.append("关闭菜单后 ui_page_open 应为假")
+	if int(main.want_mouse_mode()) != Input.MOUSE_MODE_CAPTURED:
+		failures.append("关闭菜单后鼠标应自愈为抓取")
+	if not bool(main.playing):
+		failures.append("关闭菜单后对局应继续")
+
+
+func _press_mouse(button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = true
+	Input.parse_input_event(event)
+
+
+func _release_mouse(button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = false
+	Input.parse_input_event(event)

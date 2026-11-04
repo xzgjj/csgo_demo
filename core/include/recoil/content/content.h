@@ -30,6 +30,9 @@ struct RoundDef {
     float bot_aim_error_deg = 2.4f;   // 机器人瞄准误差上限（真实化）
     uint16_t bot_reaction_ticks = 16; // 首次看到敌人后开火延迟（250ms@64tick）
     uint16_t start_money = 800;
+    // 演示局（5v5 匹配模式）出生金钱：>0 时 BeginMatch 用它，便于试玩购买步枪/狙击；
+    // 竞技参考值 start_money 仍保持 800（校准门用它）。
+    uint16_t demo_start_money = 16000;
     uint16_t max_money = 16000;
     uint16_t win_reward = 3250;
     uint16_t loss_reward = 1400;

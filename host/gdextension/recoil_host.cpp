@@ -316,6 +316,13 @@ public:
         state_ = recoil::WorldState{};
         content_ = recoil::DefaultContent();
         recoil::BeginMatch(state_, content_, last_events_);
+        // 演示局出生金钱（便于试玩购买 M4/AWP；不改变竞技参考 start_money）。
+        const uint16_t demo_money = content_.round.demo_start_money;
+        if (demo_money > 0) {
+            for (uint8_t i = 0; i < state_.player_count; ++i) {
+                state_.players[i].money = demo_money;
+            }
+        }
         pending_.clear();
         bot_commands_.clear();
         bot_refresh_ = 0;

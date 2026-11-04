@@ -3,7 +3,6 @@ extends Node3D
 ## 页面流：主菜单 → 对局 →（Esc）暂停 → 设置；回合/比赛结束自动弹结算；Tab 比分板。
 ## run_scenario.gd / capture.gd 依赖 sim、_start_play()、_update_view()、_update_hud()，签名不变。
 const EYE_HEIGHT := 64.0
-const TICKS_PER_SECOND := 64.0
 const AccountStoreScript = preload("res://scripts/account_store.gd")
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const CombatFxScript = preload("res://scripts/combat_fx.gd")
@@ -228,6 +227,8 @@ func _handle_pause_action() -> void:
 func _physics_process(_delta: float) -> void:
 	if not playing:
 		return
+	var ui_open := _ui_page_open()
+	_sync_mouse_mode()
 	var forward := Input.get_axis("move_back", "move_forward")
 	var side := Input.get_axis("move_right", "move_left")
 	if Input.is_key_pressed(KEY_SHIFT):
@@ -235,14 +236,15 @@ func _physics_process(_delta: float) -> void:
 		side *= 0.5
 	sim.set_move(0, yaw, pitch, forward, side, Input.is_action_pressed("jump"),
 			Input.is_action_pressed("duck"))
-	aiming = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+	# 页面打开时不响应瞄准/开火，避免点 UI 按钮时误开火、或被遮罩"卡住"视角。
+	aiming = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not ui_open
 	var magnification: float = weapon_magnification()
 	scope.sync(aiming, magnification, viewmodel.display_name())
 	camera.fov = scope.fps_step(camera.fov, settings.fov)
 	viewmodel.set_aiming(aiming)
 	_toggle_debug()
 	_toggle_third_person()
-	var fire_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var fire_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not ui_open
 	if fire_down and not _fire_was_down:
 		sim.fire(0, yaw, pitch)
 		shot_feedback.request_fire()
@@ -274,6 +276,24 @@ func _physics_process(_delta: float) -> void:
 	shot_feedback.after_tick(camera)
 	_update_view()
 	_update_hud()
+
+## 是否有会抢鼠标的页面打开（暂停/设置/结算/比分板/购买菜单/物品栏/主菜单）。
+func _ui_page_open() -> bool:
+	var pages: Array[bool] = [menu.visible, pause_page.visible, settings_page.visible,
+			result_page.visible, scoreboard.visible,
+			purchase != null and purchase.is_open(),
+			loadout_page != null and loadout_page.visible]
+	return pages.has(true)
+
+
+func want_mouse_mode() -> int:
+	return Input.MOUSE_MODE_VISIBLE if _ui_page_open() else Input.MOUSE_MODE_CAPTURED
+
+
+func _sync_mouse_mode() -> void:
+	if Input.mouse_mode != want_mouse_mode():
+		Input.mouse_mode = want_mouse_mode()
+
 
 func _toggle_debug() -> void:
 	var down := Input.is_key_pressed(KEY_F3)
@@ -371,8 +391,7 @@ func _toggle_buy() -> void:
 	if purchase == null:
 		return
 	purchase.toggle()
-	var mode := Input.MOUSE_MODE_VISIBLE if purchase.is_open() else Input.MOUSE_MODE_CAPTURED
-	Input.mouse_mode = mode
+	_sync_mouse_mode()
 
 func _throw_input(name: String, key: int, kind: int) -> void:
 	var down := Input.is_key_pressed(key)
