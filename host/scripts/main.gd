@@ -24,6 +24,8 @@ var yaw := 0.0
 var pitch := 0.0
 var playing := false
 var paused := false
+var match_mode := false
+var bot_meshes: Array[MeshInstance3D] = []
 var _settings_return_pause := false
 var _last_phase := -1
 var _last_score_t := 0
@@ -56,7 +58,7 @@ func _build_world() -> void:
 	camera = Camera3D.new()
 	camera.fov = settings.fov
 	camera.near = 0.05
-	camera.far = 4000.0
+	camera.far = 9000.0
 	add_child(camera)
 	viewmodel = WeaponViewmodel.new()
 	add_child(viewmodel)
@@ -64,71 +66,15 @@ func _build_world() -> void:
 
 
 func _build_ui() -> void:
-	hud = GameHud.new()
-	add_child(hud)
-	hud.build()
-	menu = MainMenuPage.new()
-	add_child(menu)
-	menu.build()
-	menu.start_button.pressed.connect(_start_play)
-	menu.settings_button.pressed.connect(show_settings_page)
-	menu.quit_button.pressed.connect(_quit)
-	pause_page = PausePage.new()
-	add_child(pause_page)
-	pause_page.build()
-	pause_page.resume_button.pressed.connect(_resume)
-	pause_page.settings_button.pressed.connect(show_settings_page)
-	pause_page.menu_button.pressed.connect(_show_menu)
-	settings_page = SettingsPage.new()
-	add_child(settings_page)
-	settings_page.build(settings)
-	settings_page.changed.connect(_apply_settings)
-	settings_page.back_button.pressed.connect(close_settings_page)
-	result_page = ResultPage.new()
-	add_child(result_page)
-	result_page.build()
-	result_page.restart_button.pressed.connect(_start_play)
-	result_page.menu_button.pressed.connect(_show_menu)
-	scoreboard = ScoreboardPanel.new()
-	add_child(scoreboard)
-	scoreboard.build()
-	blind_overlay = ColorRect.new()
-	blind_overlay.color = Color(1.0, 1.0, 1.0, 0.0)
-	blind_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	blind_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var overlay_layer := CanvasLayer.new()
-	overlay_layer.name = "BlindOverlay"
-	overlay_layer.layer = 1
-	add_child(overlay_layer)
-	overlay_layer.add_child(blind_overlay)
+	HostPages.build(self)
 
 
 func _make_target_mesh() -> MeshInstance3D:
-	var mesh_instance := MeshInstance3D.new()
-	var capsule := CapsuleMesh.new()
-	capsule.radius = 16.0
-	capsule.height = 72.0
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.75, 0.20, 0.20)
-	capsule.material = material
-	mesh_instance.mesh = capsule
-	add_child(mesh_instance)
-	return mesh_instance
+	return ActorVisuals.make_capsule(self, Color(0.75, 0.20, 0.20), "Target")
 
 
 func _make_smoke_mesh() -> MeshInstance3D:
-	var mesh_instance := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 144.0
-	sphere.height = 288.0
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(0.75, 0.78, 0.82, 0.85)
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	sphere.material = material
-	mesh_instance.mesh = sphere
-	mesh_instance.visible = false
-	add_child(mesh_instance)
-	return mesh_instance
+	return ActorVisuals.make_smoke(self)
 
 
 func _show_menu() -> void:
@@ -143,8 +89,30 @@ func _show_menu() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
 
+## 场景/截图执行器用的 2 人灰盒（±800 竞技场）模式，保持既有断言与 golden 不变。
 func _start_play() -> void:
 	sim.reset()
+	_enter_game(false)
+
+
+## 可玩模式：de_ash 全尺寸 MapDef + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
+func _start_match() -> void:
+	sim.reset()
+	_configure_sim_map()
+	sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
+	sim.begin_match()
+	_enter_game(true)
+
+
+func _restart() -> void:
+	if match_mode:
+		_start_match()
+	else:
+		_start_play()
+
+
+func _enter_game(is_match: bool) -> void:
+	match_mode = is_match
 	playing = true
 	paused = false
 	_last_phase = -1
@@ -160,6 +128,35 @@ func _start_play() -> void:
 	result_page.hide_result()
 	scoreboard.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+
+
+## 读取派生盒子（Godot 坐标）→ sim AABB 传入内核：碰撞与画面用同一份数据。
+func _configure_sim_map() -> void:
+	var text := FileAccess.get_file_as_string("res://scenes/de_ash_boxes.json")
+	if text.is_empty():
+		push_warning("缺少 de_ash_boxes.json，保持默认竞技场")
+		return
+	var data: Variant = JSON.parse_string(text)
+	if typeof(data) != TYPE_DICTIONARY:
+		push_warning("de_ash_boxes.json 非法，保持默认竞技场")
+		return
+	var flat := PackedFloat32Array()
+	for item: Dictionary in data.get("boxes", []):
+		if not bool(item.get("collision", true)):
+			continue
+		var c: Array = item["center"]
+		var s: Array = item["size"]
+		var gx := float(c[0])
+		var gy := float(c[1])
+		var gz := float(c[2])
+		var sx := float(s[0])
+		var sy := float(s[1])
+		var sz := float(s[2])
+		flat.append_array(PackedFloat32Array([
+			-gz - sz * 0.5, -gx - sx * 0.5, gy - sy * 0.5,
+			-gz + sz * 0.5, -gx + sx * 0.5, gy + sy * 0.5,
+		]))
+	sim.set_map_boxes(flat)
 
 
 func _show_pause() -> void:
@@ -267,7 +264,10 @@ func _physics_process(_delta: float) -> void:
 	_throw_input("he", KEY_G, 0)
 	_throw_input("flash", KEY_F, 1)
 	_throw_input("smoke", KEY_V, 2)
-	sim.tick()
+	if match_mode:
+		sim.tick_auto()
+	else:
+		sim.tick()
 	_update_view()
 	_update_hud()
 
@@ -278,10 +278,14 @@ func _update_view() -> void:
 	var pz: float = sim.get_z(0)
 	camera.position = Vector3(-py, pz + EYE_HEIGHT, -px)
 	camera.rotation_degrees = Vector3(pitch, yaw, 0)
-	var tx: float = sim.get_x(1)
-	var ty: float = sim.get_y(1)
-	target_mesh.position = Vector3(-ty, 36.0, -tx)
-	target_mesh.visible = sim.is_alive(1)
+	if match_mode:
+		target_mesh.visible = false
+		_update_bot_meshes()
+	else:
+		var tx: float = sim.get_x(1)
+		var ty: float = sim.get_y(1)
+		target_mesh.position = Vector3(-ty, 36.0, -tx)
+		target_mesh.visible = sim.is_alive(1)
 	var smoke_on: bool = sim.get_smoke_active() != 0
 	smoke_mesh.visible = smoke_on
 	if smoke_on:
@@ -291,6 +295,23 @@ func _update_view() -> void:
 	_update_round_pages()
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
+
+
+## 5v5：为玩家 1..9 建/更新胶囊（红=T、蓝=CT），表现层只读内核状态。
+func _update_bot_meshes() -> void:
+	var count: int = int(sim.get_player_count())
+	for index in range(1, count):
+		while bot_meshes.size() < index:
+			bot_meshes.append(_make_bot_mesh(bot_meshes.size() + 1))
+		var mesh: MeshInstance3D = bot_meshes[index - 1]
+		var alive: bool = sim.is_alive(index)
+		mesh.visible = alive
+		if alive:
+			mesh.position = Vector3(-float(sim.get_y(index)), 36.0, -float(sim.get_x(index)))
+
+
+func _make_bot_mesh(slot: int) -> MeshInstance3D:
+	return ActorVisuals.make_capsule(self, Color(0.80, 0.30, 0.20), "Bot%d" % slot)
 
 
 func _update_round_pages() -> void:

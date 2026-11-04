@@ -1,0 +1,46 @@
+{
+  "id": "demo_map",
+  "map": "content/maps/de_ash.layout.json",
+  "mode": "match",
+  "description": "de_ash 5v5 地图/导航双检查（A 轨）：MapDef 由派生盒子注入（全尺寸 4096），10 人 5v5 分队、C4/拆弹器、两层导航（L0 地面 / L2 +128 经楼梯）连通，A/B 双点与猫道可达。",
+  "script": [
+    {"action": "check", "name": "match_start", "asserts": [
+      {"player": 0, "field": "player_count", "equals": 10},
+      {"player": 0, "field": "round_number", "equals": 1},
+      {"player": 0, "field": "round_phase", "equals": 0},
+      {"player": 0, "field": "alive_count_t", "equals": 5},
+      {"player": 0, "field": "alive_count_ct", "equals": 5},
+      {"player": 0, "field": "has_bomb", "equals": 1},
+      {"player": 0, "field": "z", "equals": 0},
+      {"player": 0, "field": "wall_count", "min": 90}
+    ]},
+    {"action": "assert_nav", "name": "T_to_A", "from": [0, -1700, 0],
+     "to": [-1200, -900, 0], "expect": "path"},
+    {"action": "assert_nav", "name": "T_to_B", "from": [0, -1700, 0],
+     "to": [1200, 900, 0], "expect": "path"},
+    {"action": "assert_nav", "name": "CT_to_A", "from": [0, 1700, 0],
+     "to": [-1200, -900, 0], "expect": "path"},
+    {"action": "assert_nav", "name": "CT_to_B", "from": [0, 1700, 0],
+     "to": [1200, 900, 0], "expect": "path"},
+    {"action": "assert_nav", "name": "B_catwalk_top", "from": [0, -1700, 0],
+     "to": [1008, 1040, 128], "expect": "path"},
+    {"action": "assert_nav", "name": "mid_bridge_top", "from": [0, -1700, 0],
+     "to": [0, 0, 128], "expect": "path"},
+    {"action": "assert_nav", "name": "A_roof_unreachable", "from": [0, -1700, 0],
+     "to": [-1648, -900, 256], "expect": "none"},
+    {"action": "auto_tick", "ticks": 200},
+    {"action": "check", "name": "after_auto_ticks", "asserts": [
+      {"player": 0, "field": "round_phase", "min": 0},
+      {"player": 0, "field": "player_count", "equals": 10},
+      {"player": 0, "field": "round_number", "equals": 1},
+      {"player": 0, "field": "z", "equals": 0}
+    ]}
+  ],
+  "asserts": [
+    {"player": 0, "field": "player_count", "equals": 10},
+    {"player": 0, "field": "round_number", "equals": 1}
+  ],
+  "screenshots": [
+    {"name": "demo_map_gameplay", "width": 1280, "height": 720}
+  ]
+}
