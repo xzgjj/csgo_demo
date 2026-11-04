@@ -66,7 +66,7 @@ TEST_CASE("腿部命中按 0.75 倍伤害") {
 
 } // namespace
 
-TEST_CASE("击杀队友不给击杀数与经济奖励") {
+TEST_CASE("友军不开火伤害：队友不死亡也不给奖励（friendly fire off）") {
     WorldState state = MakeDuel();
     state.players[1].team = static_cast<uint8_t>(Team::T);
     state.players[1].position = {0.0f, 500.0f, 0.0f};
@@ -77,7 +77,8 @@ TEST_CASE("击杀队友不给击杀数与经济奖励") {
 
     const StepResult result = Step(state, content, commands);
 
-    CHECK(result.state.players[1].alive == false);
+    CHECK(result.state.players[1].alive == true);
+    CHECK(result.state.players[1].health == 36);
     CHECK(result.state.players[0].kills == 0);
     CHECK(result.state.players[0].money == 800);
 }

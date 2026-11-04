@@ -10,10 +10,43 @@ namespace {
 
 constexpr float kEpsilon = 1.0e-4f;
 constexpr float kMaxSubstepDistance = 8.0f;
+// 可直接迈上的台阶高度（与地图/导航规则一致：step 32 / jump 54，+64 需先上 +32）。
+constexpr float kStepHeight = 32.0f;
+constexpr float kSupportEpsilon = 0.6f;
 
 bool Overlaps(const Vec3& lo, const Vec3& hi, const Wall& wall) {
     return lo.x < wall.max.x && hi.x > wall.min.x && lo.y < wall.max.y && hi.y > wall.min.y &&
            lo.z < wall.max.z && hi.z > wall.min.z;
+}
+
+bool BodyOverlaps(const MapDef& map, const Vec3& position, const MovementDef& def, float height) {
+    const Vec3 lo = {position.x - def.half_width, position.y - def.half_width, position.z};
+    const Vec3 hi = {position.x + def.half_width, position.y + def.half_width, position.z + height};
+    for (int w = 0; w < map.wall_count; ++w) {
+        if (Overlaps(lo, hi, map.walls[w])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 可 step-up 时返回最高可迈上的台阶顶面，否则返回当前位置 z。
+float StepUpHeight(const MapDef& map, const PlayerState& player, const MovementDef& def,
+                   const Vec3& next, float height) {
+    const Vec3 lo = {next.x - def.half_width, next.y - def.half_width, next.z + 0.01f};
+    const Vec3 hi = {next.x + def.half_width, next.y + def.half_width, next.z + height};
+    float best = player.position.z;
+    for (int w = 0; w < map.wall_count; ++w) {
+        const Wall& wall = map.walls[w];
+        if (!Overlaps(lo, hi, wall)) {
+            continue;
+        }
+        const float rise = wall.max.z - player.position.z;
+        if (rise > 0.01f && rise <= kStepHeight && wall.max.z > best) {
+            best = wall.max.z;
+        }
+    }
+    return best;
 }
 
 void ApplyFriction(PlayerState& player, const MovementDef& def) {
@@ -75,6 +108,8 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
         const Vec3 lo = {next.x - def.half_width, next.y - def.half_width, next.z};
         const Vec3 hi = {next.x + def.half_width, next.y + def.half_width, next.z + height};
         bool blocked = false;
+        float clamp_pos = 0.0f;
+        bool clamped = false;
         for (int w = 0; w < map->wall_count; ++w) {
             const Wall& wall = map->walls[w];
             if (!Overlaps(lo, hi, wall)) {
@@ -82,11 +117,11 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
             }
             blocked = true;
             if (axis == 0) {
-                next.x = step > 0.0f ? wall.min.x - def.half_width : wall.max.x + def.half_width;
-                player.velocity.x = 0.0f;
+                clamp_pos = step > 0.0f ? wall.min.x - def.half_width : wall.max.x + def.half_width;
+                clamped = true;
             } else if (axis == 1) {
-                next.y = step > 0.0f ? wall.min.y - def.half_width : wall.max.y + def.half_width;
-                player.velocity.y = 0.0f;
+                clamp_pos = step > 0.0f ? wall.min.y - def.half_width : wall.max.y + def.half_width;
+                clamped = true;
             } else if (step > 0.0f) {
                 next.z = wall.min.z - height;
                 player.velocity.z = 0.0f;
@@ -96,6 +131,27 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
                 player.on_ground = true;
             }
         }
+        if (blocked && axis != 2 && player.on_ground) {
+            // 台阶：抬升到 ≤32u 的支撑面后重试同一水平位移。
+            const float step_height = StepUpHeight(*map, player, def, next, height);
+            if (step_height > player.position.z + 0.01f) {
+                Vec3 raised = next;
+                raised.z = step_height;
+                if (!BodyOverlaps(*map, raised, def, height)) {
+                    player.position = raised;
+                    continue;
+                }
+            }
+        }
+        if (clamped) {
+            if (axis == 0) {
+                next.x = clamp_pos;
+                player.velocity.x = 0.0f;
+            } else {
+                next.y = clamp_pos;
+                player.velocity.y = 0.0f;
+            }
+        }
         player.position = next;
         if (blocked) {
             return;
@@ -103,10 +159,26 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
     }
 }
 
-void ResolveGround(PlayerState& player, const MapDef* map) {
+// 落地：取脚下（水平投影内）最高支撑面；无支撑则离地。
+void ResolveGround(PlayerState& player, const MovementDef& def, const MapDef* map) {
     const float floor_z = (map != nullptr) ? map->floor_z : 0.0f;
-    if (player.position.z <= floor_z + kEpsilon) {
-        player.position.z = floor_z;
+    float support = floor_z;
+    if (map != nullptr) {
+        for (int w = 0; w < map->wall_count; ++w) {
+            const Wall& wall = map->walls[w];
+            if (wall.max.z < floor_z || wall.max.z > player.position.z + kSupportEpsilon) {
+                continue;
+            }
+            if (wall.min.x < player.position.x + def.half_width &&
+                wall.max.x > player.position.x - def.half_width &&
+                wall.min.y < player.position.y + def.half_width &&
+                wall.max.y > player.position.y - def.half_width) {
+                support = std::max(support, wall.max.z);
+            }
+        }
+    }
+    if (player.position.z <= support + kSupportEpsilon) {
+        player.position.z = support;
         player.velocity.z = 0.0f;
         player.on_ground = true;
         return;
@@ -118,16 +190,7 @@ bool StandsIntoWorld(const PlayerState& player, const MovementDef& def, const Ma
     if (map == nullptr) {
         return false;
     }
-    const Vec3 lo = {player.position.x - def.half_width, player.position.y - def.half_width,
-                     player.position.z};
-    const Vec3 hi = {player.position.x + def.half_width, player.position.y + def.half_width,
-                     player.position.z + def.stand_height};
-    for (int w = 0; w < map->wall_count; ++w) {
-        if (Overlaps(lo, hi, map->walls[w])) {
-            return true;
-        }
-    }
-    return false;
+    return BodyOverlaps(*map, player.position, def, def.stand_height);
 }
 
 } // namespace
@@ -170,7 +233,7 @@ void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map
     MoveAxis(player, def, map, 0, player.velocity.x * def.tick_dt);
     MoveAxis(player, def, map, 1, player.velocity.y * def.tick_dt);
     MoveAxis(player, def, map, 2, player.velocity.z * def.tick_dt);
-    ResolveGround(player, map);
+    ResolveGround(player, def, map);
 }
 
 } // namespace recoil

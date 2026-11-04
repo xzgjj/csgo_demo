@@ -19,6 +19,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / "build"
+BUILD_TYPE = "Release"
 PY = sys.executable
 GODOT_CANDIDATES = [
     Path(r"D:\app_finish\Godot\Godot_v4.7.2-stable_win64.exe"),
@@ -68,7 +69,7 @@ def do_core():
     if not cmake_file.exists():
         print("[core] core/CMakeLists.txt 尚未建立（Phase 1 任务），跳过")
         return 0
-    rc = run(["cmake", "-S", "core", "-B", "build", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=Debug"])
+    rc = run(["cmake", "-S", "core", "-B", "build", "-G", "Ninja", "-DCMAKE_BUILD_TYPE=" + BUILD_TYPE])
     if rc:
         return rc
     return run(["cmake", "--build", "build"])
@@ -105,7 +106,7 @@ def do_host():
         return 1
     # 内核静态库与扩展
     rc = run(["cmake", "-S", "host/gdextension", "-B", "build-host", "-G", "Ninja",
-              "-DCMAKE_BUILD_TYPE=Debug"])
+              "-DCMAKE_BUILD_TYPE=" + BUILD_TYPE])
     if rc:
         return rc
     rc = run(["cmake", "--build", "build-host"])
@@ -169,7 +170,7 @@ def main():
             rc |= do_verify()
         if args.ci:
             rc |= do_ci()
-        if args.clean:
+    if args.clean:
             do_clean()
     return rc
 

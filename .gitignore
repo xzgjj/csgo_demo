@@ -50,3 +50,14 @@ node_modules/
 /host/bin/*.dll
 /host/bin/*.pdb
 /verification/actual/
+
+untitled.pen
+
+# 会话脉搏（本地）
+/.pulse.json
+
+# Godot 自动导入元数据（运行时 GLTFDocument 加载，不需要 .import）
+/host/models/**/*.import
+
+# Blender 自动备份
+*.blend1

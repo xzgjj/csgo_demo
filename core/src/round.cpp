@@ -126,6 +126,25 @@ void EndRound(WorldState& state, const Content& content, uint8_t winner, EventLi
     EndRoundInternal(state, content, winner, events);
 }
 
+void BeginMatch(WorldState& state, const Content& content, EventList& events) {
+    state = WorldState{};
+    state.player_count = static_cast<uint8_t>(kTeamSize * 2);
+    AssignTeams(state);
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        PlayerState& player = state.players[i];
+        player.alive = true;
+        player.health = 100;
+        player.money = content.round.start_money;
+        player.kills = 0;
+        player.weapon.mag = content.rifle.magazine;
+        player.weapon.reserve = content.rifle.reserve;
+    }
+    state.round.number = 0;
+    state.round.score_t = 0;
+    state.round.score_ct = 0;
+    ResetRound(state, content, events);
+}
+
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
     const uint32_t total = static_cast<uint32_t>(player.money) + amount;
     player.money = static_cast<uint16_t>(std::min<uint32_t>(total, def.max_money));

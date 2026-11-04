@@ -90,7 +90,7 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
     }
     if (state.round.phase == RoundPhase::MatchEnd) {
         events.Push({EventKind::CommandRejected, command.player, 0,
-                     static_cast<int32_t>(RejectReason::None)});
+                     static_cast<int32_t>(RejectReason::MatchEnded)});
         return;
     }
     for (GrenadeState& grenade : state.grenades) {
@@ -107,7 +107,8 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
         events.Push({EventKind::GrenadeThrown, command.player, 0, grenade.kind});
         return;
     }
-    events.Push({EventKind::CommandRejected, command.player, 0, 0});
+    events.Push({EventKind::CommandRejected, command.player, 0,
+                 static_cast<int32_t>(RejectReason::NoGrenadeSlot)});
 }
 
 void StepGrenades(WorldState& state, const Content& content, EventList& events) {

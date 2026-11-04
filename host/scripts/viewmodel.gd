@@ -1,16 +1,27 @@
 class_name WeaponViewmodel
 extends Node3D
-## 第一人称武器 viewmodel：仅用盒体组合出 AK-47 / M4A1 / AWP 的可辨识轮廓
-## （枪管/弹匣/枪托/瞄具），开火后以轻微位移+俯仰回落表现后坐力。
+## 第一人称武器 viewmodel：优先运行时加载 Blender 程序化生成的 GLB
+## （AK-47 / M4A1 / AWP，见 tools/blender/build_weapons.py），加载失败时回退到
+## 盒体组合轮廓；开火后以轻微位移+俯仰回落表现后坐力。
 ## 纯表现层：不读也不写规则状态，武器切换是展示用的本地选择（内核暂无切换 API）。
+##
+## GLB 坐标约定：+X 右 / +Y 上 / -Z 枪口，单位米，原点在机匣/握把附近，
+## 与 Godot 相机空间一致，因此挂到 _pivot 下不需要额外旋转。
 
 const WEAPON_IDS: Array[String] = ["ak", "m4", "awp"]
 const DISPLAY_NAMES := {"ak": "AK-47", "m4": "M4A1", "awp": "AWP"}
+const MODEL_PATHS := {
+	"ak": "res://models/weapons/ak47.glb",
+	"m4": "res://models/weapons/m4a4.glb",
+	"awp": "res://models/weapons/awp.glb",
+}
+const MODEL_ROOT_NAMES := {"ak": "ak47", "m4": "m4a4", "awp": "awp"}
 const REST_POSITION := Vector3(0.24, -0.26, -0.58)
 const REST_ROTATION := Vector3(0.0, -2.0, 0.0)
-const VIEWMODEL_SCALE := 0.8
+const VIEWMODEL_SCALE := 0.85
 
-## 每把枪的盒体表：[尺寸, 相对偏移(枪口朝 -Z), 材质键, 旋转角度]。偏移 0 为机匣中心。
+## 每把枪的盒体表（GLB 加载失败时的回退路径）：
+## [尺寸, 相对偏移(枪口朝 -Z), 材质键, 旋转角度]。偏移 0 为机匣中心。
 const PART_LAYOUTS := {
 	"ak": [
 		[Vector3(0.060, 0.070, 0.340), Vector3(0, 0, 0), "metal", Vector3.ZERO],
@@ -67,6 +78,10 @@ var _kick := 0.0
 var _metal: StandardMaterial3D
 var _wood: StandardMaterial3D
 var _polymer: StandardMaterial3D
+## 每把武器是否成功走 GLB（false = 盒体回退），供验收脚本断言。
+var used_glb: Dictionary = {}
+var aiming := false
+const AIM_OFFSET := Vector3(-0.10, 0.035, 0.10)
 
 
 ## 由 main.gd 在相机加入场景后调用；建立 viewmodel 层级并选中默认武器。
@@ -104,6 +119,19 @@ func weapon_ids() -> Array[String]:
 	return WEAPON_IDS
 
 
+## 截图/验收用：把后坐力姿态复位到静止位（配合 set_process(false) 保证截图确定性）。
+## 右键瞄准：viewmodel 向屏幕中心收拢（表现层；FOV 由 main 控制）。
+func set_aiming(value: bool) -> void:
+	aiming = value
+
+
+func freeze_pose() -> void:
+	_kick = 0.0
+	if _pivot != null:
+		_pivot.position = REST_POSITION
+		_pivot.rotation_degrees = REST_ROTATION
+
+
 ## 开火后坐力：单次冲量，_process 内指数回落。
 func kick(strength: float = 1.0) -> void:
 	_kick = minf(1.0, _kick + 0.6 * strength)
@@ -114,11 +142,57 @@ func _process(delta: float) -> void:
 		return
 	_kick = maxf(0.0, _kick - delta * 7.0)
 	var amount := _kick * _kick
-	_pivot.position = REST_POSITION + Vector3(0.0, 0.010 * amount, 0.075 * amount)
+	var base := REST_POSITION + (AIM_OFFSET if aiming else Vector3.ZERO)
+	_pivot.position = base + Vector3(0.0, 0.010 * amount, 0.075 * amount)
 	_pivot.rotation_degrees = REST_ROTATION + Vector3(7.0 * amount, 1.8 * amount, 0.0)
 
 
+## 优先 GLB（Blender 程序化生成），失败回退盒体组合。
 func _build_model(weapon_id: String) -> Node3D:
+	var glb_model := _load_glb_model(weapon_id)
+	if glb_model != null:
+		used_glb[weapon_id] = true
+		return glb_model
+	used_glb[weapon_id] = false
+	return _build_box_model(weapon_id)
+
+
+## 运行时用 GLTFDocument 读取 res://models/weapons/*.glb；任何失败返回 null 由调用方回退。
+func _load_glb_model(weapon_id: String) -> Node3D:
+	var path := str(MODEL_PATHS.get(weapon_id, ""))
+	if path.is_empty():
+		push_warning("WeaponViewmodel: 未配置 GLB 路径（%s），回退盒体模型" % weapon_id)
+		return null
+	var document := GLTFDocument.new()
+	var state := GLTFState.new()
+	var error := document.append_from_file(path, state)
+	if error != OK:
+		# 源码工程直接读 res:// 文件；导出工程里回退为绝对路径再试一次。
+		error = document.append_from_file(ProjectSettings.globalize_path(path), state)
+	if error != OK:
+		push_warning("WeaponViewmodel: GLB 加载失败 %s（错误 %d），回退盒体模型" % [path, error])
+		return null
+	var generated := document.generate_scene(state)
+	if not generated is Node3D:
+		push_warning("WeaponViewmodel: GLB 场景无效 %s，回退盒体模型" % path)
+		return null
+	var model := generated as Node3D
+	model.name = str(MODEL_ROOT_NAMES.get(weapon_id, weapon_id))
+	for mesh_instance in _mesh_instances(model):
+		mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return model
+
+
+func _mesh_instances(node: Node) -> Array[MeshInstance3D]:
+	var instances: Array[MeshInstance3D] = []
+	for child in node.get_children():
+		if child is MeshInstance3D:
+			instances.append(child as MeshInstance3D)
+		instances.append_array(_mesh_instances(child))
+	return instances
+
+
+func _build_box_model(weapon_id: String) -> Node3D:
 	var model := Node3D.new()
 	model.name = "Weapon_" + weapon_id
 	for part: Array in PART_LAYOUTS.get(weapon_id, []):

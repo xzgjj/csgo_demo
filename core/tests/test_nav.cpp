@@ -120,3 +120,37 @@ TEST_CASE("导航路径是纯函数：相同输入得到相同结果") {
         CHECK(SamePoint(first[i], second[i]));
     }
 }
+
+TEST_CASE("分层导航可经楼梯到达 +128 高台") {
+    MapDef map = OpenMap();
+    // 高台板：x 196..400、y 200..400，板面 112..128（顶面 128 可走，下方 112 以下可通行）。
+    AddWall(map, {196.0f, 200.0f, 112.0f}, {400.0f, 400.0f, 128.0f});
+    // 4 级楼梯，每级升 32，踏板顶面 32/64/96/128。
+    AddWall(map, {68.0f, 200.0f, 0.0f}, {100.0f, 400.0f, 32.0f});
+    AddWall(map, {100.0f, 200.0f, 0.0f}, {132.0f, 400.0f, 64.0f});
+    AddWall(map, {132.0f, 200.0f, 0.0f}, {164.0f, 400.0f, 96.0f});
+    AddWall(map, {164.0f, 200.0f, 0.0f}, {196.0f, 400.0f, 128.0f});
+    const Vec3 from{0.0f, 300.0f, 0.0f};
+    const Vec3 to{320.0f, 300.0f, 128.0f};
+
+    const std::vector<Vec3> path = NavPath(map, from, to);
+
+    REQUIRE(!path.empty());
+    CHECK(path.back().z == doctest::Approx(128.0f).epsilon(0.5));
+    bool used_stairs = false;
+    for (const Vec3& point : path) {
+        used_stairs = used_stairs || (point.x > 60.0f && point.x < 200.0f);
+    }
+    CHECK(used_stairs);
+}
+
+TEST_CASE("没有楼梯时 +128 高台不可达") {
+    MapDef map = OpenMap();
+    AddWall(map, {196.0f, 200.0f, 112.0f}, {400.0f, 400.0f, 128.0f});
+    const Vec3 from{0.0f, 300.0f, 0.0f};
+    const Vec3 to{320.0f, 300.0f, 128.0f};
+
+    const std::vector<Vec3> path = NavPath(map, from, to);
+
+    CHECK(path.empty());
+}

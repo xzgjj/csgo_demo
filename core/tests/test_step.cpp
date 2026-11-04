@@ -6,6 +6,7 @@
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
 #include "recoil/sim/step.h"
+#include "recoil/world/map.h"
 
 namespace {
 
@@ -22,6 +23,7 @@ using recoil::RoundPhase;
 using recoil::Step;
 using recoil::StepResult;
 using recoil::Team;
+using recoil::Wall;
 using recoil::WorldState;
 
 WorldState MakeDuel() {

@@ -1,56 +1,1821 @@
 {
-  "schema": "map-layout/1",
+  "schema": "map-layout/2",
   "name": "de_ash",
   "reference": "AssaultCube ac_desert（GPL，仅拓扑/节奏参考；几何、贴图、命名全部原创）",
   "units": "source_units",
-  "bounds": {"min": [-2048, -2048, 0], "max": [2048, 2048, 256]},
+  "bounds": {
+    "min": [
+      -2048,
+      -2048,
+      0
+    ],
+    "max": [
+      2048,
+      2048,
+      288
+    ]
+  },
   "floor_z": 0,
   "wall_height": 256,
+  "perimeter_thickness": 32,
+  "layers": [
+    {
+      "id": "L0",
+      "z": 0,
+      "walkable": true,
+      "note": "地面：通道/包点/出生"
+    },
+    {
+      "id": "L2",
+      "z": 128,
+      "walkable": true,
+      "note": "高台/二层/天桥：仅楼梯或坡道可达"
+    }
+  ],
+  "reach": {
+    "jump_max": 57,
+    "step_max": 32,
+    "door_width": 96,
+    "door_height": 128,
+    "roof_walkable": false,
+    "max_building_height": 256,
+    "note": "CS:GO 参考跳高 57u（301.993²/1600）；离散 tick 实测约 59.4，仍 <64，故 +64 仍不可直接到达"
+  },
+  "materials": [
+    "concrete",
+    "metal",
+    "wood",
+    "glass",
+    "fabric",
+    "dirt"
+  ],
   "spawns": {
-    "T": {"center": [0, -1700, 0], "size": [256, 256], "facing": [0, 1]},
-    "CT": {"center": [0, 1700, 0], "size": [256, 256], "facing": [0, -1]}
+    "T": {
+      "center": [
+        0,
+        -1700,
+        0
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "facing": [
+        0,
+        1
+      ]
+    },
+    "CT": {
+      "center": [
+        0,
+        1700,
+        0
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "facing": [
+        0,
+        -1
+      ]
+    }
   },
   "buy_zones": [
-    {"team": "T", "center": [0, -1600, 0], "size": [512, 512]},
-    {"team": "CT", "center": [0, 1600, 0], "size": [512, 512]}
+    {
+      "team": "T",
+      "center": [
+        0,
+        -1600,
+        0
+      ],
+      "size": [
+        512,
+        512
+      ]
+    },
+    {
+      "team": "CT",
+      "center": [
+        0,
+        1600,
+        0
+      ],
+      "size": [
+        512,
+        512
+      ]
+    }
   ],
   "bombsites": [
-    {"id": "A", "center": [-1200, -900, 0], "size": [512, 512]},
-    {"id": "B", "center": [1200, 900, 0], "size": [512, 512]}
+    {
+      "id": "A",
+      "center": [
+        -1200,
+        -900,
+        0
+      ],
+      "size": [
+        512,
+        512
+      ],
+      "plant_radius": 64
+    },
+    {
+      "id": "B",
+      "center": [
+        1200,
+        900,
+        0
+      ],
+      "size": [
+        512,
+        512
+      ],
+      "plant_radius": 64
+    }
+  ],
+  "buildings": [
+    {
+      "id": "A_compound",
+      "name": "A 包点院墙",
+      "kind": "ring",
+      "center": [
+        -1200,
+        -900
+      ],
+      "size": [
+        576,
+        576
+      ],
+      "height": 256,
+      "wall_thickness": 32,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": [
+        {
+          "id": "A_long_entry",
+          "wall": "S",
+          "kind": "door",
+          "offset": 0,
+          "width": 192,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "A_short_entry",
+          "wall": "E",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "A_ct_entry",
+          "wall": "N",
+          "kind": "door",
+          "offset": 156,
+          "width": 128,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "A_house_door",
+          "wall": "W",
+          "kind": "door",
+          "offset": 0,
+          "width": 96,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "A_house_window",
+          "wall": "W",
+          "kind": "window",
+          "offset": -100,
+          "width": 96,
+          "height": 64,
+          "sill": 96
+        }
+      ]
+    },
+    {
+      "id": "A_main_house",
+      "name": "A 点主屋",
+      "kind": "shell",
+      "center": [
+        -1648,
+        -900
+      ],
+      "size": [
+        320,
+        256
+      ],
+      "height": 256,
+      "sides": [
+        "N",
+        "S",
+        "W"
+      ],
+      "wall_thickness": 32,
+      "material": "concrete",
+      "roof_material": "wood",
+      "roof_walkable": false,
+      "openings": [],
+      "attachments": [
+        {
+          "id": "A_platform",
+          "kind": "platform",
+          "center": [
+            -1296,
+            -708
+          ],
+          "size": [
+            320,
+            128
+          ],
+          "top_z": 64,
+          "material": "concrete"
+        },
+        {
+          "id": "A_ramp",
+          "kind": "ramp",
+          "start": [
+            -1408,
+            -1028
+          ],
+          "axis": "y",
+          "dir": 1,
+          "length": 256,
+          "width": 96,
+          "z0": 0,
+          "z1": 64,
+          "material": "concrete"
+        }
+      ]
+    },
+    {
+      "id": "A_long_arch",
+      "name": "A long 拱门",
+      "kind": "arch",
+      "center": [
+        -1600,
+        200
+      ],
+      "size": [
+        260,
+        200
+      ],
+      "height": 256,
+      "passage_width": 128,
+      "passage_height": 192,
+      "material": "concrete"
+    },
+    {
+      "id": "A_halls",
+      "name": "A halls",
+      "kind": "solid",
+      "center": [
+        -1750,
+        -1300
+      ],
+      "size": [
+        320,
+        300
+      ],
+      "height": 256,
+      "material": "concrete"
+    },
+    {
+      "id": "A_short_house",
+      "name": "A short 屋",
+      "kind": "solid",
+      "center": [
+        -700,
+        -1200
+      ],
+      "size": [
+        200,
+        160
+      ],
+      "height": 256,
+      "material": "concrete"
+    },
+    {
+      "id": "B_compound",
+      "name": "B 包点院墙",
+      "kind": "ring",
+      "center": [
+        1200,
+        900
+      ],
+      "size": [
+        576,
+        576
+      ],
+      "height": 256,
+      "wall_thickness": 32,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": [
+        {
+          "id": "B_long_entry",
+          "wall": "S",
+          "kind": "door",
+          "offset": 0,
+          "width": 192,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "B_short_entry",
+          "wall": "W",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "B_catwalk_gap",
+          "wall": "N",
+          "kind": "full",
+          "offset": -150,
+          "width": 380,
+          "height": 256,
+          "sill": 0
+        }
+      ]
+    },
+    {
+      "id": "B_two_storey",
+      "name": "B 双层楼",
+      "kind": "solid",
+      "center": [
+        850,
+        1350
+      ],
+      "size": [
+        340,
+        300
+      ],
+      "height": 256,
+      "material": "concrete",
+      "attachments": [
+        {
+          "id": "B_catwalk",
+          "kind": "catwalk",
+          "center": [
+            1008,
+            1040
+          ],
+          "size": [
+            128,
+            320
+          ],
+          "top_z": 128,
+          "deck_material": "wood",
+          "columns": [
+            [
+              1008,
+              1100
+            ],
+            [
+              1008,
+              960
+            ]
+          ]
+        },
+        {
+          "id": "B_catwalk_stairs",
+          "kind": "stairs",
+          "start": [
+            1072,
+            1456
+          ],
+          "axis": "y",
+          "dir": -1,
+          "length": 256,
+          "width": 96,
+          "z0": 0,
+          "z1": 128,
+          "material": "concrete"
+        }
+      ]
+    },
+    {
+      "id": "B_lower_hall",
+      "name": "B 下层大厅（简化掩体块）",
+      "kind": "solid",
+      "center": [
+        860,
+        510
+      ],
+      "size": [
+        300,
+        180
+      ],
+      "height": 128,
+      "material": "concrete"
+    },
+    {
+      "id": "B_tunnel",
+      "name": "B tunnel",
+      "kind": "solid",
+      "center": [
+        560,
+        -420
+      ],
+      "size": [
+        300,
+        220
+      ],
+      "height": 256,
+      "material": "concrete"
+    },
+    {
+      "id": "mid_gate",
+      "name": "中路门楼",
+      "kind": "arch",
+      "center": [
+        0,
+        620
+      ],
+      "size": [
+        240,
+        220
+      ],
+      "height": 256,
+      "passage_width": 128,
+      "passage_height": 128,
+      "material": "concrete"
+    },
+    {
+      "id": "mid_bridge",
+      "name": "中路天桥",
+      "kind": "bridge",
+      "center": [
+        0,
+        0
+      ],
+      "size": [
+        384,
+        128
+      ],
+      "top_z": 128,
+      "deck_material": "wood",
+      "material": "concrete",
+      "columns": [
+        [
+          -176,
+          0
+        ],
+        [
+          176,
+          0
+        ]
+      ],
+      "attachments": [
+        {
+          "id": "mid_bridge_stairs",
+          "kind": "stairs",
+          "start": [
+            192,
+            112
+          ],
+          "axis": "x",
+          "dir": -1,
+          "length": 256,
+          "width": 96,
+          "z0": 0,
+          "z1": 128,
+          "material": "concrete"
+        }
+      ]
+    },
+    {
+      "id": "T_spawn_house",
+      "name": "T 出生屋",
+      "kind": "shell",
+      "center": [
+        0,
+        -1700
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "wall_thickness": 32,
+      "material": "concrete",
+      "roof_material": "wood",
+      "openings": [
+        {
+          "id": "T_mid_exit",
+          "wall": "N",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "T_a_long_exit",
+          "wall": "W",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "T_b_long_exit",
+          "wall": "E",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        }
+      ]
+    },
+    {
+      "id": "CT_spawn_house",
+      "name": "CT 出生屋",
+      "kind": "shell",
+      "center": [
+        0,
+        1700
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "wall_thickness": 32,
+      "material": "concrete",
+      "roof_material": "wood",
+      "openings": [
+        {
+          "id": "CT_mid_exit",
+          "wall": "S",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "CT_rotate_a_exit",
+          "wall": "W",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        },
+        {
+          "id": "CT_rotate_b_exit",
+          "wall": "E",
+          "kind": "door",
+          "offset": 0,
+          "width": 160,
+          "height": 128,
+          "sill": 0
+        }
+      ]
+    },
+    {
+      "id": "CT_retake_house",
+      "name": "CT 回防屋",
+      "kind": "solid",
+      "center": [
+        -1450,
+        1600
+      ],
+      "size": [
+        260,
+        220
+      ],
+      "height": 256,
+      "material": "concrete"
+    },
+    {
+      "id": "T_spawn_west_2f",
+      "name": "T 出生 west 两层建筑",
+      "kind": "solid",
+      "center": [
+        -320,
+        -1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "T_spawn_east_2f",
+      "name": "T 出生 east 两层建筑",
+      "kind": "solid",
+      "center": [
+        320,
+        -1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "CT_spawn_west_2f",
+      "name": "CT 出生 west 两层建筑",
+      "kind": "solid",
+      "center": [
+        -320,
+        1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "CT_spawn_east_2f",
+      "name": "CT 出生 east 两层建筑",
+      "kind": "solid",
+      "center": [
+        320,
+        1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    }
+  ],
+  "structures": [
+    {
+      "id": "wall_A_sight",
+      "center": [
+        -1950,
+        -600
+      ],
+      "size": [
+        32,
+        240
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_B_sight",
+      "center": [
+        1600,
+        400
+      ],
+      "size": [
+        32,
+        320
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_mid_sight",
+      "center": [
+        -900,
+        1000
+      ],
+      "size": [
+        32,
+        240
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_T_cover",
+      "center": [
+        400,
+        -700
+      ],
+      "size": [
+        240,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_T_spawn_bend_a",
+      "center": [
+        -64,
+        -1420
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_T_spawn_bend_b",
+      "center": [
+        64,
+        -1300
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_spawn_bend_a",
+      "center": [
+        -64,
+        1420
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_spawn_bend_b",
+      "center": [
+        64,
+        1300
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_A_sight2",
+      "center": [
+        -760,
+        900
+      ],
+      "size": [
+        32,
+        320
+      ],
+      "height": 256
+    }
   ],
   "lanes": [
-    {"id": "A_long", "width": 320, "points": [[0, -1700], [-1200, -1400], [-1200, -900]]},
-    {"id": "A_short", "width": 256, "points": [[0, -1200], [-700, -900], [-1200, -900]]},
-    {"id": "mid", "width": 256, "points": [[0, -1700], [0, 0], [0, 1700]]},
-    {"id": "B_long", "width": 320, "points": [[0, -1700], [1200, -1200], [1200, 900]]},
-    {"id": "B_short", "width": 256, "points": [[0, 1200], [700, 900], [1200, 900]]},
-    {"id": "CT_rotate", "width": 256, "points": [[0, 1700], [-500, 1200], [-1200, 900]]}
+    {
+      "id": "A_long",
+      "width": 320,
+      "points": [
+        [
+          -160,
+          -1700
+        ],
+        [
+          -700,
+          -1620
+        ],
+        [
+          -1200,
+          -1400
+        ],
+        [
+          -1200,
+          -1188
+        ]
+      ]
+    },
+    {
+      "id": "A_short",
+      "width": 256,
+      "points": [
+        [
+          0,
+          -1200
+        ],
+        [
+          -700,
+          -900
+        ],
+        [
+          -912,
+          -900
+        ]
+      ]
+    },
+    {
+      "id": "mid",
+      "width": 256,
+      "points": [
+        [
+          0,
+          -1572
+        ],
+        [
+          120,
+          -1460
+        ],
+        [
+          120,
+          -1360
+        ],
+        [
+          -96,
+          -1340
+        ],
+        [
+          -96,
+          -1280
+        ],
+        [
+          -96,
+          -1188
+        ],
+        [
+          0,
+          -1100
+        ],
+        [
+          0,
+          -200
+        ],
+        [
+          130,
+          0
+        ],
+        [
+          260,
+          140
+        ],
+        [
+          0,
+          340
+        ],
+        [
+          0,
+          1100
+        ],
+        [
+          -96,
+          1188
+        ],
+        [
+          -96,
+          1280
+        ],
+        [
+          -96,
+          1340
+        ],
+        [
+          120,
+          1360
+        ],
+        [
+          120,
+          1460
+        ],
+        [
+          0,
+          1572
+        ]
+      ]
+    },
+    {
+      "id": "B_long",
+      "width": 320,
+      "points": [
+        [
+          160,
+          -1700
+        ],
+        [
+          600,
+          -1700
+        ],
+        [
+          1200,
+          -1400
+        ],
+        [
+          1200,
+          612
+        ]
+      ]
+    },
+    {
+      "id": "B_short",
+      "width": 256,
+      "points": [
+        [
+          0,
+          1200
+        ],
+        [
+          700,
+          900
+        ],
+        [
+          912,
+          900
+        ]
+      ]
+    },
+    {
+      "id": "CT_rotate_A",
+      "width": 256,
+      "points": [
+        [
+          -160,
+          1700
+        ],
+        [
+          -900,
+          1600
+        ],
+        [
+          -1600,
+          900
+        ],
+        [
+          -1600,
+          200
+        ],
+        [
+          -1600,
+          -600
+        ],
+        [
+          -1400,
+          -450
+        ],
+        [
+          -1044,
+          -450
+        ],
+        [
+          -1044,
+          -612
+        ]
+      ]
+    },
+    {
+      "id": "CT_rotate_B",
+      "width": 256,
+      "points": [
+        [
+          160,
+          1700
+        ],
+        [
+          1400,
+          1620
+        ],
+        [
+          1500,
+          1300
+        ],
+        [
+          1180,
+          1240
+        ],
+        [
+          1180,
+          1188
+        ],
+        [
+          1028,
+          1188
+        ]
+      ]
+    },
+    {
+      "id": "mid_to_A",
+      "width": 256,
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          -700,
+          -900
+        ],
+        [
+          -912,
+          -900
+        ]
+      ]
+    }
   ],
   "choke_points": [
-    {"id": "mid_door", "center": [0, 0, 0], "size": [256, 96]},
-    {"id": "A_entry", "center": [-1200, -1150, 0], "size": [320, 96]},
-    {"id": "B_entry", "center": [1200, 600, 0], "size": [320, 96]}
+    {
+      "id": "mid_gate",
+      "center": [
+        0,
+        620
+      ],
+      "passage_width": 128
+    },
+    {
+      "id": "A_long_entry",
+      "center": [
+        -1200,
+        -1188
+      ],
+      "passage_width": 192
+    },
+    {
+      "id": "A_short_entry",
+      "center": [
+        -912,
+        -900
+      ],
+      "passage_width": 160
+    },
+    {
+      "id": "A_ct_entry",
+      "center": [
+        -1044,
+        -612
+      ],
+      "passage_width": 128
+    },
+    {
+      "id": "B_long_entry",
+      "center": [
+        1200,
+        612
+      ],
+      "passage_width": 192
+    },
+    {
+      "id": "B_short_entry",
+      "center": [
+        912,
+        900
+      ],
+      "passage_width": 160
+    },
+    {
+      "id": "B_catwalk_gap",
+      "center": [
+        1028,
+        1172
+      ],
+      "passage_width": 288
+    },
+    {
+      "id": "A_long_arch",
+      "center": [
+        -1600,
+        200
+      ],
+      "passage_width": 128
+    }
+  ],
+  "sightlines": [
+    {
+      "id": "mid_spine_south",
+      "from": [
+        0,
+        -1100
+      ],
+      "to": [
+        0,
+        -100
+      ],
+      "expect": "clear",
+      "note": "中路南段（T 侧到中央掩体前）"
+    },
+    {
+      "id": "mid_spine_north",
+      "from": [
+        0,
+        300
+      ],
+      "to": [
+        0,
+        1100
+      ],
+      "expect": "clear",
+      "note": "中路北段（中央掩体后到 CT 侧）"
+    },
+    {
+      "id": "spawn_cross_blocked",
+      "from": [
+        0,
+        -1700
+      ],
+      "to": [
+        0,
+        1700
+      ],
+      "expect": "blocked",
+      "note": "T/CT 出生点不得对穿（中央掩体 + 门洞错位）"
+    },
+    {
+      "id": "A_long_entry",
+      "from": [
+        -1200,
+        -1300
+      ],
+      "to": [
+        -1200,
+        -950
+      ],
+      "expect": "clear",
+      "note": "A long 进包点南门后可见包点中心"
+    },
+    {
+      "id": "A_site_diag",
+      "from": [
+        -1250,
+        -800
+      ],
+      "to": [
+        -1050,
+        -1100
+      ],
+      "expect": "clear",
+      "note": "A 平台边到包点东侧（不穿箱/平台）"
+    },
+    {
+      "id": "B_long_entry",
+      "from": [
+        1200,
+        -500
+      ],
+      "to": [
+        1200,
+        750
+      ],
+      "expect": "clear",
+      "note": "B long 进南门后可见包点"
+    },
+    {
+      "id": "B_site_diag",
+      "from": [
+        1100,
+        1000
+      ],
+      "to": [
+        1300,
+        800
+      ],
+      "expect": "clear",
+      "note": "B 点内斜线：上层猫道下方到包点南"
+    },
+    {
+      "id": "CT_rotate_A_arch",
+      "from": [
+        -1600,
+        600
+      ],
+      "to": [
+        -1600,
+        -200
+      ],
+      "expect": "clear",
+      "note": "CT 回防 A 的拱门通道（净高 192 处）"
+    },
+    {
+      "id": "A_compound_wall",
+      "from": [
+        -1200,
+        -1300
+      ],
+      "to": [
+        -1500,
+        -950
+      ],
+      "expect": "blocked",
+      "note": "A 院墙应遮挡：非入口方向不得看穿"
+    },
+    {
+      "id": "B_compound_wall",
+      "from": [
+        1200,
+        -300
+      ],
+      "to": [
+        1450,
+        700
+      ],
+      "expect": "blocked",
+      "note": "B 院墙应遮挡：非入口方向不得看穿"
+    }
   ],
   "props": [
-    {"id": "A_crate_1", "type": "crate_large", "center": [-1300, -950, 0], "size": [128, 128, 128]},
-    {"id": "A_crate_2", "type": "crate_small", "center": [-1150, -820, 0], "size": [64, 64, 64]},
-    {"id": "A_barrel_1", "type": "barrel", "center": [-1380, -1050, 0], "size": [32, 32, 64]},
-    {"id": "B_crate_1", "type": "crate_large", "center": [1300, 950, 0], "size": [128, 128, 128]},
-    {"id": "B_crate_2", "type": "crate_small", "center": [1150, 820, 0], "size": [64, 64, 64]},
-    {"id": "B_barrel_1", "type": "barrel", "center": [1380, 1050, 0], "size": [32, 32, 64]},
-    {"id": "mid_crates", "type": "crate_cluster", "center": [0, 250, 0], "size": [96, 96, 96]},
-    {"id": "mid_door_l", "type": "door_breakable", "center": [-130, 0, 0], "size": [96, 48, 128]},
-    {"id": "mid_door_r", "type": "door_breakable", "center": [130, 0, 0], "size": [96, 48, 128]},
-    {"id": "A_glass", "type": "glass_window", "center": [-1200, -700, 96], "size": [128, 16, 96]},
-    {"id": "B_sandbags", "type": "sandbag_line", "center": [1100, 700, 0], "size": [256, 48, 64]},
-    {"id": "lamp_A", "type": "lamp", "center": [-1200, -900, 200], "size": [16, 16, 16]},
-    {"id": "lamp_B", "type": "lamp", "center": [1200, 900, 200], "size": [16, 16, 16]},
-    {"id": "sign_mid", "type": "sign", "center": [0, -400, 160], "size": [64, 8, 32]}
+    {
+      "id": "A_crate_96",
+      "kind": "prop",
+      "center": [
+        -1150,
+        -1080,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_crate_64",
+      "kind": "prop",
+      "center": [
+        -1245,
+        -980,
+        0
+      ],
+      "size": [
+        64,
+        64,
+        64
+      ],
+      "material": "wood",
+      "walkable": true
+    },
+    {
+      "id": "A_crate_32",
+      "kind": "prop",
+      "center": [
+        -1230,
+        -1080,
+        0
+      ],
+      "size": [
+        48,
+        48,
+        32
+      ],
+      "material": "wood",
+      "walkable": true
+    },
+    {
+      "id": "A_barrel_1",
+      "kind": "prop",
+      "center": [
+        -1320,
+        -900,
+        0
+      ],
+      "size": [
+        32,
+        32,
+        48
+      ],
+      "material": "metal",
+      "walkable": true
+    },
+    {
+      "id": "B_crate_96",
+      "kind": "prop",
+      "center": [
+        1300,
+        950,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "B_crate_64",
+      "kind": "prop",
+      "center": [
+        1150,
+        800,
+        0
+      ],
+      "size": [
+        64,
+        64,
+        64
+      ],
+      "material": "wood",
+      "walkable": true
+    },
+    {
+      "id": "B_crate_32",
+      "kind": "prop",
+      "center": [
+        1210,
+        760,
+        0
+      ],
+      "size": [
+        48,
+        48,
+        32
+      ],
+      "material": "wood",
+      "walkable": true
+    },
+    {
+      "id": "B_sandbags",
+      "kind": "prop",
+      "center": [
+        1100,
+        700,
+        0
+      ],
+      "size": [
+        256,
+        48,
+        48
+      ],
+      "material": "fabric",
+      "walkable": true
+    },
+    {
+      "id": "mid_crate",
+      "kind": "prop",
+      "center": [
+        -220,
+        250,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "mid_door_l",
+      "kind": "prop",
+      "center": [
+        -48,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        16,
+        128
+      ],
+      "material": "wood",
+      "collision": false
+    },
+    {
+      "id": "mid_door_r",
+      "kind": "prop",
+      "center": [
+        48,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        16,
+        128
+      ],
+      "material": "wood",
+      "collision": false
+    },
+    {
+      "id": "A_glass",
+      "kind": "prop",
+      "center": [
+        -1472,
+        -1000,
+        96
+      ],
+      "size": [
+        16,
+        96,
+        64
+      ],
+      "material": "glass",
+      "collision": false
+    },
+    {
+      "id": "lamp_A",
+      "kind": "prop",
+      "center": [
+        -1200,
+        -900,
+        224
+      ],
+      "size": [
+        16,
+        16,
+        16
+      ],
+      "material": "metal",
+      "collision": false
+    },
+    {
+      "id": "lamp_B",
+      "kind": "prop",
+      "center": [
+        1200,
+        900,
+        224
+      ],
+      "size": [
+        16,
+        16,
+        16
+      ],
+      "material": "metal",
+      "collision": false
+    },
+    {
+      "id": "sign_mid",
+      "kind": "prop",
+      "center": [
+        0,
+        -400,
+        160
+      ],
+      "size": [
+        64,
+        8,
+        32
+      ],
+      "material": "metal",
+      "collision": false
+    },
+    {
+      "id": "mid_cover",
+      "kind": "prop",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        192,
+        64,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_1",
+      "kind": "prop",
+      "center": [
+        168,
+        -1460,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_2",
+      "kind": "prop",
+      "center": [
+        -168,
+        -1360,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_3",
+      "kind": "prop",
+      "center": [
+        -168,
+        -1260,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        48
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_1",
+      "kind": "prop",
+      "center": [
+        168,
+        1460,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_2",
+      "kind": "prop",
+      "center": [
+        -168,
+        1360,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_3",
+      "kind": "prop",
+      "center": [
+        -168,
+        1260,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        48
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "mid_gate_cover_w",
+      "kind": "prop",
+      "center": [
+        -176,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "mid_gate_cover_e",
+      "kind": "prop",
+      "center": [
+        176,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_long_cover",
+      "kind": "prop",
+      "center": [
+        -1320,
+        -1300,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_short_cover",
+      "kind": "prop",
+      "center": [
+        -800,
+        -1020,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover",
+      "kind": "prop",
+      "center": [
+        -1044,
+        -520,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "B_long_cover",
+      "kind": "prop",
+      "center": [
+        1320,
+        720,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "B_short_cover",
+      "kind": "prop",
+      "center": [
+        800,
+        1020,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "A_short_cover_2",
+      "kind": "prop",
+      "center": [
+        -800,
+        -820,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover_2",
+      "kind": "prop",
+      "center": [
+        -880,
+        -460,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover_3",
+      "kind": "prop",
+      "center": [
+        -1200,
+        -560,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "B_short_cover_2",
+      "kind": "prop",
+      "center": [
+        840,
+        820,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "A_long_arch_cover_1",
+      "kind": "prop",
+      "center": [
+        -1520,
+        420,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_long_arch_cover_2",
+      "kind": "prop",
+      "center": [
+        -1520,
+        -20,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
+    }
   ],
-  "materials": ["concrete", "metal", "wood", "glass", "fabric", "dirt"],
-  "rotation_seconds_target": {"T_to_A": 14, "T_to_B": 15, "CT_to_A": 9, "CT_to_B": 9},
+  "rotation_seconds_target": {
+    "A_long": 5.2,
+    "A_short": 3.9,
+    "mid": 15.8,
+    "B_long": 12.4,
+    "B_short": 3.9,
+    "CT_rotate_A": 16.0,
+    "CT_rotate_B": 8.4,
+    "mid_to_A": 5.4
+  },
   "checks": {
-    "layoutcheck": ["spawn_safe", "sites_reachable", "nav_flood_100", "no_floating", "no_intersection"],
-    "screenshots": ["overview_top", "A_site", "B_site", "mid", "T_spawn", "CT_spawn"]
+    "layoutcheck": [
+      "bounds",
+      "buildings_14",
+      "materials_6",
+      "openings",
+      "height_layers",
+      "reachability",
+      "clearance",
+      "lanes_8",
+      "rotation_times",
+      "boxes_sync"
+    ],
+    "screenshots": [
+      "overview_top",
+      "A_site",
+      "B_site",
+      "mid",
+      "T_spawn",
+      "CT_spawn"
+    ]
   }
 }

@@ -130,3 +130,15 @@ TEST_CASE("导航不可达时仍朝敌人方向推进") {
     CHECK(command.move_forward == doctest::Approx(1.0f));
     CHECK(command.yaw_degrees == doctest::Approx(90.0).epsilon(0.01));
 }
+
+TEST_CASE("Bot 被墙体遮挡时不开火而是推进") {
+    const WorldState state = Duel();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{-64.0f, 200.0f, 0.0f}, {64.0f, 232.0f, 128.0f}};
+
+    const auto command = BotDecide(state, DefaultContent(), 0, &map);
+
+    CHECK(command.kind == CommandKind::Move);
+    CHECK(command.move_forward > 0.0f);
+}

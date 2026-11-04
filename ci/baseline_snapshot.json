@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "created_at": "2026-11-04T15:29:58",
-  "commit": "9aad8e9646fa3ae1e665caae2eea2e844c20d216",
+  "created_at": "2026-11-04T19:35:56",
+  "commit": "d8387b6223429523630da5ec68af9b5de1c5e6db",
   "budgets": {
     "planning_doc_chars": 3000,
     "doc_bytes": 20480,
@@ -16,9 +16,14 @@
     "max_function_complexity": 12,
     "max_source_lines": 400,
     "duplicate_block_lines": 8,
-    "duplicate_para_chars": 80
+    "duplicate_para_chars": 80,
+    "diff_ignore_prefixes": [
+      "assets/generated/",
+      "host/captures/",
+      "verification/actual/"
+    ]
   },
-  "policy_hash": "c0726234953e36e186892d289cbd4d7ae7934f053b16a5a68fb87bc664f15e7e",
+  "policy_hash": "6bc515f75205052528d171eb6a3aaaf669a653c3ebb163fcc952af4a639d6468",
   "protected": {
     "version": 1,
     "note": "受保护回归用例清单：只增不减。文件/用例删除需人工批准并记录 diff.md。",

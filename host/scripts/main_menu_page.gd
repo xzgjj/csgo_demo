@@ -16,7 +16,7 @@ func build() -> void:
 	settings_button = UiFactory.add_button(box, "设置")
 	quit_button = UiFactory.add_button(box, "退出")
 	hint_label = UiFactory.add_label(
-			box, "Esc 暂停 · Tab 比分板 · B 买护甲 · E 下包 · G/F/V 投掷", 14)
+			box, "WASD 移动 · Shift 静步 · Space 跳 · Ctrl 蹲 · 左键开火 · 右键瞄准 · R 换弹 · 1/2/3 切枪 · F5 视角 · F3 调试 · Esc 暂停 · Tab 比分板 · B 护甲 · E 下包 · G/F/V 投掷", 14)
 	hint_label.add_theme_color_override("font_color", UiFactory.NEUTRAL_COLOR)
 
 

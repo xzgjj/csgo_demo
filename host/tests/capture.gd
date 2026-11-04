@@ -18,17 +18,22 @@ func _capture_flow() -> void:
 	await RenderingServer.frame_post_draw
 	_save("menu.png")
 
-	main._start_play()
-	main.sim.set_move(0, 0.0, 0.0, 1.0, 0.0, false, false)
-	for i in 40:
-		main.sim.tick()
-	main.sim.fire(0, 0.0, 0.0)
-	main.sim.tick()
+	main._start_match()
+	main.sim.set_move(0, 90.0, 0.0, 1.0, 0.0, false, false)
+	for i in 36:
+		main.sim.tick_auto()
 	main._update_view()
 	main._update_hud()
 	await process_frame
 	await RenderingServer.frame_post_draw
 	_save("gameplay.png")
+	main.sim.fire(0, 0.0, 0.0)
+	main.sim.tick_auto()
+	main._update_view()
+	main._update_hud()
+	await process_frame
+	await RenderingServer.frame_post_draw
+	_save("gameplay_fire.png")
 	quit(0)
 
 func _save(name: String) -> void:

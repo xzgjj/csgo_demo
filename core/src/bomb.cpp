@@ -1,20 +1,27 @@
 #include "recoil/sim/bomb.h"
 
+#include "recoil/sim/reject.h"
 #include "recoil/sim/round.h"
 
 namespace recoil {
 
 void ApplyBombCommand(WorldState& state, const Content& content, const Command& command,
                       EventList& events) {
-    if (command.player >= state.player_count) {
+    if (!EnsureAlivePlayer(state, command.player, events)) {
         return;
     }
     PlayerState& player = state.players[command.player];
-    if (!player.alive) {
-        return;
-    }
     if (command.kind == CommandKind::Plant) {
-        if (state.bomb.planted || !player.has_bomb || state.round.phase != RoundPhase::Live) {
+        if (state.bomb.planted) {
+            PushReject(events, command.player, RejectReason::AlreadyPlanted);
+            return;
+        }
+        if (!player.has_bomb) {
+            PushReject(events, command.player, RejectReason::NoBombCarrier);
+            return;
+        }
+        if (state.round.phase != RoundPhase::Live) {
+            PushReject(events, command.player, RejectReason::InvalidPhase);
             return;
         }
         state.bomb.planted = true;
@@ -27,10 +34,16 @@ void ApplyBombCommand(WorldState& state, const Content& content, const Command& 
         return;
     }
     if (command.kind == CommandKind::Defuse) {
-        if (!state.bomb.planted || state.round.phase != RoundPhase::Live) {
+        if (!state.bomb.planted) {
+            PushReject(events, command.player, RejectReason::BombNotPlanted);
+            return;
+        }
+        if (state.round.phase != RoundPhase::Live) {
+            PushReject(events, command.player, RejectReason::InvalidPhase);
             return;
         }
         if (player.team != static_cast<uint8_t>(Team::CT)) {
+            PushReject(events, command.player, RejectReason::NotDefuser);
             return;
         }
         state.bomb.defusing = true;

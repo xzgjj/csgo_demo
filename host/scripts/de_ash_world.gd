@@ -1,5 +1,6 @@
 class_name DeAshWorld
 extends Node3D
+const MapDecorScript = preload("res://scripts/map_decor.gd")
 ## demo 世界：优先按 host/scenes/de_ash_boxes.json 生成 de_ash（墙 / 车道 / 包点 / 出生 / 道具，
 ## 材质由 MaterialLib 按 kind 选择）；JSON 缺失或非法时回退到与内核 ±800 对齐的 1600 灰盒。
 ## 包点/出生锚点直接取盒子清单里 kind=site/spawn 的中心，保证与布局数据一致。
@@ -37,6 +38,13 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 		return false
 	source = "de_ash"
 	object_count = blockout.box_count
+	var glb_world := _load_map_glb()
+	if glb_world != null:
+		# 视觉用 Blender 细节 GLB（212 mesh/装饰件），碰撞仍以 boxes JSON / 内核 MapDef 为准。
+		blockout.visible = false
+		add_child(glb_world)
+		MapDecorScript.add(self, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
+		source = "de_ash_glb"
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)
 	for anchor: Vector3 in blockout.site_anchors:
@@ -45,13 +53,32 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 	return true
 
 
+## 加载 Blender 导出的细节地图；缺失/失败时返回 null（保留 blockout 视觉）。
+func _load_map_glb() -> Node3D:
+	const GLB_PATH := "res://models/map/de_ash.glb"
+	if not FileAccess.file_exists(GLB_PATH):
+		return null
+	var document := GLTFDocument.new()
+	var gltf_state := GLTFState.new()
+	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
+		push_warning("de_ash GLB 解析失败，回退 blockout 视觉")
+		return null
+	var scene := document.generate_scene(gltf_state)
+	MaterialLib.apply_to_scene(scene)
+	return scene as Node3D
+
+
 func _build_environment() -> void:
 	var environment := Environment.new()
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = _make_sky()
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	environment.ambient_light_energy = 0.60
+	environment.ambient_light_energy = 0.95
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.fog_enabled = true
+	environment.fog_light_color = Color(0.78, 0.72, 0.62)
+	environment.fog_density = 0.00035
+	environment.fog_aerial_perspective = 0.35
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = environment
@@ -59,9 +86,19 @@ func _build_environment() -> void:
 	var sun := DirectionalLight3D.new()
 	sun.name = "Sun"
 	sun.rotation_degrees = Vector3(-50.0, -35.0, 0.0)
-	sun.light_energy = 1.6
+	sun.light_energy = 1.8
 	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 4096.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.light_energy = 1.9
+	sun.light_color = Color(1.0, 0.95, 0.86)
 	add_child(sun)
+	var fill := DirectionalLight3D.new()
+	fill.name = "Fill"
+	fill.rotation_degrees = Vector3(-25.0, 140.0, 0.0)
+	fill.light_energy = 0.45
+	fill.shadow_enabled = false
+	add_child(fill)
 
 
 func _make_sky() -> Sky:

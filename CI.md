@@ -60,3 +60,14 @@ python -X utf8 build.py --all                   # 构建+测试+CI
 ## 例外
 
 人工批准方可豁免；例外写入提交说明与 `diff.md`，不做永久 skip。连续 3 次非确定性失败即隔离并查根因。
+
+## v4 补充说明（2026-11-04）
+
+- 17 项检查中的 `calibration`：跑 `tools/calibrate/run_calibration.py`（容差门 37/37）与
+  `tools/verify/run_reference_tests.py`（靶场 6/6），任一失败即 CI FAIL。
+- `map_layout`：跑 `tools/mapgen/check_layout.py`，覆盖 schema/材质数/建筑 14/洞口/高度层可达/悬浮/穿插/
+  对线净宽净空/时长漂移/出生安全/包点/boxes 派生同步/8 条视线与出生点对穿检查。
+- 地图 6 机位截图 golden 属于**验收项**（`tools/verify/run_map_goldens.py`，需窗口化 GPU），不放进 headless CI。
+- `lint`：本机仅安装 clang-format 与 ruff 时，GDScript 不做 gdformat 检查（工具缺失会明确列在 detail 里，
+  不静默通过）；GDScript 采用 Tab 缩进为项目既有约定（与 CLAUDE.md“禁 Tab”为 C++/Python 规则，GDScript 例外）。
+- `diff_budget`：未跟踪二进制（.png/.glb/.blend/.blend1 等）按 0 行计；`*.blend1` 已在 .gitignore 忽略。

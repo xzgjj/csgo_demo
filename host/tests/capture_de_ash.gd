@@ -1,5 +1,6 @@
 extends SceneTree
-## 读取 de_ash_boxes.json 搭建 blockout，输出 6 个机位截图并退出。
+const MapDecorScript = preload("res://scripts/map_decor.gd")
+## 输出 de_ash 6 个机位截图（视觉=Blender 细节 GLB，缺失时回退 boxes blockout）。
 ## 用法：godot --path host --script res://tests/capture_de_ash.gd
 
 func _initialize() -> void:
@@ -16,20 +17,25 @@ func _initialize() -> void:
 	var root3d := Node3D.new()
 	root.add_child(root3d)
 	_build_world(root3d)
-	_build_boxes(root3d, data.get("boxes", []))
+	var glb := _load_map_glb()
+	MapDecorScript.add(root3d, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
+	if glb != null:
+		root3d.add_child(glb)
+	else:
+		_build_boxes(root3d, data.get("boxes", []))
 	var out := ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(out)
 	var views := {
-		"overview_top": [Vector3(0, 3400, 0), Vector3(0, 0, 0)],
-		"A_site": [Vector3(900, 500, 1200), Vector3(-1100, 0, -700)],
-		"B_site": [Vector3(-900, 500, -1200), Vector3(1100, 0, 700)],
-		"mid": [Vector3(0, 220, 900), Vector3(0, 0, -400)],
-		"T_spawn": [Vector3(0, 200, 1750), Vector3(0, 0, 0)],
-		"CT_spawn": [Vector3(0, 200, -1750), Vector3(0, 0, 0)],
+		"overview_top": [Vector3(0, 3200, 0), Vector3(0, 0, 0)],
+		"A_site": [Vector3(1400, 900, 1900), Vector3(800, 0, 1150)],
+		"B_site": [Vector3(-1500, 900, -1900), Vector3(-800, 0, -1150)],
+		"mid": [Vector3(0, 300, 1400), Vector3(0, 20, -600)],
+		"T_spawn": [Vector3(1700, 220, 500), Vector3(1700, 20, 0)],
+		"CT_spawn": [Vector3(-1700, 220, -500), Vector3(-1700, 20, 0)],
 	}
 	var cam := Camera3D.new()
 	cam.fov = 75.0
-	cam.far = 6000.0
+	cam.far = 12000.0
 	root3d.add_child(cam)
 	_capture.call_deferred(cam, out, views)
 
@@ -56,15 +62,20 @@ func _build_world(root3d: Node3D) -> void:
 	sky.sky_material = mat
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.65
+	env.ambient_light_energy = 0.95
 	var world_env := WorldEnvironment.new()
 	world_env.environment = env
 	root3d.add_child(world_env)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-55, -30, 0)
-	sun.light_energy = 1.5
+	sun.light_energy = 1.8
 	sun.shadow_enabled = true
 	root3d.add_child(sun)
+	var fill := DirectionalLight3D.new()
+	fill.rotation_degrees = Vector3(-25, 140, 0)
+	fill.light_energy = 0.45
+	fill.shadow_enabled = false
+	root3d.add_child(fill)
 
 func _build_boxes(root3d: Node3D, boxes: Array) -> void:
 	for item: Dictionary in boxes:
@@ -80,3 +91,17 @@ func _build_boxes(root3d: Node3D, boxes: Array) -> void:
 		mesh.position = Vector3(item["center"][0], item["center"][1], item["center"][2])
 		mesh.rotation.y = item.get("rot_y", 0.0)
 		root3d.add_child(mesh)
+
+
+func _load_map_glb() -> Node3D:
+	const GLB_PATH := "res://models/map/de_ash.glb"
+	if not FileAccess.file_exists(GLB_PATH):
+		return null
+	var document := GLTFDocument.new()
+	var gltf_state := GLTFState.new()
+	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
+		push_warning("de_ash GLB 解析失败，回退 boxes blockout")
+		return null
+	var scene := document.generate_scene(gltf_state)
+	MaterialLib.apply_to_scene(scene)
+	return scene as Node3D

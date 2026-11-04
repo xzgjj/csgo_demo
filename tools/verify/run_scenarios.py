@@ -128,6 +128,17 @@ def run_one(godot: Path, scenario: Path, args) -> int:
     return failures
 
 
+def run_input_smoke(godot: Path) -> bool:
+    """输入契约回归：WASD/跳/换弹/切枪/右键瞄准/F5/F3（headless，代码断言）。"""
+    args = [str(godot), "--headless", "--path", "host", "--script", "res://tests/input_smoke.gd"]
+    proc = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
+                          errors="replace", timeout=180)
+    output = (proc.stdout or "") + (proc.stderr or "")
+    ok = proc.returncode == 0 and "INPUT_SMOKE PASS" in output
+    print(f"[input_contract] {'PASS' if ok else 'FAIL'}")
+    return ok
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--headless", action="store_true", help="仅代码断言（CI）")
@@ -146,8 +157,12 @@ def main() -> int:
         print("没有场景可运行")
         return 0
     failures = sum(run_one(godot, scenario, args) for scenario in scenarios)
-    print(f"summary: {len(scenarios)} scenarios, failures={failures}")
-    return 0 if failures == 0 else 1
+    input_failed = 0
+    if args.headless and not args.scenario:
+        input_failed = 0 if run_input_smoke(godot) else 1
+    print(f"summary: {len(scenarios)} scenarios + input_contract, "
+          f"failures={failures + input_failed}")
+    return 0 if failures + input_failed == 0 else 1
 
 
 

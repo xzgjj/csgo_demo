@@ -35,6 +35,16 @@ def _numstat(spec):
     return files, lines
 
 
+BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".glb", ".blend", ".exe", ".dll", ".bin"}
+
+
+def _line_count(path):
+    """未跟踪文件行数：二进制按 0 行计，避免 PNG/GLB 被当文本撑爆行预算。"""
+    if path.suffix.lower() in BINARY_SUFFIXES:
+        return 0
+    return path.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+
+
 def _untracked(spec):
     files, lines = set(), 0
     rc, out = git("status", "--porcelain")
@@ -55,11 +65,11 @@ def _untracked(spec):
                 if any(part in sub for part in ("__pycache__", ".godot", "node_modules")):
                     continue
                 files.add(sub)
-                lines += f.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+                lines += _line_count(f)
             continue
         files.add(rel)
         if p.is_file():
-            lines += p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+            lines += _line_count(p)
     return files, lines
 
 
@@ -134,7 +144,7 @@ def _policy_hash(spec):
                 continue
             if rel in ("ci/baseline_snapshot.json", "ci/spec.json.bak"):
                 continue
-            h.update(x.read_text(encoding="utf-8", errors="replace").encode("utf-8"))
+            h.update(x.read_bytes().replace(b"\r\n", b"\n"))
     return h.hexdigest()
 
 
