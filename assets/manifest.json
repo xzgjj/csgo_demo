@@ -1,0 +1,7 @@
+{
+  "schema": "asset-manifest/1",
+  "assets": [
+    {"id": "map-de_ash-blockout", "type": "map_source", "path": "content/maps/de_ash.glb",
+     "license": "Original", "author": "xzgjj", "source": "tools/blender/build_de_ash.py 生成", "hash": ""}
+  ]
+}

@@ -15,6 +15,8 @@ var camera: Camera3D
 var target_mesh: MeshInstance3D
 var smoke_mesh: MeshInstance3D
 var blind_overlay: ColorRect
+var result_label: Label
+var scoreboard_label: Label
 var throw_was := {"he": false, "flash": false, "smoke": false}
 var hud_label: Label
 var menu_layer: CanvasLayer
@@ -143,6 +145,19 @@ func _build_ui() -> void:
 	settings_layer = _make_menu("设置（占位）", ["返回"], [_hide_settings])
 	settings_layer.visible = false
 
+	result_label = Label.new()
+	result_label.set_anchors_preset(Control.PRESET_CENTER)
+	result_label.position = Vector2(420, 300)
+	result_label.add_theme_font_size_override("font_size", 40)
+	result_label.visible = false
+	hud.add_child(result_label)
+
+	scoreboard_label = Label.new()
+	scoreboard_label.position = Vector2(460, 80)
+	scoreboard_label.add_theme_font_size_override("font_size", 28)
+	scoreboard_label.visible = false
+	hud.add_child(scoreboard_label)
+
 func _make_menu(title: String, buttons: Array, callbacks: Array) -> CanvasLayer:
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -251,6 +266,14 @@ func _update_view() -> void:
 	if smoke_on:
 		smoke_mesh.position = Vector3(-sim.get_smoke_y(), 144.0, -sim.get_smoke_x())
 	blind_overlay.color = Color(1, 1, 1, clampf(float(sim.get_blind_ticks(0)) / 128.0, 0.0, 0.85))
+	var phase: int = sim.get_round_phase()
+	result_label.visible = phase >= 2
+	if phase >= 2:
+		var winner := "T" if sim.get_score_t() > sim.get_score_ct() else "CT"
+		result_label.text = "MATCH END" if phase == 3 else "ROUND OVER"
+		result_label.text += "  %d : %d" % [sim.get_score_t(), sim.get_score_ct()]
+	scoreboard_label.visible = Input.is_key_pressed(KEY_TAB)
+	scoreboard_label.text = "T %d : %d CT" % [sim.get_score_t(), sim.get_score_ct()]
 
 func _update_hud() -> void:
 	last_hits = sim.get_total_damage_events()
