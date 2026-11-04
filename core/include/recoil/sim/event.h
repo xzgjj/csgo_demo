@@ -37,6 +37,13 @@ enum class RejectReason : int32_t {
     EmptyMagazine = 5,
     NoReserve = 6,
     MagazineFull = 7,
+    NoBombCarrier = 8,
+    BombNotPlanted = 9,
+    AlreadyPlanted = 10,
+    InvalidPhase = 11,
+    NotDefuser = 12,
+    NoGrenadeSlot = 13,
+    MatchEnded = 14,
 };
 
 struct Event {

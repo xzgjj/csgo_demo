@@ -14,6 +14,7 @@ using recoil::DefaultContent;
 using recoil::EventKind;
 using recoil::EventList;
 using recoil::GrenadeKind;
+using recoil::RejectReason;
 using recoil::RoundPhase;
 using recoil::Step;
 using recoil::StepResult;
@@ -69,6 +70,16 @@ int CountEvents(const EventList& events, EventKind kind) {
         }
     }
     return total;
+}
+
+bool HasReject(const EventList& events, RejectReason reason) {
+    for (int i = 0; i < events.count; ++i) {
+        if (events.items[i].kind == EventKind::CommandRejected &&
+            events.items[i].value == static_cast<int32_t>(reason)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace
@@ -188,4 +199,19 @@ TEST_CASE("比赛结束后不能投掷手雷") {
     const auto result = Step(state, DefaultContent(), throw_cmd);
 
     CHECK(result.state.grenades[0].active == false);
+    CHECK(HasReject(result.events, RejectReason::MatchEnded));
+}
+
+TEST_CASE("手雷槽位已满时投掷被拒绝") {
+    WorldState state = MakeArena();
+    for (auto& grenade : state.grenades) {
+        grenade.active = true;
+        grenade.fuse_ticks = 1000;
+    }
+    const std::array<Command, 1> throw_cmd{Throw(GrenadeKind::HE, 90.0f, 0.0f)};
+
+    const auto result = Step(state, DefaultContent(), throw_cmd);
+
+    CHECK(HasReject(result.events, RejectReason::NoGrenadeSlot));
+    CHECK(CountEvents(result.events, EventKind::GrenadeThrown) == 0);
 }

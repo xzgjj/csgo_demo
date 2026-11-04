@@ -92,6 +92,10 @@ func _run_step(step: Dictionary) -> void:
 			_auto_tick(int(step.get("ticks", 1)))
 		"assert_nav":
 			_assert_nav(step)
+		"walk_nav":
+			_walk_nav(step)
+		"restart_match":
+			main._start_match()
 		_:
 			push_error("未知 action: " + action)
 
@@ -103,6 +107,40 @@ func _tick(count: int) -> void:
 func _auto_tick(count: int) -> void:
 	for i in count:
 		main.sim.tick_auto()
+
+## 验收：把玩家 0 放到 from，按内核 NavPath 航点实际走，检查是否到达 to（防“有路走不到”）。
+func _walk_nav(step: Dictionary) -> void:
+	var from: Array = step.get("from", [0, 0, 0])
+	var to: Array = step.get("to", [0, 0, 0])
+	var max_ticks: int = int(step.get("max_ticks", 900))
+	var name := str(step.get("name", "walk"))
+	main.sim.set_player_position(0, float(from[0]), float(from[1]), float(from[2]))
+	main.sim.tick()
+	var points: PackedVector3Array = main.sim.nav_points(
+			float(from[0]), float(from[1]), float(from[2]),
+			float(to[0]), float(to[1]), float(to[2]))
+	if points.is_empty():
+		failures.append("walk_nav %s: 无导航路径" % name)
+		return
+	var target := Vector3(float(to[0]), float(to[1]), float(to[2]))
+	var index := 0
+	var reached := false
+	for i in max_ticks:
+		var pos := Vector3(main.sim.get_x(0), main.sim.get_y(0), main.sim.get_z(0))
+		if pos.distance_to(target) < 56.0:
+			reached = true
+			break
+		while index < points.size() - 1 and pos.distance_to(points[index]) < 40.0:
+			index += 1
+		var waypoint: Vector3 = points[index]
+		var yaw := atan2(waypoint.y - pos.y, waypoint.x - pos.x) * (180.0 / PI)
+		main.sim.set_move(0, yaw, 0.0, 1.0, 0.0, false, false)
+		main.sim.tick()
+	if not reached:
+		var last := Vector3(main.sim.get_x(0), main.sim.get_y(0), main.sim.get_z(0))
+		var next: Vector3 = points[min(index, points.size() - 1)]
+		failures.append("walk_nav %s: 未到达 to=%s last=%s index=%d next=%s points=%s" %
+				[name, str(target), str(last), index, str(next), str(points)])
 
 func _assert_nav(step: Dictionary) -> void:
 	var from: Array = step.get("from", [0, 0, 0])

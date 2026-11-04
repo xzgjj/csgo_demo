@@ -2,6 +2,7 @@
 
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
+#include "recoil/sim/event.h"
 #include "recoil/sim/step.h"
 
 namespace {
@@ -10,6 +11,9 @@ using recoil::Command;
 using recoil::CommandKind;
 using recoil::Content;
 using recoil::DefaultContent;
+using recoil::EventKind;
+using recoil::EventList;
+using recoil::RejectReason;
 using recoil::RoundPhase;
 using recoil::Step;
 using recoil::Team;
@@ -42,6 +46,16 @@ Command Cmd(CommandKind kind, uint8_t player = 0) {
     command.kind = kind;
     command.player = player;
     return command;
+}
+
+bool HasReject(const EventList& events, RejectReason reason) {
+    for (int i = 0; i < events.count; ++i) {
+        if (events.items[i].kind == EventKind::CommandRejected &&
+            events.items[i].value == static_cast<int32_t>(reason)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 } // namespace
@@ -169,4 +183,72 @@ TEST_CASE("埋包与拆包成功给对应玩家奖励") {
     const auto result = Step(defusing, fast, defuse);
     CHECK(result.state.bomb.defused);
     CHECK(result.state.players[1].money == 800 + 300 + 3250);
+}
+
+TEST_CASE("非法埋包/拆包带具体原因拒绝且不改变状态") {
+    const Content content = DefaultContent();
+
+    SUBCASE("非携带者埋包") {
+        WorldState state = MakeBombWorld();
+        state.players[0].has_bomb = false;
+        const std::array<Command, 1> plant{Cmd(CommandKind::Plant)};
+        const auto result = Step(state, content, plant);
+        CHECK(HasReject(result.events, RejectReason::NoBombCarrier));
+        CHECK(result.state.bomb.planted == false);
+    }
+
+    SUBCASE("已下包时再次埋包") {
+        WorldState state = MakeBombWorld();
+        state.bomb.planted = true;
+        state.bomb.timer_ticks = 1000;
+        const std::array<Command, 1> plant{Cmd(CommandKind::Plant)};
+        const auto result = Step(state, content, plant);
+        CHECK(HasReject(result.events, RejectReason::AlreadyPlanted));
+        CHECK(result.state.players[0].has_bomb);
+    }
+
+    SUBCASE("冻结期埋包") {
+        WorldState state = MakeBombWorld();
+        state.round.phase = RoundPhase::Freeze;
+        state.round.phase_ticks = 100;
+        const std::array<Command, 1> plant{Cmd(CommandKind::Plant)};
+        const auto result = Step(state, content, plant);
+        CHECK(HasReject(result.events, RejectReason::InvalidPhase));
+        CHECK(result.state.bomb.planted == false);
+    }
+
+    SUBCASE("未下包时拆包") {
+        WorldState state = MakeBombWorld();
+        const std::array<Command, 1> defuse{Cmd(CommandKind::Defuse, 1)};
+        const auto result = Step(state, content, defuse);
+        CHECK(HasReject(result.events, RejectReason::BombNotPlanted));
+        CHECK(result.state.bomb.defuse_progress == 0);
+    }
+
+    SUBCASE("T 不能拆包") {
+        WorldState state = MakeBombWorld();
+        state.bomb.planted = true;
+        state.bomb.timer_ticks = 1000;
+        const std::array<Command, 1> defuse{Cmd(CommandKind::Defuse, 0)};
+        const auto result = Step(state, content, defuse);
+        CHECK(HasReject(result.events, RejectReason::NotDefuser));
+        CHECK(result.state.bomb.defuse_progress == 0);
+    }
+
+    SUBCASE("死亡玩家埋包") {
+        WorldState state = MakeBombWorld();
+        state.players[0].alive = false;
+        const std::array<Command, 1> plant{Cmd(CommandKind::Plant)};
+        const auto result = Step(state, content, plant);
+        CHECK(HasReject(result.events, RejectReason::Dead));
+        CHECK(result.state.bomb.planted == false);
+    }
+
+    SUBCASE("非法玩家索引埋包") {
+        WorldState state = MakeBombWorld();
+        const std::array<Command, 1> plant{Cmd(CommandKind::Plant, 9)};
+        const auto result = Step(state, content, plant);
+        CHECK(HasReject(result.events, RejectReason::InvalidPlayer));
+        CHECK(result.state.bomb.planted == false);
+    }
 }

@@ -26,6 +26,7 @@ target_compile_options(recoil_core PRIVATE
 add_executable(recoil_tests
     tests/doctest_main.cpp
     tests/test_5v5.cpp
+    tests/test_ballistics.cpp
     tests/test_bomb.cpp
     tests/test_bot.cpp
     tests/test_grenades.cpp

@@ -15,6 +15,7 @@
 #include "recoil/sim/step.h"
 #include "recoil/world/map.h"
 #include "recoil_default_map.h"
+#include "recoil_match_ops.h"
 
 using namespace godot;
 
@@ -84,6 +85,8 @@ protected:
         BIND(get_alive_count, "team");
         BIND(get_has_bomb, "player");
         BIND(nav_path_points, "fx", "fy", "fz", "tx", "ty", "tz");
+        BIND(nav_points, "fx", "fy", "fz", "tx", "ty", "tz");
+        BIND(set_player_position, "player", "x", "y", "z");
 #undef BIND
     }
 
@@ -190,7 +193,6 @@ public:
         command.player = static_cast<uint8_t>(player);
         pending_.push_back(command);
     }
-
     int get_bomb_planted() const {
         return state_.bomb.planted ? 1 : 0;
     }
@@ -250,29 +252,28 @@ public:
         }
         tick();
     }
-
     int get_wall_count() const {
-        return map_.wall_count;
+        return recoil_host::WallCount(map_);
     }
     int get_round_number() const {
         return state_.round.number;
     }
     int get_alive_count(int team) const {
-        int count = 0;
-        for (uint8_t i = 0; i < state_.player_count; ++i) {
-            if (state_.players[i].alive && static_cast<int>(state_.players[i].team) == team) {
-                ++count;
-            }
-        }
-        return count;
+        return recoil_host::AliveCount(state_, team);
     }
     int get_has_bomb(int player) const {
-        return state_.players[player].has_bomb ? 1 : 0;
+        return recoil_host::HasBomb(state_, player);
     }
     int nav_path_points(float fx, float fy, float fz, float tx, float ty, float tz) const {
-        return static_cast<int>(recoil::NavPath(map_, {fx, fy, fz}, {tx, ty, tz}).size());
+        return recoil_host::NavPointCount(map_, fx, fy, fz, tx, ty, tz);
     }
-
+    PackedVector3Array nav_points(float fx, float fy, float fz, float tx, float ty,
+                                  float tz) const {
+        return recoil_host::NavPoints(map_, fx, fy, fz, tx, ty, tz);
+    }
+    void set_player_position(int player, float x, float y, float z) {
+        recoil_host::SetPlayerPosition(state_, player, x, y, z);
+    }
     float get_x(int player) const {
         return state_.players[player].position.x;
     }
@@ -339,7 +340,6 @@ public:
     int get_tick() const {
         return static_cast<int>(state_.tick);
     }
-
     int _count(recoil::EventKind kind) const {
         int total = 0;
         for (int i = 0; i < last_events_.count; ++i) {

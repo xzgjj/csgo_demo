@@ -8,6 +8,7 @@
 #include "recoil/movement/movement.h"
 #include "recoil/sim/bomb.h"
 #include "recoil/sim/grenades.h"
+#include "recoil/sim/reject.h"
 #include "recoil/sim/round.h"
 
 namespace recoil {
@@ -53,10 +54,6 @@ bool RayVsAabb(const Vec3& origin, const Vec3& dir, const Vec3& lo, const Vec3& 
     return true;
 }
 
-void PushReject(EventList& events, uint8_t player, RejectReason reason) {
-    events.Push({EventKind::CommandRejected, player, 0, static_cast<int32_t>(reason)});
-}
-
 void FinishReload(PlayerState& player, const Content& content, uint8_t source, EventList& events) {
     const int capacity =
         std::max(0, static_cast<int>(content.rifle.magazine) - static_cast<int>(player.weapon.mag));
@@ -88,15 +85,10 @@ void ApplyTimers(WorldState& state, const Content& content, EventList& events) {
 
 void StartReload(WorldState& state, const Content& content, const Command& command,
                  EventList& events) {
-    if (command.player >= state.player_count) {
-        PushReject(events, command.player, RejectReason::InvalidPlayer);
+    if (!EnsureAlivePlayer(state, command.player, events)) {
         return;
     }
     PlayerState& player = state.players[command.player];
-    if (!player.alive) {
-        PushReject(events, command.player, RejectReason::Dead);
-        return;
-    }
     if (player.weapon.reloading) {
         PushReject(events, command.player, RejectReason::Reloading);
         return;
@@ -234,15 +226,10 @@ void Fire(WorldState& state, const Content& content, const Command& command, con
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {
-    if (command.player >= state.player_count) {
-        PushReject(events, command.player, RejectReason::InvalidPlayer);
+    if (!EnsureAlivePlayer(state, command.player, events)) {
         return;
     }
     PlayerState& player = state.players[command.player];
-    if (!player.alive) {
-        PushReject(events, command.player, RejectReason::Dead);
-        return;
-    }
     constexpr float kPi = 3.14159265358979323846f;
     const float yaw = command.yaw_degrees * (kPi / 180.0f);
     const float forward_x = std::cos(yaw);
@@ -321,6 +308,9 @@ uint64_t HashState(const WorldState& state) {
         (static_cast<uint64_t>(state.bomb.exploded) << 2) |
         (static_cast<uint64_t>(state.bomb.timer_ticks) << 8) |
         (static_cast<uint64_t>(state.bomb.defuse_progress) << 32));
+    mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.bomb.position.x)));
+    mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.bomb.position.y)));
+    mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.bomb.position.z)));
     mix(static_cast<uint64_t>(state.smoke.active) |
         (static_cast<uint64_t>(state.smoke.ticks_left) << 8));
     mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.smoke.position.x)));
@@ -356,6 +346,8 @@ uint64_t HashState(const WorldState& state) {
             (static_cast<uint64_t>(player.weapon.cooldown_ticks) << 32) |
             (static_cast<uint64_t>(player.weapon.reload_ticks_left) << 48));
         mix(static_cast<uint64_t>(player.weapon.reloading));
+        mix(static_cast<uint64_t>(player.has_bomb) |
+            (static_cast<uint64_t>(player.has_defuser) << 1));
     }
     return hash;
 }

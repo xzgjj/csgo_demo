@@ -2,45 +2,290 @@
   "id": "demo_map",
   "map": "content/maps/de_ash.layout.json",
   "mode": "match",
-  "description": "de_ash 5v5 地图/导航双检查（A 轨）：MapDef 由派生盒子注入（全尺寸 4096），10 人 5v5 分队、C4/拆弹器、两层导航（L0 地面 / L2 +128 经楼梯）连通，A/B 双点与猫道可达。",
+  "description": "de_ash 5v5 地图/导航双检查（A 轨）：MapDef 由派生盒子注入（全尺寸 4096），10 人 5v5 分队、C4/拆弹器；两层导航（L0 地面 / L2 +128 经楼梯）连通；A/B 双点与猫道/天桥可达且可实走；出生点互不对穿；屋顶不可达；200+ tick 自动对局可推进。",
   "script": [
-    {"action": "check", "name": "match_start", "asserts": [
-      {"player": 0, "field": "player_count", "equals": 10},
-      {"player": 0, "field": "round_number", "equals": 1},
-      {"player": 0, "field": "round_phase", "equals": 0},
-      {"player": 0, "field": "alive_count_t", "equals": 5},
-      {"player": 0, "field": "alive_count_ct", "equals": 5},
-      {"player": 0, "field": "has_bomb", "equals": 1},
-      {"player": 0, "field": "z", "equals": 0},
-      {"player": 0, "field": "wall_count", "min": 90}
-    ]},
-    {"action": "assert_nav", "name": "T_to_A", "from": [0, -1700, 0],
-     "to": [-1200, -900, 0], "expect": "path"},
-    {"action": "assert_nav", "name": "T_to_B", "from": [0, -1700, 0],
-     "to": [1200, 900, 0], "expect": "path"},
-    {"action": "assert_nav", "name": "CT_to_A", "from": [0, 1700, 0],
-     "to": [-1200, -900, 0], "expect": "path"},
-    {"action": "assert_nav", "name": "CT_to_B", "from": [0, 1700, 0],
-     "to": [1200, 900, 0], "expect": "path"},
-    {"action": "assert_nav", "name": "B_catwalk_top", "from": [0, -1700, 0],
-     "to": [1008, 1040, 128], "expect": "path"},
-    {"action": "assert_nav", "name": "mid_bridge_top", "from": [0, -1700, 0],
-     "to": [0, 0, 128], "expect": "path"},
-    {"action": "assert_nav", "name": "A_roof_unreachable", "from": [0, -1700, 0],
-     "to": [-1648, -900, 256], "expect": "none"},
-    {"action": "auto_tick", "ticks": 200},
-    {"action": "check", "name": "after_auto_ticks", "asserts": [
-      {"player": 0, "field": "round_phase", "min": 0},
-      {"player": 0, "field": "player_count", "equals": 10},
-      {"player": 0, "field": "round_number", "equals": 1},
-      {"player": 0, "field": "z", "equals": 0}
-    ]}
+    {
+      "action": "check",
+      "name": "match_start",
+      "asserts": [
+        {
+          "player": 0,
+          "field": "player_count",
+          "equals": 10
+        },
+        {
+          "player": 0,
+          "field": "round_number",
+          "equals": 1
+        },
+        {
+          "player": 0,
+          "field": "round_phase",
+          "equals": 0
+        },
+        {
+          "player": 0,
+          "field": "alive_count_t",
+          "equals": 5
+        },
+        {
+          "player": 0,
+          "field": "alive_count_ct",
+          "equals": 5
+        },
+        {
+          "player": 0,
+          "field": "has_bomb",
+          "equals": 1
+        },
+        {
+          "player": 0,
+          "field": "z",
+          "equals": 0
+        },
+        {
+          "player": 0,
+          "field": "wall_count",
+          "min": 90
+        }
+      ]
+    },
+    {
+      "action": "assert_nav",
+      "name": "T_to_A",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        -1200,
+        -900,
+        0
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "T_to_B",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        1200,
+        900,
+        0
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "CT_to_A",
+      "from": [
+        0,
+        1700,
+        0
+      ],
+      "to": [
+        -1200,
+        -900,
+        0
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "CT_to_B",
+      "from": [
+        0,
+        1700,
+        0
+      ],
+      "to": [
+        1200,
+        900,
+        0
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "A_platform_top",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        -1296,
+        -708,
+        64
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "B_catwalk_top",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        1008,
+        1040,
+        128
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "mid_bridge_top",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        0,
+        0,
+        128
+      ],
+      "expect": "path"
+    },
+    {
+      "action": "assert_nav",
+      "name": "A_roof_unreachable",
+      "from": [
+        0,
+        -1700,
+        0
+      ],
+      "to": [
+        -1648,
+        -900,
+        256
+      ],
+      "expect": "none"
+    },
+    {
+      "action": "walk_nav",
+      "name": "walk_A_platform",
+      "from": [
+        -1408,
+        -1100,
+        0
+      ],
+      "to": [
+        -1296,
+        -708,
+        64
+      ],
+      "max_ticks": 900
+    },
+    {
+      "action": "walk_nav",
+      "name": "walk_mid_bridge",
+      "from": [
+        500,
+        112,
+        0
+      ],
+      "to": [
+        0,
+        0,
+        128
+      ],
+      "max_ticks": 900
+    },
+    {
+      "action": "walk_nav",
+      "name": "walk_B_catwalk",
+      "from": [
+        1120,
+        1500,
+        0
+      ],
+      "to": [
+        1008,
+        1040,
+        128
+      ],
+      "max_ticks": 1200
+    },
+    {
+      "action": "restart_match"
+    },
+    {
+      "action": "auto_tick",
+      "ticks": 210
+    },
+    {
+      "action": "check",
+      "name": "spawn_safe_after_live",
+      "asserts": [
+        {
+          "player": 0,
+          "field": "alive_count_t",
+          "equals": 5
+        },
+        {
+          "player": 0,
+          "field": "alive_count_ct",
+          "equals": 5
+        },
+        {
+          "player": 0,
+          "field": "round_phase",
+          "min": 1
+        }
+      ]
+    },
+    {
+      "action": "auto_tick",
+      "ticks": 500
+    },
+    {
+      "action": "check",
+      "name": "round_progress",
+      "asserts": [
+        {
+          "player": 0,
+          "field": "player_count",
+          "equals": 10
+        },
+        {
+          "player": 0,
+          "field": "round_number",
+          "min": 1
+        },
+        {
+          "player": 0,
+          "field": "z",
+          "equals": 0
+        }
+      ]
+    }
   ],
   "asserts": [
-    {"player": 0, "field": "player_count", "equals": 10},
-    {"player": 0, "field": "round_number", "equals": 1}
+    {
+      "player": 0,
+      "field": "player_count",
+      "equals": 10
+    },
+    {
+      "player": 0,
+      "field": "round_number",
+      "min": 1
+    }
   ],
   "screenshots": [
-    {"name": "demo_map_gameplay", "width": 1280, "height": 720}
+    {
+      "name": "demo_map_gameplay",
+      "width": 1280,
+      "height": 720
+    }
   ]
 }
