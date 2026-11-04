@@ -2,9 +2,6 @@ extends Node3D
 ## Project Recoil 灰盒 demo：C++ 内核（GDExtension）驱动，Godot 只做表现与输入。
 ## 输入 → Command，内核 tick → 只读状态 → 相机/靶子/HUD。
 
-const ARENA_HALF := 800.0
-const WALL_THICKNESS := 32.0
-const WALL_HEIGHT := 200.0
 const EYE_HEIGHT := 64.0
 var sensitivity := 0.08
 
@@ -29,6 +26,9 @@ var bomb_was_down := false
 var last_hits := 0
 var last_shots := 0
 var last_dry := 0
+var blockout: BlockoutBuilder
+var viewmodel: WeaponViewmodel
+var weapon_key_was := -1
 
 func _ready() -> void:
 	sim = RecoilSim.new()
@@ -61,20 +61,10 @@ func _build_world() -> void:
 	sun.shadow_enabled = true
 	add_child(sun)
 
-	_add_box(Vector3(0, -10, 0), Vector3(ARENA_HALF * 2.0, 20.0, ARENA_HALF * 2.0), Color(0.32, 0.33, 0.35))
-	# 与 GDExtension 中 MapDef 的四周边界墙一一对应（sim 坐标 → Godot 坐标：(-y, z, -x)）。
-	_add_box(Vector3(0, WALL_HEIGHT * 0.5, -ARENA_HALF - WALL_THICKNESS * 0.5),
-			Vector3(ARENA_HALF * 2.0, WALL_HEIGHT, WALL_THICKNESS), Color(0.45, 0.42, 0.38))
-	_add_box(Vector3(0, WALL_HEIGHT * 0.5, ARENA_HALF + WALL_THICKNESS * 0.5),
-			Vector3(ARENA_HALF * 2.0, WALL_HEIGHT, WALL_THICKNESS), Color(0.45, 0.42, 0.38))
-	_add_box(Vector3(-ARENA_HALF - WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0),
-			Vector3(WALL_THICKNESS, WALL_HEIGHT, ARENA_HALF * 2.0), Color(0.42, 0.4, 0.36))
-	_add_box(Vector3(ARENA_HALF + WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0),
-			Vector3(WALL_THICKNESS, WALL_HEIGHT, ARENA_HALF * 2.0), Color(0.42, 0.4, 0.36))
-
-	# 几个箱子（仅表现，内核暂无对应碰撞体）。
-	_add_box(Vector3(-180, 40, -260), Vector3(120, 80, 120), Color(0.5, 0.36, 0.22))
-	_add_box(Vector3(260, 40, 180), Vector3(120, 80, 120), Color(0.5, 0.36, 0.22))
+	# blockout 来自 res://scenes/de_ash_boxes.json（de_ash 唯一事实源），逐盒按 kind 选材质。
+	blockout = BlockoutBuilder.new()
+	add_child(blockout)
+	blockout.build()
 
 	target_mesh = MeshInstance3D.new()
 	var capsule := CapsuleMesh.new()
@@ -104,16 +94,9 @@ func _build_world() -> void:
 	camera.far = 4000.0
 	add_child(camera)
 
-func _add_box(pos: Vector3, size: Vector3, color: Color) -> void:
-	var mesh_instance := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = color
-	box.material = mat
-	mesh_instance.mesh = box
-	mesh_instance.position = pos
-	add_child(mesh_instance)
+	viewmodel = WeaponViewmodel.new()
+	add_child(viewmodel)
+	viewmodel.attach(camera)
 
 func _build_ui() -> void:
 	var hud := CanvasLayer.new()
@@ -284,7 +267,12 @@ func _physics_process(_delta: float) -> void:
 	var fire_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	if fire_down and not fire_was_down:
 		sim.fire(0, yaw, pitch)
+		viewmodel.kick()
 	fire_was_down = fire_down
+	var weapon_key := _pressed_weapon_key()
+	if weapon_key != -1 and weapon_key != weapon_key_was:
+		_switch_weapon(weapon_key)
+	weapon_key_was = weapon_key
 	if Input.is_action_just_pressed("reload"):
 		sim.reload(0)
 	var buy_down := Input.is_key_pressed(KEY_B)
@@ -330,13 +318,32 @@ func _update_hud() -> void:
 	last_hits = sim.get_total_damage_events()
 	last_shots = sim.get_total_fire_events()
 	last_dry = sim.get_total_dryfire_events()
-	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
-		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
+	var weapon_name := viewmodel.display_name() if viewmodel != null else "-"
+	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   %s   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
+		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0), weapon_name,
 		sim.get_health(1), 0, _phase_text(), sim.get_money(0),
 		sim.get_score_t(), sim.get_score_ct(), sim.get_bomb_planted(), sim.get_bomb_timer(),
 		sim.get_smoke_active(), sim.get_blind_ticks(0),
 		last_shots, last_hits, last_dry,
 	]
+
+
+func _pressed_weapon_key() -> int:
+	if Input.is_key_pressed(KEY_1):
+		return 0
+	if Input.is_key_pressed(KEY_2):
+		return 1
+	if Input.is_key_pressed(KEY_3):
+		return 2
+	return -1
+
+
+func _switch_weapon(index: int) -> void:
+	if viewmodel == null:
+		return
+	var ids := viewmodel.weapon_ids()
+	if index < ids.size():
+		viewmodel.select_weapon(ids[index])
 
 func _throw_input(name: String, key: int, kind: int) -> void:
 	var down := Input.is_key_pressed(key)
