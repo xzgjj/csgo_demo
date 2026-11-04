@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(recoil_core STATIC
+    src/ai_tactics.cpp
     src/bomb.cpp
     src/bot.cpp
     src/content.cpp
@@ -34,6 +35,7 @@ add_executable(recoil_tests
     tests/test_nav.cpp
     tests/test_round.cpp
     tests/test_step.cpp
+    tests/test_tactics.cpp
 )
 target_include_directories(recoil_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 target_link_libraries(recoil_tests PRIVATE recoil_core)
