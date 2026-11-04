@@ -24,8 +24,47 @@ float YawTo(const Vec3& from, const Vec3& to) {
     return std::atan2(d.y, d.x) * (180.0f / kPi);
 }
 
-// 最近敌人用于推进目标；最近可见敌人用于开火（烟雾会挡住部分目标）。
-EnemyPick PickEnemies(const WorldState& state, uint8_t self) {
+// 实体遮挡：eye→chest 线段与 MapDef AABB 是否相交（可见性用）。
+bool WallBlocks(const MapDef* map, const Vec3& from, const Vec3& to) {
+    if (map == nullptr) {
+        return false;
+    }
+    const Vec3 d = to - from;
+    for (int i = 0; i < map->wall_count; ++i) {
+        const Wall& wall = map->walls[i];
+        float t_min = 0.0f;
+        float t_max = 1.0f;
+        bool hit = true;
+        for (int axis = 0; axis < 3 && hit; ++axis) {
+            const float origin = axis == 0 ? from.x : (axis == 1 ? from.y : from.z);
+            const float delta = axis == 0 ? d.x : (axis == 1 ? d.y : d.z);
+            const float lo = axis == 0 ? wall.min.x : (axis == 1 ? wall.min.y : wall.min.z);
+            const float hi = axis == 0 ? wall.max.x : (axis == 1 ? wall.max.y : wall.max.z);
+            if (std::fabs(delta) < 1.0e-6f) {
+                hit = origin >= lo && origin <= hi;
+                continue;
+            }
+            const float inv = 1.0f / delta;
+            float t0 = (lo - origin) * inv;
+            float t1 = (hi - origin) * inv;
+            if (t0 > t1) {
+                const float swap = t0;
+                t0 = t1;
+                t1 = swap;
+            }
+            t_min = t0 > t_min ? t0 : t_min;
+            t_max = t1 < t_max ? t1 : t_max;
+            hit = t_min <= t_max;
+        }
+        if (hit && t_max > 0.0f && t_min < 1.0f) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// 最近敌人用于推进目标；最近可见敌人用于开火（墙体/烟雾会挡住目标）。
+EnemyPick PickEnemies(const WorldState& state, uint8_t self, const MapDef* map) {
     EnemyPick pick;
     const PlayerState& me = state.players[self];
     const Vec3 eye = me.position + Vec3{0.0f, 0.0f, kEyeHeight};
@@ -42,7 +81,8 @@ EnemyPick PickEnemies(const WorldState& state, uint8_t self) {
             nearest_dist = dist;
             pick.nearest = i;
         }
-        if (dist < visible_dist && !SmokeBlocksSegment(state, eye, chest)) {
+        if (dist < visible_dist && !SmokeBlocksSegment(state, eye, chest) &&
+            !WallBlocks(map, eye, chest)) {
             visible_dist = dist;
             pick.visible = i;
         }
@@ -84,7 +124,7 @@ Command BotDecide(const WorldState& state, const Content& content, uint8_t self,
     if (self >= state.player_count || !state.players[self].alive) {
         return command;
     }
-    const EnemyPick pick = PickEnemies(state, self);
+    const EnemyPick pick = PickEnemies(state, self, map);
     if (pick.nearest < 0) {
         return command;
     }

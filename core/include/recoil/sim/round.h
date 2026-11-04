@@ -14,6 +14,10 @@ void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def);
 // 队伍分配：前一半玩家为 T，后一半为 CT（10 人即 5v5）。
 void AssignTeams(WorldState& state);
 
+// 开始一场 5v5：设置 10 名玩家、分队、发枪与出生点（de_ash 出生屋），进入首回合冻结期。
+// 纯函数式状态初始化；地图仍由调用方通过 Step 的 MapDef 传入。
+void BeginMatch(WorldState& state, const Content& content, EventList& events);
+
 // 回合状态机：冻结 → 进行中 → 结算 → 重置；含胜负判定与经济结算。
 void AdvanceRound(WorldState& state, const Content& content, EventList& events);
 

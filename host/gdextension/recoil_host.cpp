@@ -2,33 +2,21 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
+#include <godot_cpp/variant/packed_float32_array.hpp>
 
 #include <vector>
 
 #include "gdextension_interface.h"
+#include "recoil/ai/nav.h"
+#include "recoil/ai/tactics.h"
 #include "recoil/content/content.h"
 #include "recoil/sim/command.h"
+#include "recoil/sim/round.h"
 #include "recoil/sim/step.h"
 #include "recoil/world/map.h"
+#include "recoil_default_map.h"
 
 using namespace godot;
-
-namespace {
-
-recoil::MapDef MakeArena() {
-    recoil::MapDef map;
-    const float half = 800.0f;
-    const float thickness = 32.0f;
-    const float height = 200.0f;
-    map.wall_count = 4;
-    map.walls[0] = {{half, -half, 0.0f}, {half + thickness, half, height}};
-    map.walls[1] = {{-half - thickness, -half, 0.0f}, {-half, half, height}};
-    map.walls[2] = {{-half, half, 0.0f}, {half, half + thickness, height}};
-    map.walls[3] = {{-half, -half - thickness, 0.0f}, {half, -half, height}};
-    return map;
-}
-
-} // namespace
 
 class RecoilSim : public RefCounted {
     GDCLASS(RecoilSim, RefCounted)
@@ -40,56 +28,63 @@ class RecoilSim : public RefCounted {
     int total_damage_ = 0;
     int total_fire_ = 0;
     int total_dry_ = 0;
+    int human_player_ = 0;
+    recoil::SiteLayout sites_{};
     std::vector<recoil::Command> pending_{};
 
 protected:
     static void _bind_methods() {
-        ClassDB::bind_method(D_METHOD("reset"), &RecoilSim::reset);
-        ClassDB::bind_method(
-            D_METHOD("set_move", "player", "yaw", "pitch", "forward", "side", "jump", "duck"),
-            &RecoilSim::set_move);
-        ClassDB::bind_method(D_METHOD("fire", "player", "yaw", "pitch"), &RecoilSim::fire);
-        ClassDB::bind_method(D_METHOD("reload", "player"), &RecoilSim::reload);
-        ClassDB::bind_method(D_METHOD("buy_armor", "player"), &RecoilSim::buy_armor);
-        ClassDB::bind_method(D_METHOD("plant_bomb", "player"), &RecoilSim::plant_bomb);
-        ClassDB::bind_method(D_METHOD("defuse_bomb", "player"), &RecoilSim::defuse_bomb);
-        ClassDB::bind_method(D_METHOD("get_bomb_planted"), &RecoilSim::get_bomb_planted);
-        ClassDB::bind_method(D_METHOD("get_bomb_timer"), &RecoilSim::get_bomb_timer);
-        ClassDB::bind_method(D_METHOD("get_helmet", "player"), &RecoilSim::get_helmet);
-        ClassDB::bind_method(D_METHOD("get_team", "player"), &RecoilSim::get_team);
-        ClassDB::bind_method(D_METHOD("get_player_count"), &RecoilSim::get_player_count);
-        ClassDB::bind_method(D_METHOD("get_round_phase"), &RecoilSim::get_round_phase);
-        ClassDB::bind_method(D_METHOD("get_round_ticks"), &RecoilSim::get_round_ticks);
-        ClassDB::bind_method(D_METHOD("get_score_t"), &RecoilSim::get_score_t);
-        ClassDB::bind_method(D_METHOD("get_score_ct"), &RecoilSim::get_score_ct);
-        ClassDB::bind_method(D_METHOD("get_money", "player"), &RecoilSim::get_money);
-        ClassDB::bind_method(D_METHOD("throw_grenade", "player", "kind", "yaw", "pitch"),
-                             &RecoilSim::throw_grenade);
-        ClassDB::bind_method(D_METHOD("get_smoke_active"), &RecoilSim::get_smoke_active);
-        ClassDB::bind_method(D_METHOD("get_smoke_x"), &RecoilSim::get_smoke_x);
-        ClassDB::bind_method(D_METHOD("get_smoke_y"), &RecoilSim::get_smoke_y);
-        ClassDB::bind_method(D_METHOD("get_blind_ticks", "player"), &RecoilSim::get_blind_ticks);
-        ClassDB::bind_method(D_METHOD("tick"), &RecoilSim::tick);
-        ClassDB::bind_method(D_METHOD("get_x", "player"), &RecoilSim::get_x);
-        ClassDB::bind_method(D_METHOD("get_y", "player"), &RecoilSim::get_y);
-        ClassDB::bind_method(D_METHOD("get_z", "player"), &RecoilSim::get_z);
-        ClassDB::bind_method(D_METHOD("get_health", "player"), &RecoilSim::get_health);
-        ClassDB::bind_method(D_METHOD("get_armor", "player"), &RecoilSim::get_armor);
-        ClassDB::bind_method(D_METHOD("get_mag", "player"), &RecoilSim::get_mag);
-        ClassDB::bind_method(D_METHOD("get_reserve", "player"), &RecoilSim::get_reserve);
-        ClassDB::bind_method(D_METHOD("is_alive", "player"), &RecoilSim::is_alive);
-        ClassDB::bind_method(D_METHOD("get_kills", "player"), &RecoilSim::get_kills);
-        ClassDB::bind_method(D_METHOD("get_tick"), &RecoilSim::get_tick);
-        ClassDB::bind_method(D_METHOD("get_last_damage_events"),
-                             &RecoilSim::get_last_damage_events);
-        ClassDB::bind_method(D_METHOD("get_last_fire_events"), &RecoilSim::get_last_fire_events);
-        ClassDB::bind_method(D_METHOD("get_last_dryfire_events"),
-                             &RecoilSim::get_last_dryfire_events);
-        ClassDB::bind_method(D_METHOD("get_total_damage_events"),
-                             &RecoilSim::get_total_damage_events);
-        ClassDB::bind_method(D_METHOD("get_total_fire_events"), &RecoilSim::get_total_fire_events);
-        ClassDB::bind_method(D_METHOD("get_total_dryfire_events"),
-                             &RecoilSim::get_total_dryfire_events);
+#define BIND(name, ...)                                                                            \
+    ClassDB::bind_method(D_METHOD(#name __VA_OPT__(, ) __VA_ARGS__), &RecoilSim::name)
+        BIND(reset);
+        BIND(set_move, "player", "yaw", "pitch", "forward", "side", "jump", "duck");
+        BIND(fire, "player", "yaw", "pitch");
+        BIND(reload, "player");
+        BIND(buy_armor, "player");
+        BIND(plant_bomb, "player");
+        BIND(defuse_bomb, "player");
+        BIND(get_bomb_planted);
+        BIND(get_bomb_timer);
+        BIND(get_helmet, "player");
+        BIND(get_team, "player");
+        BIND(get_player_count);
+        BIND(get_round_phase);
+        BIND(get_round_ticks);
+        BIND(get_score_t);
+        BIND(get_score_ct);
+        BIND(get_money, "player");
+        BIND(throw_grenade, "player", "kind", "yaw", "pitch");
+        BIND(get_smoke_active);
+        BIND(get_smoke_x);
+        BIND(get_smoke_y);
+        BIND(get_blind_ticks, "player");
+        BIND(tick);
+        BIND(get_x, "player");
+        BIND(get_y, "player");
+        BIND(get_z, "player");
+        BIND(get_health, "player");
+        BIND(get_armor, "player");
+        BIND(get_mag, "player");
+        BIND(get_reserve, "player");
+        BIND(is_alive, "player");
+        BIND(get_kills, "player");
+        BIND(get_tick);
+        BIND(get_last_damage_events);
+        BIND(get_last_fire_events);
+        BIND(get_last_dryfire_events);
+        BIND(get_total_damage_events);
+        BIND(get_total_fire_events);
+        BIND(get_total_dryfire_events);
+        BIND(set_map_boxes, "boxes");
+        BIND(set_sites, "ax", "ay", "bx", "by");
+        BIND(begin_match);
+        BIND(tick_auto);
+        BIND(get_wall_count);
+        BIND(get_round_number);
+        BIND(get_alive_count, "team");
+        BIND(get_has_bomb, "player");
+        BIND(nav_path_points, "fx", "fy", "fz", "tx", "ty", "tz");
+#undef BIND
     }
 
 public:
@@ -97,7 +92,7 @@ public:
         state_ = recoil::WorldState{};
         state_.player_count = 2;
         content_ = recoil::DefaultContent();
-        map_ = MakeArena();
+        map_ = recoil_host::MakeDemoArena();
         pending_.clear();
         last_events_ = recoil::EventList{};
         total_damage_ = 0;
@@ -211,6 +206,71 @@ public:
         total_fire_ += _count(recoil::EventKind::WeaponFired);
         total_dry_ += _count(recoil::EventKind::WeaponDryFire);
         pending_.clear();
+    }
+
+    // de_ash：宿主读派生盒子（Godot 坐标 → sim AABB），每盒 6 个 float。
+    void set_map_boxes(const PackedFloat32Array& boxes) {
+        map_ = recoil::MapDef{};
+        const int count = boxes.size() / 6;
+        for (int i = 0; i < count && map_.wall_count < recoil::kMaxWalls; ++i) {
+            const int base = i * 6;
+            recoil::Wall& wall = map_.walls[map_.wall_count++];
+            wall.min = {static_cast<float>(boxes[base + 0]), static_cast<float>(boxes[base + 1]),
+                        static_cast<float>(boxes[base + 2])};
+            wall.max = {static_cast<float>(boxes[base + 3]), static_cast<float>(boxes[base + 4]),
+                        static_cast<float>(boxes[base + 5])};
+        }
+    }
+
+    void set_sites(float ax, float ay, float bx, float by) {
+        sites_.site_a = {ax, ay, 0.0f};
+        sites_.site_b = {bx, by, 0.0f};
+    }
+
+    void begin_match() {
+        state_ = recoil::WorldState{};
+        content_ = recoil::DefaultContent();
+        recoil::EventList events{};
+        recoil::BeginMatch(state_, content_, events);
+        pending_.clear();
+        last_events_ = events;
+        total_damage_ = 0;
+        total_fire_ = 0;
+        total_dry_ = 0;
+    }
+
+    // 人机由内核战术层驱动：玩家 1..N-1 生成 Command，再统一 Step。
+    void tick_auto() {
+        for (int i = 0; i < static_cast<int>(state_.player_count); ++i) {
+            if (i == human_player_) {
+                continue;
+            }
+            pending_.push_back(recoil::TacticalBotDecide(state_, content_, static_cast<uint8_t>(i),
+                                                         sites_, &map_));
+        }
+        tick();
+    }
+
+    int get_wall_count() const {
+        return map_.wall_count;
+    }
+    int get_round_number() const {
+        return state_.round.number;
+    }
+    int get_alive_count(int team) const {
+        int count = 0;
+        for (uint8_t i = 0; i < state_.player_count; ++i) {
+            if (state_.players[i].alive && static_cast<int>(state_.players[i].team) == team) {
+                ++count;
+            }
+        }
+        return count;
+    }
+    int get_has_bomb(int player) const {
+        return state_.players[player].has_bomb ? 1 : 0;
+    }
+    int nav_path_points(float fx, float fy, float fz, float tx, float ty, float tz) const {
+        return static_cast<int>(recoil::NavPath(map_, {fx, fy, fz}, {tx, ty, tz}).size());
     }
 
     float get_x(int player) const {

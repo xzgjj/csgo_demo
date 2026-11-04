@@ -6,7 +6,8 @@
 
 namespace recoil {
 
-constexpr int kMaxWalls = 64;
+// de_ash 派生盒子约 90 个碰撞盒；留 512 上限覆盖后续地图扩展。
+constexpr int kMaxWalls = 512;
 
 struct Wall {
     Vec3 min{};

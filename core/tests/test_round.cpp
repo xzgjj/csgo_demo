@@ -4,6 +4,7 @@
 
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
+#include "recoil/sim/round.h"
 #include "recoil/sim/step.h"
 
 namespace {
@@ -202,4 +203,33 @@ TEST_CASE("回合重置不会把 C4 留在错误玩家身上") {
 
     CHECK(result.state.players[0].has_bomb);
     CHECK(result.state.players[1].has_bomb == false);
+}
+
+TEST_CASE("BeginMatch 初始化 10 人 5v5 并放在 de_ash 出生点") {
+    const Content content = DefaultContent();
+    WorldState state;
+    EventList events;
+
+    recoil::BeginMatch(state, content, events);
+
+    CHECK(state.player_count == 10);
+    int t_count = 0;
+    int ct_count = 0;
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        const auto& player = state.players[i];
+        CHECK(player.alive);
+        CHECK(player.health == 100);
+        CHECK(player.money == content.round.start_money);
+        t_count += player.team == static_cast<uint8_t>(Team::T) ? 1 : 0;
+        ct_count += player.team == static_cast<uint8_t>(Team::CT) ? 1 : 0;
+    }
+    CHECK(t_count == 5);
+    CHECK(ct_count == 5);
+    CHECK(state.round.phase == RoundPhase::Freeze);
+    CHECK(state.round.phase_ticks == content.round.freeze_ticks);
+    CHECK(state.round.number == 1);
+    CHECK(state.players[0].position.y < -1600.0f);
+    CHECK(state.players[5].position.y > 1600.0f);
+    CHECK(state.players[0].has_bomb);
+    CHECK(state.players[5].has_defuser);
 }

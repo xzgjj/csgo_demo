@@ -197,3 +197,68 @@ TEST_CASE("状态哈希覆盖移动意图与跳跃队列") {
     CHECK(HashState(base) != HashState(with_wish));
     CHECK(HashState(base) != HashState(with_jump));
 }
+
+TEST_CASE("32u 台阶自动 step-up 上台阶") {
+    const Content content = DefaultContent();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{40.0f, -96.0f, 0.0f}, {400.0f, 96.0f, 32.0f}};
+    WorldState state = MakeMover();
+    state.players[0].position = {-20.0f, 0.0f, 0.0f};
+
+    for (int i = 0; i < 64; ++i) {
+        state = StepOnce(state, content, MoveCommand(1.0f), &map).state;
+    }
+
+    CHECK(state.players[0].position.z == doctest::Approx(32.0f).epsilon(0.001));
+    CHECK(state.players[0].position.x > 40.0f);
+}
+
+TEST_CASE("超过 step_max 的高台不能直接 step-up") {
+    const Content content = DefaultContent();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{40.0f, -96.0f, 0.0f}, {400.0f, 96.0f, 64.0f}};
+    WorldState state = MakeMover();
+    state.players[0].position = {-20.0f, 0.0f, 0.0f};
+
+    for (int i = 0; i < 64; ++i) {
+        state = StepOnce(state, content, MoveCommand(1.0f), &map).state;
+    }
+
+    CHECK(state.players[0].position.z == doctest::Approx(0.0f).epsilon(0.001));
+    CHECK(state.players[0].position.x <= 24.5f);
+}
+
+TEST_CASE("从空中落到平台顶面并落地") {
+    const Content content = DefaultContent();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{0.0f, -96.0f, 0.0f}, {200.0f, 96.0f, 64.0f}};
+    WorldState state = MakeMover();
+    state.players[0].position = {60.0f, 0.0f, 120.0f};
+    state.players[0].on_ground = false;
+
+    for (int i = 0; i < 80; ++i) {
+        state = StepOnce(state, content, MoveCommand(0.0f), &map).state;
+    }
+
+    CHECK(state.players[0].position.z == doctest::Approx(64.0f).epsilon(0.001));
+    CHECK(state.players[0].on_ground == true);
+}
+
+TEST_CASE("走出平台边缘后会坠落回地面") {
+    const Content content = DefaultContent();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{-100.0f, -100.0f, 0.0f}, {100.0f, 100.0f, 64.0f}};
+    WorldState state = MakeMover();
+    state.players[0].position = {0.0f, 0.0f, 64.0f};
+
+    for (int i = 0; i < 200; ++i) {
+        state = StepOnce(state, content, MoveCommand(1.0f), &map).state;
+    }
+
+    CHECK(state.players[0].position.x > 116.0f);
+    CHECK(state.players[0].position.z == doctest::Approx(0.0f).epsilon(0.001));
+}

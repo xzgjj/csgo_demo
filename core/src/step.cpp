@@ -173,7 +173,23 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     }
 }
 
-void Fire(WorldState& state, const Content& content, const Command& command, EventList& events) {
+// 沿射线最近实体面的 t（无命中返回极大值）。
+float NearestWallT(const MapDef& map, const Vec3& origin, const Vec3& dir, float max_range) {
+    float nearest = 1.0e9f;
+    for (int i = 0; i < map.wall_count; ++i) {
+        float t = 0.0f;
+        if (!RayVsAabb(origin, dir, map.walls[i].min, map.walls[i].max, t)) {
+            continue;
+        }
+        if (t >= 0.0f && t <= max_range && t < nearest) {
+            nearest = t;
+        }
+    }
+    return nearest;
+}
+
+void Fire(WorldState& state, const Content& content, const Command& command, const MapDef* map,
+          EventList& events) {
     if (command.player >= state.player_count) {
         PushReject(events, command.player, RejectReason::InvalidPlayer);
         return;
@@ -207,7 +223,9 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
     const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, content.movement.eye_height};
     const Vec3 dir = DirectionFromAngles(command.yaw_degrees, command.pitch_degrees);
     const RayHit hit = TraceAgainstPlayers(state, command.player, origin, dir, content.rifle.range);
-    if (!hit.hit) {
+    const float wall_t =
+        (map != nullptr) ? NearestWallT(*map, origin, dir, content.rifle.range) : 1.0e9f;
+    if (!hit.hit || wall_t < hit.t) {
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
     }
@@ -252,7 +270,7 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
     for (const Command& command : commands) {
         switch (command.kind) {
         case CommandKind::Fire:
-            Fire(out.state, content, command, out.events);
+            Fire(out.state, content, command, map, out.events);
             break;
         case CommandKind::Reload:
             StartReload(out.state, content, command, out.events);
