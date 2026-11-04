@@ -19,6 +19,7 @@ var pause_layer: CanvasLayer
 var settings_layer: CanvasLayer
 var playing := false
 var fire_was_down := false
+var buy_was_down := false
 var last_hits := 0
 var last_shots := 0
 var last_dry := 0
@@ -203,6 +204,10 @@ func _physics_process(_delta: float) -> void:
 	fire_was_down = fire_down
 	if Input.is_action_just_pressed("reload"):
 		sim.reload(0)
+	var buy_down := Input.is_key_pressed(KEY_B)
+	if buy_down and not buy_was_down:
+		sim.buy_armor(0)
+	buy_was_down = buy_down
 	sim.tick()
 	_update_view()
 	_update_hud()
@@ -222,7 +227,19 @@ func _update_hud() -> void:
 	last_hits = sim.get_total_damage_events()
 	last_shots = sim.get_total_fire_events()
 	last_dry = sim.get_total_dryfire_events()
-	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   shots %d  hits %d  dry %d" % [
+	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
 		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
-		sim.get_health(1), last_shots, last_hits, last_dry,
+		sim.get_health(1), 0, _phase_text(), sim.get_money(0),
+		sim.get_score_t(), sim.get_score_ct(), last_shots, last_hits, last_dry,
 	]
+
+func _phase_text() -> String:
+	match sim.get_round_phase():
+		0:
+			return "FREEZE"
+		1:
+			return "LIVE"
+		2:
+			return "ROUND END"
+		_:
+			return "MATCH END"

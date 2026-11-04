@@ -13,6 +13,11 @@ enum class EventKind : uint8_t {
     ReloadStarted,
     ReloadFinished,
     CommandRejected,
+    RoundLive,
+    RoundEnded,
+    RoundReset,
+    BuySucceeded,
+    BuyFailed,
 };
 
 enum class RejectReason : int32_t {

@@ -8,7 +8,12 @@ enum class CommandKind : uint8_t {
     Fire,
     Reload,
     Move,
+    Buy,
     Stop,
+};
+
+enum class BuyItem : uint8_t {
+    Armor = 0,
 };
 
 struct Command {
@@ -21,6 +26,7 @@ struct Command {
     float move_side = 0.0f;
     bool jump = false;
     bool duck = false;
+    BuyItem item = BuyItem::Armor;
 };
 
 } // namespace recoil

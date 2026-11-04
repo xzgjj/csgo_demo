@@ -6,12 +6,14 @@
 
 #include "recoil/base/vec3.h"
 #include "recoil/movement/movement.h"
+#include "recoil/sim/round.h"
 
 namespace recoil {
 namespace {
 
 constexpr float kHalfWidth = 16.0f;
 constexpr float kBodyHeight = 72.0f;
+
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
@@ -149,6 +151,7 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     if (target.health == 0) {
         target.alive = false;
         ++state.players[shooter].kills;
+        AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
         events.Push({EventKind::PlayerDied, shooter, victim, 0});
     }
 }
@@ -235,10 +238,14 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
         case CommandKind::Move:
             ApplyMove(out.state, command, out.events);
             break;
+        case CommandKind::Buy:
+            ApplyBuy(out.state, content, command, out.events);
+            break;
         case CommandKind::Stop:
             break;
         }
     }
+    AdvanceRound(out.state, content, out.events);
     for (uint8_t i = 0; i < out.state.player_count; ++i) {
         StepMovement(out.state.players[i], content.movement, map);
     }
@@ -254,12 +261,19 @@ uint64_t HashState(const WorldState& state) {
     mix(state.tick);
     mix(state.rng);
     mix(state.player_count);
+    mix(static_cast<uint64_t>(state.round.phase) |
+        (static_cast<uint64_t>(state.round.phase_ticks) << 8) |
+        (static_cast<uint64_t>(state.round.number) << 32) |
+        (static_cast<uint64_t>(state.round.winner) << 48));
+    mix(static_cast<uint64_t>(state.round.score_t) |
+        (static_cast<uint64_t>(state.round.score_ct) << 16));
     for (uint8_t i = 0; i < state.player_count; ++i) {
         const PlayerState& player = state.players[i];
         mix(static_cast<uint64_t>(player.alive) | (static_cast<uint64_t>(player.helmet) << 1) |
             (static_cast<uint64_t>(player.health) << 8) |
             (static_cast<uint64_t>(player.armor) << 24) |
             (static_cast<uint64_t>(player.kills) << 40));
+        mix(static_cast<uint64_t>(player.team) | (static_cast<uint64_t>(player.money) << 8));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.x)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.y)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.z)));

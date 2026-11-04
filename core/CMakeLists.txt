@@ -8,6 +8,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 add_library(recoil_core STATIC
     src/content.cpp
     src/movement.cpp
+    src/round.cpp
     src/step.cpp
 )
 target_include_directories(recoil_core PUBLIC include)
@@ -20,6 +21,7 @@ target_compile_options(recoil_core PRIVATE
 add_executable(recoil_tests
     tests/doctest_main.cpp
     tests/test_movement.cpp
+    tests/test_round.cpp
     tests/test_step.cpp
 )
 target_include_directories(recoil_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
