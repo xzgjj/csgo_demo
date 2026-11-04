@@ -144,6 +144,33 @@
       "author": "xzgjj",
       "source": "Qwen-Image API",
       "hash": ""
+    },
+    {
+      "id": "model-weapon-ak47",
+      "type": "model",
+      "path": "host/models/weapons/ak47.glb",
+      "license": "Original",
+      "author": "xzgjj",
+      "source": "tools/blender/build_weapons.py 程序化生成",
+      "hash": ""
+    },
+    {
+      "id": "model-weapon-m4a4",
+      "type": "model",
+      "path": "host/models/weapons/m4a4.glb",
+      "license": "Original",
+      "author": "xzgjj",
+      "source": "tools/blender/build_weapons.py 程序化生成",
+      "hash": ""
+    },
+    {
+      "id": "model-weapon-awp",
+      "type": "model",
+      "path": "host/models/weapons/awp.glb",
+      "license": "Original",
+      "author": "xzgjj",
+      "source": "tools/blender/build_weapons.py 程序化生成",
+      "hash": ""
     }
   ]
 }
