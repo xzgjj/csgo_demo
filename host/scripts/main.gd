@@ -6,7 +6,7 @@ const ARENA_HALF := 800.0
 const WALL_THICKNESS := 32.0
 const WALL_HEIGHT := 200.0
 const EYE_HEIGHT := 64.0
-const SENSITIVITY := 0.08
+var sensitivity := 0.08
 
 var sim: RefCounted
 var yaw := 0.0
@@ -143,8 +143,7 @@ func _build_ui() -> void:
 	pause_layer = _make_menu("已暂停", ["继续", "设置", "返回主菜单"], [_resume, _show_settings, _show_menu])
 	pause_layer.visible = false
 
-	settings_layer = _make_menu("设置（占位）", ["返回"], [_hide_settings])
-	settings_layer.visible = false
+	_build_settings()
 
 	result_label = Label.new()
 	result_label.set_anchors_preset(Control.PRESET_CENTER)
@@ -180,6 +179,53 @@ func _make_menu(title: String, buttons: Array, callbacks: Array) -> CanvasLayer:
 		box.add_child(button)
 	layer.add_child(panel)
 	return layer
+
+func _build_settings() -> void:
+	settings_layer = CanvasLayer.new()
+	add_child(settings_layer)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(460, 360)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "设置"
+	title.add_theme_font_size_override("font_size", 26)
+	box.add_child(title)
+	var fov_label := Label.new()
+	fov_label.text = "视野 FOV: 90"
+	box.add_child(fov_label)
+	var fov := HSlider.new()
+	fov.min_value = 70
+	fov.max_value = 110
+	fov.value = 90
+	fov.custom_minimum_size = Vector2(360, 28)
+	fov.value_changed.connect(func(value: float):
+		fov_label.text = "视野 FOV: %d" % int(value)
+		if camera:
+			camera.fov = value)
+	box.add_child(fov)
+	var sens_label := Label.new()
+	sens_label.text = "灵敏度: 0.080"
+	box.add_child(sens_label)
+	var sens := HSlider.new()
+	sens.min_value = 0.02
+	sens.max_value = 0.20
+	sens.step = 0.005
+	sens.value = sensitivity
+	sens.custom_minimum_size = Vector2(360, 28)
+	sens.value_changed.connect(func(value: float):
+		sensitivity = value
+		sens_label.text = "灵敏度: %.3f" % value)
+	box.add_child(sens)
+	var back := Button.new()
+	back.text = "返回"
+	back.custom_minimum_size = Vector2(360, 44)
+	back.pressed.connect(_hide_settings)
+	box.add_child(back)
+	settings_layer.add_child(panel)
+	settings_layer.visible = false
 
 func _show_menu() -> void:
 	playing = false
@@ -219,8 +265,8 @@ func _quit() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * SENSITIVITY
-		pitch = clampf(pitch - event.relative.y * SENSITIVITY, -89.0, 89.0)
+		yaw -= event.relative.x * sensitivity
+		pitch = clampf(pitch - event.relative.y * sensitivity, -89.0, 89.0)
 	if event.is_action_pressed("pause"):
 		if playing:
 			_show_pause()
