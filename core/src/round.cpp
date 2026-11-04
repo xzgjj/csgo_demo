@@ -145,6 +145,10 @@ void ApplyBuy(WorldState& state, const Content& content, const Command& command,
         return;
     }
     const bool helmet = command.item == BuyItem::Helmet;
+    if (!helmet && player.armor >= 100) {
+        events.Push({EventKind::BuyFailed, command.player, 0, 2});
+        return;
+    }
     const uint16_t price = helmet ? content.round.helmet_price : content.round.armor_price;
     if (player.money < price) {
         events.Push({EventKind::BuyFailed, command.player, 0, 1});
