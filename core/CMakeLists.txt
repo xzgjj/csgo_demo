@@ -10,11 +10,16 @@ add_library(recoil_core STATIC
     src/bomb.cpp
     src/bot.cpp
     src/content.cpp
+    src/ground.cpp
     src/grenades.cpp
+    src/hash.cpp
     src/movement.cpp
     src/nav.cpp
+    src/reaction.cpp
     src/round.cpp
     src/step.cpp
+    src/vision.cpp
+    src/weapon_table.cpp
 )
 target_include_directories(recoil_core PUBLIC include)
 target_compile_options(recoil_core PRIVATE
@@ -29,6 +34,8 @@ add_executable(recoil_tests
     tests/test_ballistics.cpp
     tests/test_bomb.cpp
     tests/test_bot.cpp
+    tests/test_drops.cpp
+    tests/test_fire_state.cpp
     tests/test_grenades.cpp
     tests/test_helmet.cpp
     tests/test_hitgroups.cpp
@@ -37,6 +44,9 @@ add_executable(recoil_tests
     tests/test_round.cpp
     tests/test_step.cpp
     tests/test_tactics.cpp
+    tests/test_vision.cpp
+    tests/test_weapons.cpp
+    tests/test_weapons_loadout.cpp
 )
 target_include_directories(recoil_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../third_party)
 target_link_libraries(recoil_tests PRIVATE recoil_core)

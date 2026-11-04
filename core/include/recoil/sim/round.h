@@ -26,4 +26,15 @@ void EndRound(WorldState& state, const Content& content, uint8_t winner, EventLi
 // 购买（当前仅护甲）；只允许冻结期。
 void ApplyBuy(WorldState& state, const Content& content, const Command& command, EventList& events);
 
+// 购买主/副武器（BuyWeapon）：只允许冻结期；手枪进副武器槽，其余进主武器槽。
+void ApplyBuyWeapon(WorldState& state, const Content& content, const Command& command,
+                    EventList& events);
+
+// 切换武器槽（SwitchWeapon）：交换主/副武器状态并切换激活槽；换弹中切枪会打断换弹。
+void ApplySwitchWeapon(WorldState& state, const Command& command, EventList& events);
+
+// 按队伍发默认主武器/副武器（T：AK-47 + Glock-18；CT：M4A4 + USP-S），并补满弹匣。
+// 无 weapon_table 依赖的玩家（旧用例）保持 WeaponId::None。
+void GiveDefaultLoadout(PlayerState& player, uint8_t team);
+
 } // namespace recoil

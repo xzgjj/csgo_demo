@@ -15,6 +15,20 @@ enum class Team : uint8_t {
     CT = 2,
 };
 
+// 武器 id（与 content/defs/weapons.json 的 enum 字段一一对应，由生成器写入常量表）。
+// None = 未持武器：内核回退到 Content::rifle 的单一定义（兼容旧状态/测试）。
+enum class WeaponId : uint8_t {
+    None = 0,
+    AK47 = 1,
+    M4A4 = 2,
+    AWP = 3,
+    USP = 4,
+    Glock = 5,
+};
+
+// 武器槽数量：0=主武器、1=副武器。weapon 字段始终描述当前激活槽。
+constexpr int kWeaponSlotCount = 2;
+
 enum class RoundPhase : uint8_t {
     Freeze = 0,
     Live = 1,
@@ -75,6 +89,17 @@ struct WeaponState {
     bool reloading = false;
 };
 
+// 地面掉落武器（模块 6）：击杀后主武器留在死亡位置，存活玩家靠近可拾取。
+struct GroundWeapon {
+    bool active = false;
+    uint8_t weapon_id = 0; // WeaponId
+    Vec3 position{};
+    uint16_t mag = 0;
+    uint16_t reserve = 0;
+};
+
+constexpr int kMaxDrops = 8;
+
 struct PlayerState {
     bool alive = false;
     bool helmet = false;
@@ -94,7 +119,22 @@ struct PlayerState {
     float wish_side = 0.0f;
     Vec3 position{};
     Vec3 velocity{};
+    // 双武器槽：primary_id/secondary_id 为两槽武器，active_slot 指向当前激活槽；
+    // weapon 描述激活槽状态，sidearm 保存另一槽状态（切枪时两者交换）。
+    uint8_t primary_id = 0;   // WeaponId（主武器槽）
+    uint8_t secondary_id = 0; // WeaponId（副武器槽）
+    uint8_t active_slot = 0;
     WeaponState weapon{};
+    WeaponState sidearm{};
+    // 机器人视觉反应延迟状态（Step 每 tick 更新、参与 HashState；确定性，无时钟/随机）：
+    // reaction_target = 当前连续看到的敌人索引（0xFF=无），reaction_ticks = 连续看到的 tick 数。
+    uint8_t reaction_target = 0xFF;
+    uint16_t reaction_ticks = 0;
+    // 模块 5：最近一次 Fire/Move 命令的朝向（表现层让枪口/角色朝向一致），进 HashState。
+    float view_yaw = 0.0f;
+    // 模块 5：本场累计开火数与最后一次开火 tick（0=未开火），进 HashState。
+    uint16_t fire_count = 0;
+    uint32_t last_fire_tick = 0;
 };
 
 struct WorldState {
@@ -105,6 +145,7 @@ struct WorldState {
     BombState bomb{};
     SmokeZone smoke{};
     std::array<GrenadeState, kMaxGrenades> grenades{};
+    std::array<GroundWeapon, kMaxDrops> ground_weapons{};
     std::array<PlayerState, kMaxPlayers> players{};
 };
 

@@ -6,13 +6,21 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONTENT_HEADER = ROOT / "core/include/recoil/content/content.h"
 MOVEMENT_HEADER = ROOT / "core/include/recoil/movement/movement.h"
+WEAPONS_JSON = ROOT / "content/defs/weapons.json"
 TICKRATE = 64.0
+## 参考表/校准的 rifle.* 口径 = T 主武器 AK-47（模块 7 起武器数值以 JSON 为事实源）。
+RIFLE_WEAPON_ID = "ak47"
+RIFLE_FIELDS = ("damage", "magazine", "reserve", "fire_interval_ticks", "reload_ticks",
+                "armor_ratio", "range", "range_modifier", "range_modifier_unit",
+                "scope_magnification")
+SKIP_WEAPON_FIELDS = {"id", "enum", "name", "category", "team", "baseline", "notes"}
 
 _STRUCT_RE = re.compile(r"struct\s+(\w+)\s*\{(.*?)\n\};", re.S)
 _FIELD_RE = re.compile(r"^\s*(?:float|uint16_t|uint32_t|int32_t|int)\s+(\w+)\s*=\s*([^;]+);", re.M)
@@ -63,6 +71,28 @@ def parse_structs(path: Path) -> dict[str, dict[str, float]]:
     return structs
 
 
+def _apply_weapon_json(project: dict[str, float]) -> None:
+    """模块 7：武器数值以 content/defs/weapons.json 为准（覆盖头文件默认值）。
+
+    扁平键：`weapon.<id>.<field>`；同时把 AK-47 映射到历史口径 `rifle.*`。
+    """
+    if not WEAPONS_JSON.exists():
+        return
+    payload = json.loads(WEAPONS_JSON.read_text(encoding="utf-8"))
+    for weapon in payload.get("weapons", []):
+        weapon_id = str(weapon.get("id", ""))
+        if not weapon_id:
+            continue
+        for field, value in weapon.items():
+            if field in SKIP_WEAPON_FIELDS or not isinstance(value, (int, float)):
+                continue
+            project[f"weapon.{weapon_id}.{field}"] = float(value)
+    for field in RIFLE_FIELDS:
+        value = project.get(f"weapon.{RIFLE_WEAPON_ID}.{field}")
+        if value is not None:
+            project[f"rifle.{field}"] = value
+
+
 def _add_derived(project: dict[str, float]) -> None:
     tick_dt = project.get("movement.tick_dt")
     if tick_dt:
@@ -92,6 +122,7 @@ def load_project() -> dict[str, float]:
     for struct, prefix in PREFIXES:
         for field, value in structs.get(struct, {}).items():
             project[f"{prefix}.{field}"] = value
+    _apply_weapon_json(project)
     _add_derived(project)
     return project
 

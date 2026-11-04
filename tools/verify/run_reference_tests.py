@@ -68,12 +68,20 @@ def _ref_value(entries: list[dict], entry_id: str) -> float:
     raise KeyError(f"reference 缺少条目 {entry_id}")
 
 
-def _body_damage(project: dict[str, float], distance: float, armored: bool) -> int:
-    """按 content 口径复算 0u 距离修正后的躯干单发伤害（四舍五入）。"""
-    falloff = project["rifle.range_modifier"] ** (
-        distance / project["rifle.range_modifier_unit"])
-    ratio = project["rifle.armor_ratio"] if armored else 1.0
-    return round(project["rifle.damage"] * falloff * ratio)
+def _falloff(project: dict[str, float], distance: float, weapon_id: str) -> float:
+    return project[f"weapon.{weapon_id}.range_modifier"] ** (
+        distance / project[f"weapon.{weapon_id}.range_modifier_unit"])
+
+
+def _body_damage(project: dict[str, float], distance: float, armored: bool,
+                 weapon_id: str = "ak47") -> int:
+    """按 content/defs/weapons.json 口径复算躯干单发伤害（四舍五入）。
+
+    demo_armor 正向：P0=T 持 AK-47 打有甲目标；反向：P1=CT 持 M4A4 打无甲目标。
+    """
+    damage = project[f"weapon.{weapon_id}.damage"]
+    ratio = project[f"weapon.{weapon_id}.armor_ratio"] if armored else 1.0
+    return round(damage * _falloff(project, distance, weapon_id) * ratio)
 
 
 def _expectations(results: list[dict], cid: str, items: list[tuple[str, object, object]]) -> None:
@@ -112,9 +120,12 @@ def check_reference_gate(project: dict[str, float], entries: list[dict],
 def check_armor(project: dict[str, float], entries: list[dict], results: list[dict]) -> None:
     data = _load_scenario("demo_armor")
     distance = PLAYER_SEPARATION - project["movement.half_width"]
-    armored = _body_damage(project, distance, True)
-    unarmored = _body_damage(project, distance, False)
-    armored_ref = round(_ref_value(entries, "ak47.armored_body_damage"))
+    armored = _body_damage(project, distance, True, "ak47")
+    unarmored = _body_damage(project, distance, False, "m4a4")
+    # 参考条目 ak47.armored_body_damage 是 0u 口径（36×0.775=27.9），靶场实际距离 384u
+    # 需按 range_modifier 折算后再比较（模块 7 距离衰减）。
+    armored_ref = round(_ref_value(entries, "ak47.armored_body_damage")
+                        * _falloff(project, distance, "ak47"))
     expectations = [
         ("有甲伤害=参考值", armored, armored_ref),
         ("有甲血量", _expect(_check_step(data, "armored_hit"), 1, "health"),

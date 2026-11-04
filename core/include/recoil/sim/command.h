@@ -15,6 +15,10 @@ enum class CommandKind : uint8_t {
     Plant,
     Defuse,
     Stop,
+    // 新增命令追加在末尾，保持既有数值稳定（场景/脚本按名字调用，但避免不必要变动）。
+    BuyWeapon,
+    SwitchWeapon,
+    Pickup,
 };
 
 enum class BuyItem : uint8_t {
@@ -35,6 +39,8 @@ struct Command {
     bool duck = false;
     BuyItem item = BuyItem::Armor;
     GrenadeKind grenade = GrenadeKind::HE;
+    WeaponId weapon_id = WeaponId::None; // BuyWeapon 使用
+    uint8_t slot = 0;                    // SwitchWeapon 使用：0=主武器，1=副武器
 };
 
 } // namespace recoil

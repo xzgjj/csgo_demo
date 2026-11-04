@@ -9,8 +9,11 @@
 #include "gdextension_interface.h"
 #include "recoil/ai/nav.h"
 #include "recoil/ai/tactics.h"
+#include "recoil/ai/vision.h"
 #include "recoil/content/content.h"
+#include "recoil/content/weapon_table.h"
 #include "recoil/sim/command.h"
+#include "recoil/sim/ground.h"
 #include "recoil/sim/round.h"
 #include "recoil/sim/step.h"
 #include "recoil/world/map.h"
@@ -90,6 +93,26 @@ protected:
         BIND(nav_path_points, "fx", "fy", "fz", "tx", "ty", "tz");
         BIND(nav_points, "fx", "fy", "fz", "tx", "ty", "tz");
         BIND(set_player_position, "player", "x", "y", "z");
+        BIND(is_visible, "viewer", "target");
+        BIND(buy_weapon, "player", "weapon_id");
+        BIND(switch_weapon, "player", "slot");
+        BIND(get_weapon_id, "player");
+        BIND(get_weapon_scope, "player");
+        BIND(get_weapon_mag_capacity, "player");
+        BIND(get_weapon_price, "weapon_id");
+        BIND(get_weapon_name, "weapon_id");
+        BIND(pickup_weapon, "player");
+        BIND(buy_helmet, "player");
+        BIND(get_ground_weapon_count);
+        BIND(get_ground_weapon_id, "index");
+        BIND(get_ground_weapon_x, "index");
+        BIND(get_ground_weapon_y, "index");
+        BIND(get_ground_weapon_z, "index");
+        BIND(get_ground_weapon_mag, "index");
+        BIND(get_nearest_ground_weapon, "player");
+        BIND(get_fire_count, "player");
+        BIND(get_last_fire_tick, "player");
+        BIND(get_view_yaw, "player");
 #undef BIND
     }
 
@@ -114,8 +137,7 @@ public:
         local.team = static_cast<uint8_t>(recoil::Team::T);
         local.money = content_.round.start_money;
         local.position = {0.0f, 0.0f, 0.0f};
-        local.weapon.mag = content_.rifle.magazine;
-        local.weapon.reserve = content_.rifle.reserve;
+        recoil::GiveDefaultLoadout(local, static_cast<uint8_t>(recoil::Team::T));
 
         recoil::PlayerState& dummy = state_.players[1];
         dummy.alive = true;
@@ -125,8 +147,7 @@ public:
         dummy.team = static_cast<uint8_t>(recoil::Team::CT);
         dummy.money = content_.round.start_money;
         dummy.position = {400.0f, 0.0f, 0.0f};
-        dummy.weapon.mag = content_.rifle.magazine;
-        dummy.weapon.reserve = content_.rifle.reserve;
+        recoil::GiveDefaultLoadout(dummy, static_cast<uint8_t>(recoil::Team::CT));
 
         // 与 core ResetRound 的分配一致：C4 给 T 方、拆弹器给 CT 方；
         // 否则首回合任何玩家都没有 C4，E 下包永远不生效（C4 HUD 也就无从显示）。
@@ -175,6 +196,54 @@ public:
         pending_.push_back(command);
     }
 
+    // 购买武器：入队一条 BuyWeapon 命令；返回值=命令能否生效（冻结期/枪存在/钱够），
+    // 扣钱与换装在下一个 tick 由内核应用（失败会发 BuyFailed 事件）。
+    bool buy_weapon(int player, int weapon_id) {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return false;
+        }
+        const recoil::WeaponRow* row =
+            recoil::FindWeaponRow(static_cast<recoil::WeaponId>(weapon_id));
+        if (row == nullptr || state_.round.phase != recoil::RoundPhase::Freeze) {
+            return false;
+        }
+        if (state_.players[static_cast<size_t>(player)].money < row->price) {
+            return false;
+        }
+        recoil::Command command;
+        command.kind = recoil::CommandKind::BuyWeapon;
+        command.player = static_cast<uint8_t>(player);
+        command.weapon_id = static_cast<recoil::WeaponId>(weapon_id);
+        pending_.push_back(command);
+        return true;
+    }
+
+    // 购买头盔（$1000，冻结期；已有内核 ApplyBuy 语义）。
+    void buy_helmet(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Buy;
+        command.player = static_cast<uint8_t>(player);
+        command.item = recoil::BuyItem::Helmet;
+        pending_.push_back(command);
+    }
+
+    // 拾取附近地面掉落武器（半径 64u，取最近一件）。
+    void pickup_weapon(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Pickup;
+        command.player = static_cast<uint8_t>(player);
+        pending_.push_back(command);
+    }
+
+    // 切换武器槽（0=主武器，1=副武器）；非法槽位由内核发 CommandRejected(InvalidSlot)。
+    void switch_weapon(int player, int slot) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::SwitchWeapon;
+        command.player = static_cast<uint8_t>(player);
+        command.slot = static_cast<uint8_t>(slot);
+        pending_.push_back(command);
+    }
+
     void throw_grenade(int player, int kind, float yaw, float pitch) {
         recoil::Command command;
         command.kind = recoil::CommandKind::Throw;
@@ -197,12 +266,6 @@ public:
         command.kind = recoil::CommandKind::Defuse;
         command.player = static_cast<uint8_t>(player);
         pending_.push_back(command);
-    }
-    int get_bomb_planted() const {
-        return state_.bomb.planted ? 1 : 0;
-    }
-    int get_bomb_timer() const {
-        return state_.bomb.timer_ticks;
     }
 
     void tick() {
@@ -261,87 +324,10 @@ public:
         tick();
     }
 
-    int get_wall_count() const {
-        return recoil_host::WallCount(map_);
-    }
-    int get_round_number() const {
-        return state_.round.number;
-    }
-    int get_alive_count(int team) const {
-        return recoil_host::AliveCount(state_, team);
-    }
-    int get_has_bomb(int player) const {
-        return recoil_host::HasBomb(state_, player);
-    }
-    int nav_path_points(float fx, float fy, float fz, float tx, float ty, float tz) const {
-        return recoil_host::NavPointCount(map_, fx, fy, fz, tx, ty, tz);
-    }
-    PackedVector3Array nav_points(float fx, float fy, float fz, float tx, float ty,
-                                  float tz) const {
-        return recoil_host::NavPoints(map_, fx, fy, fz, tx, ty, tz);
-    }
     void set_player_position(int player, float x, float y, float z) {
         recoil_host::SetPlayerPosition(state_, player, x, y, z);
     }
-#define RECOIL_FLOAT_GETTER(name, expr)                                                            \
-    float name(int player) const {                                                                 \
-        return expr;                                                                               \
-    }
-#define RECOIL_INT_GETTER(name, expr)                                                              \
-    int name(int player) const {                                                                   \
-        return expr;                                                                               \
-    }
-#define RECOIL_GETTER0(name, expr)                                                                 \
-    int name() const {                                                                             \
-        return expr;                                                                               \
-    }
-    RECOIL_FLOAT_GETTER(get_x, state_.players[player].position.x)
-    RECOIL_FLOAT_GETTER(get_y, state_.players[player].position.y)
-    RECOIL_FLOAT_GETTER(get_z, state_.players[player].position.z)
-    RECOIL_INT_GETTER(get_health, state_.players[player].health)
-    RECOIL_INT_GETTER(get_armor, state_.players[player].armor)
-    RECOIL_INT_GETTER(get_helmet, state_.players[player].helmet ? 1 : 0)
-    RECOIL_INT_GETTER(get_team, static_cast<int>(state_.players[player].team))
-    RECOIL_GETTER0(get_kill_count, recoil_host::KillCount())
-#define RECOIL_KILL_GETTER(name, expr)                                                             \
-    int name(int index) const {                                                                    \
-        return expr;                                                                               \
-    }
-    RECOIL_KILL_GETTER(get_kill_shooter, recoil_host::KillShooter(index))
-    RECOIL_KILL_GETTER(get_kill_victim, recoil_host::KillVictim(index))
-    RECOIL_GETTER0(get_player_count, state_.player_count)
-    int get_mag(int player) const {
-        return state_.players[player].weapon.mag;
-    }
-    int get_reserve(int player) const {
-        return state_.players[player].weapon.reserve;
-    }
-    bool is_alive(int player) const {
-        return state_.players[player].alive;
-    }
-    int get_kills(int player) const {
-        return state_.players[player].kills;
-    }
-    int get_money(int player) const {
-        return state_.players[player].money;
-    }
-    int get_smoke_active() const {
-        return state_.smoke.active ? 1 : 0;
-    }
-    float get_smoke_x() const {
-        return state_.smoke.position.x;
-    }
-    float get_smoke_y() const {
-        return state_.smoke.position.y;
-    }
-    int get_blind_ticks(int player) const {
-        return state_.players[player].blind_ticks;
-    }
-    RECOIL_GETTER0(get_round_phase, static_cast<int>(state_.round.phase))
-    RECOIL_GETTER0(get_round_ticks, state_.round.phase_ticks)
-    RECOIL_GETTER0(get_score_t, state_.round.score_t)
-    RECOIL_GETTER0(get_score_ct, state_.round.score_ct)
-    RECOIL_GETTER0(get_tick, static_cast<int>(state_.tick))
+
     int _count(recoil::EventKind kind) const {
         int total = 0;
         for (int i = 0; i < last_events_.count; ++i) {
@@ -351,18 +337,9 @@ public:
         }
         return total;
     }
-    int get_last_damage_events() const {
-        return _count(recoil::EventKind::DamageApplied);
-    }
-    int get_last_fire_events() const {
-        return _count(recoil::EventKind::WeaponFired);
-    }
-    int get_total_damage_events() const {
-        return total_damage_;
-    }
-    int get_total_fire_events() const {
-        return total_fire_;
-    }
+
+    // 只读 getter 组（含 is_visible）拆到独立头文件，保持本文件 <=400 行。
+#include "recoil_host_getters.h"
 };
 
 namespace {

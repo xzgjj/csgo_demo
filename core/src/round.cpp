@@ -1,6 +1,11 @@
 #include "recoil/sim/round.h"
 
 #include <algorithm>
+#include <utility>
+
+#include "recoil/ai/reaction.h"
+#include "recoil/content/weapon_table.h"
+#include "recoil/sim/reject.h"
 
 namespace recoil {
 namespace {
@@ -13,9 +18,10 @@ constexpr Vec3 kLegacyTSpawn{0.0f, -200.0f, 0.0f};
 constexpr Vec3 kLegacyCTSpawn{400.0f, 0.0f, 0.0f};
 constexpr int kTeamSize = 5;
 constexpr float kSpawnSpacing = 64.0f;
+// 与 content/maps/de_ash.layout.json spawns.*.slots 同步（横排，避免挡住队友视线）。
 constexpr float kSpawnOffsets[kTeamSize][2] = {
-    {0.0f, 0.0f},          {kSpawnSpacing, 0.0f},  {-kSpawnSpacing, 0.0f},
-    {0.0f, kSpawnSpacing}, {0.0f, -kSpawnSpacing},
+    {-2.0f * kSpawnSpacing, 0.0f}, {-kSpawnSpacing, 0.0f},       {0.0f, 0.0f},
+    {kSpawnSpacing, 0.0f},         {2.0f * kSpawnSpacing, 0.0f},
 };
 
 // 同一出生点内按队列序号错开，避免同队玩家重叠。
@@ -34,6 +40,9 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
     for (GrenadeState& grenade : state.grenades) {
         grenade = GrenadeState{};
     }
+    for (GroundWeapon& drop : state.ground_weapons) {
+        drop = GroundWeapon{};
+    }
     const bool full_team = state.player_count == static_cast<uint8_t>(kTeamSize * 2);
     int t_slot = 0;
     int ct_slot = 0;
@@ -51,11 +60,9 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         player.jump_held = false;
         player.on_ground = true;
         player.blind_ticks = 0;
-        player.weapon.mag = content.rifle.magazine;
-        player.weapon.reserve = content.rifle.reserve;
-        player.weapon.cooldown_ticks = 0;
-        player.weapon.reloading = false;
-        player.weapon.reload_ticks_left = 0;
+        player.reaction_target = kNoReactionTarget;
+        player.reaction_ticks = 0;
+        GiveDefaultLoadout(player, player.team);
         const bool is_t = player.team == static_cast<uint8_t>(Team::T);
         if (!full_team) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
@@ -137,8 +144,6 @@ void BeginMatch(WorldState& state, const Content& content, EventList& events) {
         player.health = 100;
         player.money = content.round.start_money;
         player.kills = 0;
-        player.weapon.mag = content.rifle.magazine;
-        player.weapon.reserve = content.rifle.reserve;
     }
     state.round.number = 0;
     state.round.score_t = 0;
@@ -234,6 +239,70 @@ void ApplyBuy(WorldState& state, const Content& content, const Command& command,
     player.armor = 100;
     player.helmet = player.helmet || helmet;
     events.Push({EventKind::BuySucceeded, command.player, 0, player.money});
+}
+
+void ApplyBuyWeapon(WorldState& state, const Content& content, const Command& command,
+                    EventList& events) {
+    (void)content;
+    if (command.player >= state.player_count) {
+        events.Push({EventKind::BuyFailed, command.player, 0, 0});
+        return;
+    }
+    PlayerState& player = state.players[command.player];
+    if (state.round.phase != RoundPhase::Freeze) {
+        events.Push({EventKind::BuyFailed, command.player, 0, 0});
+        return;
+    }
+    const WeaponRow* row = FindWeaponRow(command.weapon_id);
+    if (row == nullptr) {
+        events.Push({EventKind::BuyFailed, command.player, 0, 0});
+        return;
+    }
+    if (player.money < row->price) {
+        events.Push({EventKind::BuyFailed, command.player, 0, 1});
+        return;
+    }
+    player.money = static_cast<uint16_t>(player.money - row->price);
+    const uint8_t slot = row->sidearm ? 1 : 0;
+    WeaponSlotId(player, slot) = static_cast<uint8_t>(row->id);
+    WeaponSlotState(player, slot) = WeaponState{row->def.magazine, row->def.reserve, 0, 0, false};
+    events.Push({EventKind::BuySucceeded, command.player, 0, player.money});
+}
+
+void ApplySwitchWeapon(WorldState& state, const Command& command, EventList& events) {
+    if (!EnsureAlivePlayer(state, command.player, events)) {
+        return;
+    }
+    PlayerState& player = state.players[command.player];
+    if (command.slot >= kWeaponSlotCount || command.slot == player.active_slot) {
+        PushReject(events, command.player, RejectReason::InvalidSlot);
+        return;
+    }
+    // 切枪打断换弹，并交换两槽状态（weapon 永远描述当前激活槽）。
+    player.weapon.reloading = false;
+    player.weapon.reload_ticks_left = 0;
+    std::swap(player.weapon, player.sidearm);
+    player.active_slot = command.slot;
+    events.Push({EventKind::WeaponSwitched, command.player, 0, command.slot});
+}
+
+void GiveDefaultLoadout(PlayerState& player, uint8_t team) {
+    const bool is_t = team == static_cast<uint8_t>(Team::T);
+    const WeaponRow* primary = FindWeaponRow(is_t ? WeaponId::AK47 : WeaponId::M4A4);
+    const WeaponRow* sidearm = FindWeaponRow(is_t ? WeaponId::Glock : WeaponId::USP);
+    if (primary == nullptr || sidearm == nullptr) {
+        player.primary_id = 0;
+        player.secondary_id = 0;
+        player.active_slot = 0;
+        player.weapon = WeaponState{};
+        player.sidearm = WeaponState{};
+        return;
+    }
+    player.primary_id = static_cast<uint8_t>(primary->id);
+    player.secondary_id = static_cast<uint8_t>(sidearm->id);
+    player.active_slot = 0;
+    player.weapon = WeaponState{primary->def.magazine, primary->def.reserve, 0, 0, false};
+    player.sidearm = WeaponState{sidearm->def.magazine, sidearm->def.reserve, 0, 0, false};
 }
 
 } // namespace recoil

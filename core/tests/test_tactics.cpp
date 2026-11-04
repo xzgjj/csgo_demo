@@ -324,6 +324,10 @@ TEST_CASE("可见敌人时优先交战开火") {
     KillTeam(state, Team::CT);
     PlacePlayer(state, 5, Team::CT, {0.0f, 300.0f, 0.0f}); // 只留一名可见敌人
     state.players[0].has_bomb = true;                      // 携带 C4 也先交火
+    // 模块 3 语义变更：机器人首次看到敌人有反应延迟（RoundDef::bot_reaction_ticks），
+    // 这里直接把延迟状态置为"已就绪"，专注验证战术层交战优先级。
+    state.players[0].reaction_target = 5;
+    state.players[0].reaction_ticks = DefaultContent().round.bot_reaction_ticks;
 
     const TacticalDecision decision = Decide(state, 0);
     CHECK(decision.state == TacticState::Engage);

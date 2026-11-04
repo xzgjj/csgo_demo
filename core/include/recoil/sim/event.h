@@ -26,6 +26,9 @@ enum class EventKind : uint8_t {
     BombPlanted,
     BombDefused,
     BombExploded,
+    WeaponSwitched,
+    WeaponDropped,
+    WeaponPickedUp,
 };
 
 enum class RejectReason : int32_t {
@@ -44,6 +47,8 @@ enum class RejectReason : int32_t {
     NotDefuser = 12,
     NoGrenadeSlot = 13,
     MatchEnded = 14,
+    InvalidSlot = 15,
+    NoGroundWeapon = 16,
 };
 
 struct Event {
