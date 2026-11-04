@@ -5,6 +5,7 @@ extends Node3D
 
 const EYE_HEIGHT := 64.0
 const TICKS_PER_SECOND := 64.0
+const CombatFxScript = preload("res://scripts/combat_fx.gd")
 
 var sim: RefCounted
 var world: DeAshWorld
@@ -19,6 +20,7 @@ var camera: Camera3D
 var target_mesh: MeshInstance3D
 var smoke_mesh: MeshInstance3D
 var viewmodel: WeaponViewmodel
+var fx
 var blind_overlay: ColorRect
 var yaw := 0.0
 var pitch := 0.0
@@ -42,6 +44,7 @@ var _player_mesh: MeshInstance3D
 var _death_label: Label
 var _debug_label: Label
 var _f3_was := false
+var _last_damage := 0
 var _f5_was := false
 func _ready() -> void:
 	sim = RecoilSim.new()
@@ -67,6 +70,8 @@ func _build_world() -> void:
 	viewmodel = WeaponViewmodel.new()
 	add_child(viewmodel)
 	viewmodel.attach(camera)
+	fx = CombatFxScript.new()
+	add_child(fx)
 	_player_mesh = ActorVisuals.make_capsule(self, Color(0.35, 0.55, 0.90), "Player")
 	_player_mesh.visible = false
 
@@ -118,6 +123,7 @@ func _enter_game(is_match: bool) -> void:
 	_last_phase = -1
 	_last_score_t = 0
 	_last_score_ct = 0
+	_last_damage = 0
 	yaw = 90.0 if is_match else 0.0
 	pitch = 0.0
 	hud.visible = true
@@ -244,6 +250,7 @@ func _physics_process(_delta: float) -> void:
 	if fire_down and not _fire_was_down:
 		sim.fire(0, yaw, pitch)
 		viewmodel.kick()
+		fx.trigger_shot()
 	_fire_was_down = fire_down
 	var weapon_key := _pressed_weapon_key()
 	if weapon_key != -1 and weapon_key != _weapon_key_was:
@@ -266,6 +273,10 @@ func _physics_process(_delta: float) -> void:
 		sim.tick_auto()
 	else:
 		sim.tick()
+	var damage: int = int(sim.get_total_damage_events())
+	if damage > _last_damage:
+		fx.trigger_hit(CombatFxScript.hit_point(sim, camera))
+		_last_damage = damage
 	_update_view()
 	_update_hud()
 
@@ -297,7 +308,7 @@ func _update_view() -> void:
 	viewmodel.visible = not third_person and not scoped
 	if match_mode:
 		target_mesh.visible = false
-		_update_bot_meshes()
+		ActorVisuals.update_bot_meshes(self, sim, bot_meshes)
 	else:
 		var tx: float = sim.get_x(1)
 		var ty: float = sim.get_y(1)
@@ -312,21 +323,6 @@ func _update_view() -> void:
 	_update_round_pages()
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
-
-## 5v5：为玩家 1..9 建/更新胶囊（红=T、蓝=CT），表现层只读内核状态。
-func _update_bot_meshes() -> void:
-	var count: int = int(sim.get_player_count())
-	for index in range(1, count):
-		while bot_meshes.size() < index:
-			bot_meshes.append(_make_bot_mesh(bot_meshes.size() + 1))
-		var mesh: MeshInstance3D = bot_meshes[index - 1]
-		var alive: bool = sim.is_alive(index)
-		mesh.visible = alive
-		if alive:
-			mesh.position = Vector3(-float(sim.get_y(index)), 36.0, -float(sim.get_x(index)))
-
-func _make_bot_mesh(slot: int) -> MeshInstance3D:
-	return ActorVisuals.make_capsule(self, Color(0.80, 0.30, 0.20), "Bot%d" % slot)
 
 func _update_round_pages() -> void:
 	var phase: int = sim.get_round_phase()

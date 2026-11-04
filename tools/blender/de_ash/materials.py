@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import bpy
 
-from .data import MATERIAL_SPECS
+from .data import MATERIAL_SPECS, PROJECT_ROOT
 
 
 def srgb_to_linear(value):
@@ -17,6 +17,41 @@ def srgb_to_linear(value):
 
 def linear_rgb(color):
     return tuple(srgb_to_linear(channel) for channel in color)
+
+
+TEXTURE_FILES = {
+    "concrete": "brick_wall.png",
+    "wood": "wood_grain.png",
+    "metal": "metal_scratch.png",
+    "fabric": "fabric_weave.png",
+    "dirt": "dirt_noise.png",
+    "brick": "brick_wall.png",
+}
+TEXTURE_DIR = PROJECT_ROOT / "assets" / "generated"
+
+
+def _attach_texture(material, key, bsdf, base_rgba):
+    """给 Principled Base Color 接 UV 贴图（6 材质），无贴图时保持平色。"""
+    file_name = TEXTURE_FILES.get(key)
+    if not file_name:
+        return False
+    path = TEXTURE_DIR / file_name
+    if not path.exists():
+        return False
+    image = bpy.data.images.load(str(path), check_existing=True)
+    image.colorspace_settings.name = "sRGB"
+    nodes = material.node_tree.nodes
+    links = material.node_tree.links
+    tex = nodes.new("ShaderNodeTexImage")
+    tex.image = image
+    tex.interpolation = "Linear"
+    coord = nodes.new("ShaderNodeTexCoord")
+    mapping = nodes.new("ShaderNodeMapping")
+    mapping.inputs["Scale"].default_value = (2.0, 2.0, 2.0)
+    links.new(coord.outputs["UV"], mapping.inputs["Vector"])
+    links.new(mapping.outputs["Vector"], tex.inputs["Vector"])
+    links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    return True
 
 
 def make_materials():
@@ -45,6 +80,7 @@ def _make_material(key, spec):
     if alpha < 1.0:
         _set_blended(material)
     material.diffuse_color = (*base, alpha)
+    _attach_texture(material, key, bsdf, base)
     return material
 
 

@@ -1,4 +1,5 @@
 extends SceneTree
+const MapDecorScript = preload("res://scripts/map_decor.gd")
 ## 输出 de_ash 6 个机位截图（视觉=Blender 细节 GLB，缺失时回退 boxes blockout）。
 ## 用法：godot --path host --script res://tests/capture_de_ash.gd
 
@@ -17,6 +18,7 @@ func _initialize() -> void:
 	root.add_child(root3d)
 	_build_world(root3d)
 	var glb := _load_map_glb()
+	MapDecorScript.add(root3d, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
 	if glb != null:
 		root3d.add_child(glb)
 	else:
@@ -100,4 +102,6 @@ func _load_map_glb() -> Node3D:
 	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
 		push_warning("de_ash GLB 解析失败，回退 boxes blockout")
 		return null
-	return document.generate_scene(gltf_state) as Node3D
+	var scene := document.generate_scene(gltf_state)
+	MaterialLib.apply_to_scene(scene)
+	return scene as Node3D

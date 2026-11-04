@@ -30,3 +30,20 @@ static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:
 	mesh_instance.visible = false
 	parent.add_child(mesh_instance)
 	return mesh_instance
+
+
+static func update_bot_meshes(parent: Node3D, sim: RefCounted,
+		meshes: Array[MeshInstance3D]) -> void:
+	var count: int = int(sim.get_player_count())
+	for index in range(1, count):
+		while meshes.size() < index:
+			meshes.append(make_bot_mesh(parent, meshes.size() + 1))
+		var mesh: MeshInstance3D = meshes[index - 1]
+		var alive: bool = sim.is_alive(index)
+		mesh.visible = alive
+		if alive:
+			mesh.position = Vector3(-float(sim.get_y(index)), 36.0, -float(sim.get_x(index)))
+
+
+static func make_bot_mesh(parent: Node3D, slot: int) -> MeshInstance3D:
+	return make_capsule(parent, Color(0.80, 0.30, 0.20), "Bot%d" % slot)

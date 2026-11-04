@@ -109,8 +109,10 @@ void StartReload(WorldState& state, const Content& content, const Command& comma
 RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3& origin,
                            const Vec3& dir, float max_range) {
     RayHit best;
+    const uint8_t shooter_team = state.players[shooter].team;
     for (uint8_t i = 0; i < state.player_count; ++i) {
-        if (i == shooter || !state.players[i].alive) {
+        // 竞技默认 friendly fire off：队友不挡弹道、不受伤（也避免 Bot 误伤玩家）。
+        if (i == shooter || !state.players[i].alive || state.players[i].team == shooter_team) {
             continue;
         }
         const Vec3& pos = state.players[i].position;

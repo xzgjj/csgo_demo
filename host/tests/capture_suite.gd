@@ -27,6 +27,8 @@ func _flow() -> void:
 	main.yaw = 90.0
 	main.pitch = 0.0
 	main.viewmodel.set_process(false)
+	for i in 5:
+		await process_frame
 	await _shot("spawn.png")
 
 	main.sim.set_move(0, 90.0, 0.0, 1.0, 0.0, false, false)
@@ -75,6 +77,7 @@ func _shot(name: String) -> void:
 	main.viewmodel.freeze_pose()
 	main._update_view()
 	main._update_hud()
+	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw
 	_save(name)

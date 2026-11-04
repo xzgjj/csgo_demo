@@ -600,6 +600,74 @@
       ],
       "height": 256,
       "material": "concrete"
+    },
+    {
+      "id": "T_spawn_west_2f",
+      "name": "T 出生 west 两层建筑",
+      "kind": "solid",
+      "center": [
+        -320,
+        -1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "T_spawn_east_2f",
+      "name": "T 出生 east 两层建筑",
+      "kind": "solid",
+      "center": [
+        320,
+        -1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "CT_spawn_west_2f",
+      "name": "CT 出生 west 两层建筑",
+      "kind": "solid",
+      "center": [
+        -320,
+        1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
+    },
+    {
+      "id": "CT_spawn_east_2f",
+      "name": "CT 出生 east 两层建筑",
+      "kind": "solid",
+      "center": [
+        320,
+        1500
+      ],
+      "size": [
+        256,
+        256
+      ],
+      "height": 256,
+      "material": "concrete",
+      "roof_walkable": false,
+      "openings": []
     }
   ],
   "structures": [
@@ -650,6 +718,66 @@
         32
       ],
       "height": 128
+    },
+    {
+      "id": "wall_T_spawn_bend_a",
+      "center": [
+        -64,
+        -1420
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_T_spawn_bend_b",
+      "center": [
+        64,
+        -1300
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_spawn_bend_a",
+      "center": [
+        -64,
+        1420
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_spawn_bend_b",
+      "center": [
+        64,
+        1300
+      ],
+      "size": [
+        256,
+        32
+      ],
+      "height": 128
+    },
+    {
+      "id": "wall_CT_A_sight2",
+      "center": [
+        -760,
+        900
+      ],
+      "size": [
+        32,
+        320
+      ],
+      "height": 256
     }
   ],
   "lanes": [
@@ -702,6 +830,30 @@
           -1572
         ],
         [
+          120,
+          -1460
+        ],
+        [
+          120,
+          -1360
+        ],
+        [
+          -96,
+          -1340
+        ],
+        [
+          -96,
+          -1280
+        ],
+        [
+          -96,
+          -1188
+        ],
+        [
+          0,
+          -1100
+        ],
+        [
           0,
           -200
         ],
@@ -719,6 +871,30 @@
         ],
         [
           0,
+          1100
+        ],
+        [
+          -96,
+          1188
+        ],
+        [
+          -96,
+          1280
+        ],
+        [
+          -96,
+          1340
+        ],
+        [
+          120,
+          1360
+        ],
+        [
+          120,
+          1460
+        ],
+        [
+          0,
           1572
         ]
       ]
@@ -729,6 +905,10 @@
       "points": [
         [
           160,
+          -1700
+        ],
+        [
+          600,
           -1700
         ],
         [
@@ -917,7 +1097,7 @@
       "id": "mid_spine_south",
       "from": [
         0,
-        -1500
+        -1100
       ],
       "to": [
         0,
@@ -934,7 +1114,7 @@
       ],
       "to": [
         0,
-        1500
+        1100
       ],
       "expect": "clear",
       "note": "中路北段（中央掩体后到 CT 侧）"
@@ -1300,12 +1480,316 @@
       ],
       "material": "wood",
       "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_1",
+      "kind": "prop",
+      "center": [
+        168,
+        -1460,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_2",
+      "kind": "prop",
+      "center": [
+        -168,
+        -1360,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "spawn_T_cover_3",
+      "kind": "prop",
+      "center": [
+        -168,
+        -1260,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        48
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_1",
+      "kind": "prop",
+      "center": [
+        168,
+        1460,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_2",
+      "kind": "prop",
+      "center": [
+        -168,
+        1360,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "spawn_CT_cover_3",
+      "kind": "prop",
+      "center": [
+        -168,
+        1260,
+        0
+      ],
+      "size": [
+        40,
+        80,
+        48
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "mid_gate_cover_w",
+      "kind": "prop",
+      "center": [
+        -176,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "mid_gate_cover_e",
+      "kind": "prop",
+      "center": [
+        176,
+        620,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_long_cover",
+      "kind": "prop",
+      "center": [
+        -1320,
+        -1300,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_short_cover",
+      "kind": "prop",
+      "center": [
+        -800,
+        -1020,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover",
+      "kind": "prop",
+      "center": [
+        -1044,
+        -520,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "B_long_cover",
+      "kind": "prop",
+      "center": [
+        1320,
+        720,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "B_short_cover",
+      "kind": "prop",
+      "center": [
+        800,
+        1020,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "A_short_cover_2",
+      "kind": "prop",
+      "center": [
+        -800,
+        -820,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover_2",
+      "kind": "prop",
+      "center": [
+        -880,
+        -460,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_ct_cover_3",
+      "kind": "prop",
+      "center": [
+        -1200,
+        -560,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
+    },
+    {
+      "id": "B_short_cover_2",
+      "kind": "prop",
+      "center": [
+        840,
+        820,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "metal",
+      "walkable": false
+    },
+    {
+      "id": "A_long_arch_cover_1",
+      "kind": "prop",
+      "center": [
+        -1520,
+        420,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "wood",
+      "walkable": false
+    },
+    {
+      "id": "A_long_arch_cover_2",
+      "kind": "prop",
+      "center": [
+        -1520,
+        -20,
+        0
+      ],
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "material": "concrete",
+      "walkable": false
     }
   ],
   "rotation_seconds_target": {
     "A_long": 5.2,
     "A_short": 3.9,
-    "mid": 13.4,
+    "mid": 15.8,
     "B_long": 12.4,
     "B_short": 3.9,
     "CT_rotate_A": 16.0,

@@ -24,6 +24,7 @@ func _run() -> void:
 	await _check_view_toggle()
 	await _check_debug_toggle()
 	await _check_reload()
+	await _check_combat_fx()
 	if failures.is_empty():
 		print("INPUT_SMOKE PASS")
 		quit(0)
@@ -157,3 +158,25 @@ func _check_reload() -> void:
 		await physics_frame
 	if int(main.sim.get_mag(player_id)) != 30:
 		failures.append("R 换弹未生效：mag %d -> %d" % [mag_before, main.sim.get_mag(player_id)])
+
+
+func _check_combat_fx() -> void:
+	main.sim.set_player_position(0, 0.0, 0.0, 0.0)
+	var tx := float(main.sim.get_x(1))
+	var ty := float(main.sim.get_y(1))
+	main.yaw = atan2(ty, tx) * 180.0 / PI
+	main.pitch = 0.0
+	var shot_before: int = int(main.fx.shot_count)
+	var hit_before: int = int(main.fx.hit_count)
+	_press_mouse(MOUSE_BUTTON_LEFT)
+	for i in 3:
+		await physics_frame
+	_release_mouse(MOUSE_BUTTON_LEFT)
+	for i in 3:
+		await physics_frame
+	if int(main.fx.shot_count) <= shot_before:
+		failures.append("开火未触发枪声（shot_count 未增加）")
+	if int(main.fx.hit_count) <= hit_before:
+		failures.append("命中未触发命中音/火花（dmg=%d last=%d hit=%d target_alive=%s hp=%d）" % [int(main.sim.get_total_damage_events()), int(main._last_damage), int(main.fx.hit_count), str(main.sim.is_alive(1)), int(main.sim.get_health(1))])
+	if not bool(main.fx.spark.emitting):
+		failures.append("命中火花未发射")

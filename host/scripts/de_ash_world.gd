@@ -1,5 +1,6 @@
 class_name DeAshWorld
 extends Node3D
+const MapDecorScript = preload("res://scripts/map_decor.gd")
 ## demo 世界：优先按 host/scenes/de_ash_boxes.json 生成 de_ash（墙 / 车道 / 包点 / 出生 / 道具，
 ## 材质由 MaterialLib 按 kind 选择）；JSON 缺失或非法时回退到与内核 ±800 对齐的 1600 灰盒。
 ## 包点/出生锚点直接取盒子清单里 kind=site/spawn 的中心，保证与布局数据一致。
@@ -42,6 +43,7 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 		# 视觉用 Blender 细节 GLB（212 mesh/装饰件），碰撞仍以 boxes JSON / 内核 MapDef 为准。
 		blockout.visible = false
 		add_child(glb_world)
+		MapDecorScript.add(self, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
 		source = "de_ash_glb"
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)
@@ -62,6 +64,7 @@ func _load_map_glb() -> Node3D:
 		push_warning("de_ash GLB 解析失败，回退 blockout 视觉")
 		return null
 	var scene := document.generate_scene(gltf_state)
+	MaterialLib.apply_to_scene(scene)
 	return scene as Node3D
 
 

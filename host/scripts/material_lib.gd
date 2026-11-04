@@ -6,6 +6,14 @@ extends RefCounted
 
 const BASE_IDS: Array[String] = ["concrete", "metal", "wood", "glass", "fabric", "dirt"]
 const HIGHLIGHT_IDS: Array[String] = ["site", "spawn"]
+const TEXTURE_FILES := {
+	"concrete": "res://textures/brick_wall.png",
+	"wood": "res://textures/wood_grain.png",
+	"metal": "res://textures/metal_scratch.png",
+	"fabric": "res://textures/fabric_weave.png",
+	"dirt": "res://textures/dirt_noise.png",
+}
+const TEXTURE_SCALE := 0.01
 
 static var _cache: Dictionary = {}
 
@@ -89,6 +97,21 @@ static func material_for_prop_type(prop_type: String) -> StandardMaterial3D:
 	return get_material("concrete")
 
 
+## 把 GLB 的 mat_* 材质替换为带 6 贴图的 MaterialLib 材质（triplanar，无需 UV）。
+## 游戏（de_ash_world）与 6 机位截图（capture_de_ash）共用，保证视觉一致。
+static func apply_to_scene(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mesh_instance := node as MeshInstance3D
+		for surface in mesh_instance.get_surface_override_material_count():
+			var current := mesh_instance.get_active_material(surface)
+			if current is StandardMaterial3D and current.resource_name.begins_with("mat_"):
+				var key := current.resource_name.trim_prefix("mat_")
+				if is_base_id(key):
+					mesh_instance.set_surface_override_material(surface, get_material(key))
+	for child in node.get_children():
+		apply_to_scene(child)
+
+
 static func _create(id: String) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	match id:
@@ -113,7 +136,22 @@ static func _create(id: String) -> StandardMaterial3D:
 			_set_emission(material, Color(0.15, 0.40, 0.85), 0.9)
 		_:
 			_set_pbr(material, Color(0.30, 0.30, 0.30), 0.9, 0.0)
+	_apply_texture(material, id)
 	return material
+
+
+static func _apply_texture(material: StandardMaterial3D, id: String) -> void:
+	var path: String = TEXTURE_FILES.get(id, "")
+	if path.is_empty():
+		return
+	var image := Image.new()
+	if image.load(ProjectSettings.globalize_path(path)) != OK:
+		return
+	var texture := ImageTexture.create_from_image(image)
+	material.albedo_texture = texture
+	material.uv1_triplanar = true
+	material.uv1_scale = Vector3(TEXTURE_SCALE, TEXTURE_SCALE, TEXTURE_SCALE)
+	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 
 
 static func _set_pbr(material: StandardMaterial3D, color: Color, roughness: float,

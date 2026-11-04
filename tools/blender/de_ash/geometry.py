@@ -52,6 +52,23 @@ def rot_axes(axis_x, axis_y, axis_z):
     ))
 
 
+
+
+def assign_box_uv(bm, tile=256.0):
+    """无 UV 的 bmesh 立方体：按主轴投影 + 世界坐标平铺，供 6 材质贴图使用。"""
+    uv_layer = bm.loops.layers.uv.verify()
+    for face in bm.faces:
+        normal = face.normal
+        if abs(normal.x) >= abs(normal.y) and abs(normal.x) >= abs(normal.z):
+            axis_u, axis_v = 1, 2
+        elif abs(normal.y) >= abs(normal.z):
+            axis_u, axis_v = 0, 2
+        else:
+            axis_u, axis_v = 0, 1
+        for loop in face.loops:
+            co = loop.vert.co
+            loop[uv_layer].uv = (co[axis_u] / tile, co[axis_v] / tile)
+
 class GeoBuilder:
     """把若干盒体累加进同一个 mesh（逐面记录材质索引），最后生成单个 object。"""
 
@@ -81,6 +98,7 @@ class GeoBuilder:
         return self
 
     def finish(self, name, collection, bevel_width=0.8, bevel_segments=1):
+        assign_box_uv(self.bm)
         mesh = bpy.data.meshes.new(name)
         self.bm.to_mesh(mesh)
         self.bm.free()
@@ -99,6 +117,7 @@ def make_block_object(box, materials, collection):
     bm = bmesh.new()
     bmesh.ops.create_cube(bm, size=1.0)
     bmesh.ops.scale(bm, vec=Vector(box["size"]), verts=bm.verts)
+    assign_box_uv(bm)
     bm.to_mesh(mesh)
     bm.free()
     mesh.materials.append(materials[box["material"]])

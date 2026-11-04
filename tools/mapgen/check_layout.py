@@ -90,8 +90,8 @@ def _building_shape_issues(building, boxes, max_h, issues):
 def check_buildings(layout, boxes):
     issues = []
     buildings = layout.get("buildings", [])
-    if len(buildings) != 14:
-        issues.append(f"建筑数量应为 14，实际 {len(buildings)}")
+    if len(buildings) != 18:
+        issues.append(f"建筑数量应为 18，实际 {len(buildings)}")
     ids = [building["id"] for building in buildings]
     if len(set(ids)) != len(ids):
         issues.append("建筑 id 重复")
