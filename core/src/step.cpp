@@ -19,6 +19,7 @@ constexpr float kBodyHeight = 72.0f;
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
+    float hit_z = 0.0f;
     int player = -1;
 };
 
@@ -135,17 +136,20 @@ RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3&
         }
         best.hit = true;
         best.t = t;
+        best.hit_z = origin.z + dir.z * t;
         best.player = i;
     }
     return best;
 }
 
 void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, uint8_t victim,
-                   float distance, EventList& events) {
+                   float distance, float hit_z, EventList& events) {
     PlayerState& target = state.players[victim];
     const float falloff =
         std::pow(content.rifle.range_modifier, distance / content.rifle.range_modifier_unit);
-    const float raw = static_cast<float>(content.rifle.damage) * falloff *
+    const float height = hit_z - target.position.z;
+    const float group = height >= 65.0f ? 4.0f : (height < 32.0f ? 0.75f : 1.0f);
+    const float raw = static_cast<float>(content.rifle.damage) * falloff * group *
                       (target.armor > 0 ? content.rifle.armor_ratio : 1.0f);
     const uint16_t damage = static_cast<uint16_t>(std::lround(raw));
     const uint16_t applied = std::min(damage, target.health);
@@ -197,7 +201,8 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
     }
-    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), hit.t, events);
+    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), hit.t,
+                  hit.hit_z, events);
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {

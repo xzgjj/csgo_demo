@@ -24,6 +24,7 @@ add_executable(recoil_tests
     tests/doctest_main.cpp
     tests/test_bomb.cpp
     tests/test_grenades.cpp
+    tests/test_hitgroups.cpp
     tests/test_movement.cpp
     tests/test_round.cpp
     tests/test_step.cpp
