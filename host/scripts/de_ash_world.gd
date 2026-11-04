@@ -72,6 +72,10 @@ func _build_environment() -> void:
 	environment.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
 	environment.ambient_light_energy = 0.95
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	environment.fog_enabled = true
+	environment.fog_light_color = Color(0.78, 0.72, 0.62)
+	environment.fog_density = 0.00035
+	environment.fog_aerial_perspective = 0.35
 	var world_env := WorldEnvironment.new()
 	world_env.name = "WorldEnvironment"
 	world_env.environment = environment
@@ -81,6 +85,10 @@ func _build_environment() -> void:
 	sun.rotation_degrees = Vector3(-50.0, -35.0, 0.0)
 	sun.light_energy = 1.8
 	sun.shadow_enabled = true
+	sun.directional_shadow_max_distance = 4096.0
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+	sun.light_energy = 1.9
+	sun.light_color = Color(1.0, 0.95, 0.86)
 	add_child(sun)
 	var fill := DirectionalLight3D.new()
 	fill.name = "Fill"

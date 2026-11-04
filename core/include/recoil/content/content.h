@@ -21,9 +21,9 @@ struct WeaponDef {
 
 struct RoundDef {
     uint16_t freeze_ticks = 192;
-    uint16_t live_ticks = 1920;
+    uint16_t live_ticks = 7360; // 115s @64tick（CS:GO 回合时长）
     uint16_t end_ticks = 320;
-    uint16_t max_score = 2;
+    uint16_t max_score = 13; // MR12：先到 13 胜
     uint16_t start_money = 800;
     uint16_t max_money = 16000;
     uint16_t win_reward = 3250;

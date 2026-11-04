@@ -32,6 +32,8 @@ class RecoilSim : public RefCounted {
     int human_player_ = 0;
     recoil::SiteLayout sites_{};
     std::vector<recoil::Command> pending_{};
+    std::vector<recoil::Command> bot_commands_{};
+    int bot_refresh_ = 0;
 
 protected:
     static void _bind_methods() {
@@ -97,6 +99,8 @@ public:
         content_ = recoil::DefaultContent();
         map_ = recoil_host::MakeDemoArena();
         pending_.clear();
+        bot_commands_.clear();
+        bot_refresh_ = 0;
         last_events_ = recoil::EventList{};
         total_damage_ = 0;
         total_fire_ = 0;
@@ -232,26 +236,29 @@ public:
     void begin_match() {
         state_ = recoil::WorldState{};
         content_ = recoil::DefaultContent();
-        recoil::EventList events{};
-        recoil::BeginMatch(state_, content_, events);
+        recoil::BeginMatch(state_, content_, last_events_);
         pending_.clear();
-        last_events_ = events;
-        total_damage_ = 0;
-        total_fire_ = 0;
-        total_dry_ = 0;
+        bot_commands_.clear();
+        bot_refresh_ = 0;
+        total_damage_ = total_fire_ = total_dry_ = 0;
     }
 
-    // 人机由内核战术层驱动：玩家 1..N-1 生成 Command，再统一 Step。
+    // 人机由内核战术层驱动：每 4 tick 重算一次决策（导航开销分摊），中间复用命令。
     void tick_auto() {
-        for (int i = 0; i < static_cast<int>(state_.player_count); ++i) {
-            if (i == human_player_) {
-                continue;
+        if (bot_refresh_ % 4 == 0) { // 人机决策每 4 tick 刷新，导航开销分摊
+            bot_commands_.clear();
+            for (uint8_t i = 0; i < state_.player_count; ++i) {
+                if (i != human_player_) {
+                    bot_commands_.push_back(
+                        recoil::TacticalBotDecide(state_, content_, i, sites_, &map_));
+                }
             }
-            pending_.push_back(recoil::TacticalBotDecide(state_, content_, static_cast<uint8_t>(i),
-                                                         sites_, &map_));
         }
+        ++bot_refresh_;
+        pending_.insert(pending_.end(), bot_commands_.begin(), bot_commands_.end());
         tick();
     }
+
     int get_wall_count() const {
         return recoil_host::WallCount(map_);
     }
@@ -274,27 +281,21 @@ public:
     void set_player_position(int player, float x, float y, float z) {
         recoil_host::SetPlayerPosition(state_, player, x, y, z);
     }
-    float get_x(int player) const {
-        return state_.players[player].position.x;
+#define RECOIL_FLOAT_GETTER(name, expr)                                                            \
+    float name(int player) const {                                                                 \
+        return expr;                                                                               \
     }
-    float get_y(int player) const {
-        return state_.players[player].position.y;
+#define RECOIL_INT_GETTER(name, expr)                                                              \
+    int name(int player) const {                                                                   \
+        return expr;                                                                               \
     }
-    float get_z(int player) const {
-        return state_.players[player].position.z;
-    }
-    int get_health(int player) const {
-        return state_.players[player].health;
-    }
-    int get_armor(int player) const {
-        return state_.players[player].armor;
-    }
-    int get_helmet(int player) const {
-        return state_.players[player].helmet ? 1 : 0;
-    }
-    int get_team(int player) const {
-        return static_cast<int>(state_.players[player].team);
-    }
+    RECOIL_FLOAT_GETTER(get_x, state_.players[player].position.x)
+    RECOIL_FLOAT_GETTER(get_y, state_.players[player].position.y)
+    RECOIL_FLOAT_GETTER(get_z, state_.players[player].position.z)
+    RECOIL_INT_GETTER(get_health, state_.players[player].health)
+    RECOIL_INT_GETTER(get_armor, state_.players[player].armor)
+    RECOIL_INT_GETTER(get_helmet, state_.players[player].helmet ? 1 : 0)
+    RECOIL_INT_GETTER(get_team, static_cast<int>(state_.players[player].team))
     int get_player_count() const {
         return state_.player_count;
     }

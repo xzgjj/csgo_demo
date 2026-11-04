@@ -22,13 +22,13 @@
     {"id": "plant_reward", "value": 300, "unit": "money", "project": "round.plant_reward", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §5"},
     {"id": "defuse_reward", "value": 300, "unit": "money", "project": "round.defuse_reward", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §5"},
     {"id": "freeze_seconds", "value": 15, "unit": "s", "project": "round.freeze_seconds", "tolerance": {"abs": 1}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4", "note": "项目 3s（192 tick），更接近 demo 节奏；已知偏差"},
-    {"id": "live_seconds", "value": 115, "unit": "s", "project": "round.live_seconds", "tolerance": {"abs": 2}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4", "note": "项目 30s（1920 tick），已知偏差"},
+    {"id": "live_seconds", "value": 115, "unit": "s", "project": "round.live_seconds", "tolerance": {"abs": 2}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4", "note": "项目 115s（7360 tick），已对齐"},
     {"id": "bomb_seconds", "value": 40, "unit": "s", "project": "round.bomb_seconds", "tolerance": {"abs": 0.1}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4"},
     {"id": "defuse_seconds", "value": 10, "unit": "s", "project": "round.defuse_seconds", "tolerance": {"abs": 0.1}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4"},
     {"id": "defuse_kit_seconds", "value": 5, "unit": "s", "project": "round.defuse_kit_seconds", "tolerance": {"abs": 0.1}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4"},
     {"id": "overtime_start_money", "value": 10000, "unit": "money", "project": null, "tolerance": {"abs": 0}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §1"},
     {"id": "rounds_per_half", "value": 15, "unit": "rounds", "project": null, "tolerance": {"abs": 0}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4"},
-    {"id": "win_score", "value": 16, "unit": "rounds", "project": null, "tolerance": {"abs": 0}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4", "note": "项目 max_score=2（demo 收口用），赛制待校准"},
+    {"id": "win_score", "value": 13, "unit": "rounds", "project": null, "tolerance": {"abs": 0}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/economy-round.md §4", "note": "项目 max_score=13（MR12，先到 13 胜）"},
     {"id": "teamkill_penalty", "value": -300, "unit": "money", "project": null, "tolerance": {"abs": 0}, "gate": false, "grade": "B", "source": "research/csgo-mechanics/economy-round.md §2"}
   ]
 }

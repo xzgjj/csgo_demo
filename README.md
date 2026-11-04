@@ -13,12 +13,24 @@
 # 全量构建 + 测试 + 本地 CI
 python -X utf8 build.py --all
 
+# 一键验证（运行 → 截图 → 比对 → 报告；制品+断言，非“看一眼”）
+python -X utf8 tools/verify/run_all.py
+
+# 运行游戏（Godot 4.7.2；或 tools\run_game.ps1）
+& 'D:\app_finish\Godot\Godot_v4.7.2-stable_win64.exe' --path .\host
+
 # 仅本地 CI（规则见 CI.md，阈值见 ci/spec.json）
 python -X utf8 tools/ci/run_local.py
 
 # 环境基线
 python -X utf8 build.py --env
 ```
+
+- 运行/验证/编辑的详细说明与查看位置：`docs/quickstart-run.md`（本地文档）。
+- Authoring/Runtime 分离：编辑器只改场景/资源（唯一工作编辑实例，交互走 MCP/脚本
+  `tools/authoring/godot_mcp.py`）；验证一律非编辑器 CLI（状态断言 headless，截图走窗口化 CLI）。
+- 验证制品：`verification/actual/`（实际截图/diff）、`verification/goldens/`（基线）、
+  `log/verify/run_all/report.md`（报告）。
 
 ## 目录
 

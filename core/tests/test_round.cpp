@@ -233,3 +233,11 @@ TEST_CASE("BeginMatch 初始化 10 人 5v5 并放在 de_ash 出生点") {
     CHECK(state.players[0].has_bomb);
     CHECK(state.players[5].has_defuser);
 }
+
+TEST_CASE("默认赛制对齐 CS:GO：Live 115s / 先到 13 胜（避免开局数秒结束）") {
+    const recoil::Content content = recoil::DefaultContent();
+    CHECK(content.round.freeze_ticks == 192);
+    CHECK(content.round.live_ticks == 7360);
+    CHECK(content.round.end_ticks == 320);
+    CHECK(content.round.max_score == 13);
+}

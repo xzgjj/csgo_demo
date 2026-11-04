@@ -262,3 +262,20 @@ TEST_CASE("走出平台边缘后会坠落回地面") {
     CHECK(state.players[0].position.x > 116.0f);
     CHECK(state.players[0].position.z == doctest::Approx(0.0f).epsilon(0.001));
 }
+
+TEST_CASE("死亡玩家无法移动（实机卡死回归：死亡后输入应被忽略）") {
+    recoil::WorldState state;
+    state.player_count = 1;
+    state.players[0].alive = false;
+    state.players[0].health = 0;
+    state.players[0].position = {0.0f, 0.0f, 0.0f};
+    recoil::Command command;
+    command.kind = recoil::CommandKind::Move;
+    command.player = 0;
+    command.move_forward = 1.0f;
+    command.yaw_degrees = 90.0f;
+    const std::array<recoil::Command, 1> commands{command};
+    const recoil::StepResult result = recoil::Step(state, recoil::DefaultContent(), commands);
+    CHECK(result.state.players[0].position.x == doctest::Approx(0.0).epsilon(0.0001));
+    CHECK(result.state.players[0].position.y == doctest::Approx(0.0).epsilon(0.0001));
+}

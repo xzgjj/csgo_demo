@@ -78,6 +78,10 @@ var _kick := 0.0
 var _metal: StandardMaterial3D
 var _wood: StandardMaterial3D
 var _polymer: StandardMaterial3D
+## 每把武器是否成功走 GLB（false = 盒体回退），供验收脚本断言。
+var used_glb: Dictionary = {}
+var aiming := false
+const AIM_OFFSET := Vector3(-0.10, 0.035, 0.10)
 
 
 ## 由 main.gd 在相机加入场景后调用；建立 viewmodel 层级并选中默认武器。
@@ -115,6 +119,19 @@ func weapon_ids() -> Array[String]:
 	return WEAPON_IDS
 
 
+## 截图/验收用：把后坐力姿态复位到静止位（配合 set_process(false) 保证截图确定性）。
+## 右键瞄准：viewmodel 向屏幕中心收拢（表现层；FOV 由 main 控制）。
+func set_aiming(value: bool) -> void:
+	aiming = value
+
+
+func freeze_pose() -> void:
+	_kick = 0.0
+	if _pivot != null:
+		_pivot.position = REST_POSITION
+		_pivot.rotation_degrees = REST_ROTATION
+
+
 ## 开火后坐力：单次冲量，_process 内指数回落。
 func kick(strength: float = 1.0) -> void:
 	_kick = minf(1.0, _kick + 0.6 * strength)
@@ -125,7 +142,8 @@ func _process(delta: float) -> void:
 		return
 	_kick = maxf(0.0, _kick - delta * 7.0)
 	var amount := _kick * _kick
-	_pivot.position = REST_POSITION + Vector3(0.0, 0.010 * amount, 0.075 * amount)
+	var base := REST_POSITION + (AIM_OFFSET if aiming else Vector3.ZERO)
+	_pivot.position = base + Vector3(0.0, 0.010 * amount, 0.075 * amount)
 	_pivot.rotation_degrees = REST_ROTATION + Vector3(7.0 * amount, 1.8 * amount, 0.0)
 
 
@@ -133,7 +151,9 @@ func _process(delta: float) -> void:
 func _build_model(weapon_id: String) -> Node3D:
 	var glb_model := _load_glb_model(weapon_id)
 	if glb_model != null:
+		used_glb[weapon_id] = true
 		return glb_model
+	used_glb[weapon_id] = false
 	return _build_box_model(weapon_id)
 
 
