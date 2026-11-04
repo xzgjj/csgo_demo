@@ -8,6 +8,7 @@ const AccountStoreScript = preload("res://scripts/account_store.gd")
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const CombatFxScript = preload("res://scripts/combat_fx.gd")
 const MapLoaderScript = preload("res://scripts/map_loader.gd")
+const BotVisualsScript = preload("res://scripts/bot_visuals.gd")
 const PurchaseFlowScript = preload("res://scripts/purchase_flow.gd")
 const MatchFlowScript = preload("res://scripts/match_flow.gd")
 var sim: RefCounted
@@ -30,6 +31,7 @@ var radar
 var buy_menu
 var purchase
 var match_flow
+var bot_visuals: Node3D
 var fx
 var blind_overlay: ColorRect
 var yaw := 0.0
@@ -37,7 +39,6 @@ var pitch := 0.0
 var playing := false
 var paused := false
 var match_mode := false
-var bot_meshes: Array[Node3D] = []
 var _settings_return_pause := false
 var _fire_was_down := false
 var _buy_was_down := false
@@ -81,6 +82,9 @@ func _build_world() -> void:
 	viewmodel.attach(camera)
 	fx = CombatFxScript.new()
 	add_child(fx)
+	bot_visuals = BotVisualsScript.new()
+	bot_visuals.name = "BotVisuals"
+	add_child(bot_visuals)
 	_player_mesh = ActorVisuals.make_capsule(self, Color(0.35, 0.55, 0.90), "Player")
 	_player_mesh.visible = false
 func _build_ui() -> void:
@@ -248,10 +252,11 @@ func _physics_process(_delta: float) -> void:
 	if buy_down and not _buy_was_down:
 		_toggle_buy()
 	_buy_was_down = buy_down
-	var bomb_down := Input.is_key_pressed(KEY_E)
-	if bomb_down and not _bomb_was_down:
-		sim.plant_bomb(0)
-	_bomb_was_down = bomb_down
+	var pickup_down := Input.is_key_pressed(KEY_E)
+	if pickup_down and not _bomb_was_down:
+		if not _try_pickup():
+			sim.plant_bomb(0)
+	_bomb_was_down = pickup_down
 	_throw_input("he", KEY_G, 0)
 	_throw_input("flash", KEY_F, 1)
 	_throw_input("smoke", KEY_V, 2)
@@ -292,14 +297,9 @@ func _update_view() -> void:
 		_player_mesh.position = Vector3(-py, 36.0, -px)
 	var scoped: bool = scope.is_scoped()
 	viewmodel.visible = not third_person and not scoped
-	if match_mode:
-		target_mesh.visible = false
-		ActorVisuals.update_bot_meshes(self, sim, bot_meshes)
-	else:
-		var tx: float = sim.get_x(1)
-		var ty: float = sim.get_y(1)
-		target_mesh.position = Vector3(-ty, 36.0, -tx)
-		target_mesh.visible = sim.is_alive(1)
+	# 所有玩家（含 2 人灰盒模式的靶子）统一用 BotVisuals 类人+持枪表现，旧胶囊靶隐藏。
+	target_mesh.visible = false
+	bot_visuals.sync(sim)
 	var smoke_on: bool = sim.get_smoke_active() != 0
 	smoke_mesh.visible = smoke_on
 	if smoke_on:
@@ -356,6 +356,18 @@ func _pressed_weapon_key() -> int:
 func _switch_weapon(index: int) -> void:
 	if purchase != null:
 		purchase.switch_weapon(index)
+
+## 模块 6：E 键靠近掉落物优先拾取；附近无掉落物才下包。
+func _try_pickup() -> bool:
+	if sim == null or not sim.has_method("pickup_weapon"):
+		return false
+	if int(sim.get_nearest_ground_weapon(0)) < 0:
+		return false
+	sim.pickup_weapon(0)
+	if purchase != null:
+		purchase.sync_viewmodel()
+	return true
+
 
 func _toggle_buy() -> void:
 	if purchase == null:

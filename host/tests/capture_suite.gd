@@ -1,4 +1,4 @@
-extends SceneTree
+﻿extends SceneTree
 ## 运行时截图套件（非编辑器、窗口化 CLI；供统一验证管线 run_all.py 使用）。
 ## 用法：godot --path host --script res://tests/capture_suite.gd -- <out_dir>
 ## 产出：menu/spawn/gameplay/fire/weapon_0..2/scoreboard/pause/settings 共 11 张，
@@ -73,6 +73,48 @@ func _flow() -> void:
 	await _shot("radar_off.png")
 	main.radar.set_open(true)
 
+	# 模块 5：T bot 持 AK（侧身），镜头在其右侧 → 可见持枪轮廓 + 开火枪口闪光
+	main.bot_visuals.set_animating(false)
+	for other in range(2, 5):
+		main.sim.set_player_position(other, 2600.0, -2600.0, 0.0)
+	main.sim.set_player_position(1, 0.0, -1700.0, 0.0)
+	main.sim.set_move(1, 180.0, 0.0, 0.0, 0.0, false, false)
+	main.sim.set_player_position(0, 0.0, -1630.0, 0.0)
+	main.sim.tick()
+	main._update_view()
+	await _shot("bot_weapon.png", -90.0)
+	main.sim.fire(1, 180.0, 0.0)
+	main.sim.tick()
+	main._update_view()
+	main.bot_visuals.advance(0.0)
+	await _shot("bot_fire.png", -90.0)
+
+	# 模块 6：CT bot 摆到 T 出生点开阔地击杀 → 倒地 + 原地掉落主武器 → 靠近提示
+	var victim := 5
+	main.sim.set_player_position(victim, 0.0, -1600.0, 0.0)
+	main.sim.set_player_position(0, 0.0, -1600.0, 0.0)
+	main.sim.tick()
+	for shot in 8:
+		if not bool(main.sim.is_alive(victim)):
+			break
+		main.sim.fire(0, 0.0, 0.0)
+		for wait in 8:
+			main.sim.tick()
+	main._update_view()
+	main.sim.set_player_position(0, -100.0, -1760.0, 0.0)
+	main.sim.tick()
+	main._update_view()
+	for step in 12:
+		main.bot_visuals.advance(1.0 / 60.0)
+	await _shot("drop_weapon.png", rad_to_deg(atan2(160.0, 100.0)))
+	main.sim.set_player_position(0, 0.0, -1560.0, 0.0)
+	main.sim.tick()
+	main._update_view()
+	await _shot("pickup_prompt.png", -90.0)
+	# 回到 5v5 对局（后续 meta 断言 player_count==10）
+	main.call("_start_match")
+	main.set_physics_process(false)
+	main.bot_visuals.set_animating(false)
 	# 模块 9/10：购买菜单（800 起始金 → 手枪可买/步枪灰显）与物品栏页面。
 	main.purchase.toggle()
 	await _shot("buy_menu.png")
@@ -103,8 +145,8 @@ func _flow() -> void:
 	quit(0)
 
 
-func _shot(name: String) -> void:
-	main.yaw = 90.0
+func _shot(name: String, yaw_degrees: float = 90.0) -> void:
+	main.yaw = yaw_degrees
 	main.pitch = 0.0
 	main.viewmodel.freeze_pose()
 	main._update_view()

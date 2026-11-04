@@ -4,6 +4,8 @@ extends SceneTree
 ## 每例三动作：准备（_start_play：800 金 / 无甲 / 冻结期 demo 局）→ 执行（菜单点击 / 内核 tick）→ 断言。
 ## 依赖 Lead 的接线：main.purchase（PurchaseFlow）、main.buy_menu（BuyMenu）、main.sim。
 
+const Support = preload("res://tests/smoke_support.gd")
+
 var checks := 0
 var failures: Array[String] = []
 var main: Node
@@ -12,9 +14,7 @@ var _capture_dir := ""
 
 
 func _initialize() -> void:
-	var args := OS.get_cmdline_user_args()
-	if args.size() >= 2 and args[0] == "--capture":
-		_capture_dir = args[1]
+	_capture_dir = Support.capture_dir_from_args()
 	main = load("res://main.tscn").instantiate()
 	root.add_child(main)
 	_run.call_deferred()
@@ -240,13 +240,9 @@ func _capture_frames() -> void:
 
 
 func _capture(shot_name: String) -> void:
-	DirAccess.make_dir_recursive_absolute(_capture_dir)
 	await process_frame
 	await RenderingServer.frame_post_draw
-	var image: Image = root.get_texture().get_image()
-	var path := _capture_dir.path_join(shot_name + ".png")
-	image.save_png(path)
-	print("BUY_CAPTURE ", path, " ", image.get_width(), "x", image.get_height())
+	Support.save_shot(root, _capture_dir, shot_name, "BUY_CAPTURE")
 
 
 func _tick_frames(count: int) -> void:

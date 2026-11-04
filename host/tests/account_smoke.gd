@@ -7,6 +7,7 @@ extends SceneTree
 const AccountStoreScript = preload("res://scripts/account_store.gd")
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const BuyMenuScript = preload("res://scripts/buy_menu.gd")
+const Support = preload("res://tests/smoke_support.gd")
 
 const TEST_PATH := "user://account_smoke_test.json"
 const TEST_TMP := "user://account_smoke_test.json.tmp"
@@ -18,9 +19,7 @@ var _capture_dir := ""
 
 
 func _initialize() -> void:
-	var args := OS.get_cmdline_user_args()
-	if args.size() >= 2 and args[0] == "--capture":
-		_capture_dir = args[1]
+	_capture_dir = Support.capture_dir_from_args()
 	_run.call_deferred()
 
 
@@ -270,13 +269,9 @@ func _capture_pages() -> void:
 
 
 func _capture(shot_name: String) -> void:
-	DirAccess.make_dir_recursive_absolute(_capture_dir)
 	await process_frame
 	await RenderingServer.frame_post_draw
-	var image: Image = root.get_texture().get_image()
-	var path := _capture_dir.path_join(shot_name + ".png")
-	image.save_png(path)
-	print("ACCOUNT_CAPTURE ", path, " ", image.get_width(), "x", image.get_height())
+	Support.save_shot(root, _capture_dir, shot_name, "ACCOUNT_CAPTURE")
 
 
 func _on_purchase_requested(item_id: String, price: int) -> void:

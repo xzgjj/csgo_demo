@@ -60,6 +60,10 @@ func switch_weapon(index: int) -> void:
 
 
 ## 手模跟随内核当前武器（视觉预览/无模型时保持不变）。
+func sync_viewmodel() -> void:
+	_sync_viewmodel()
+
+
 func _sync_viewmodel() -> void:
 	var weapon_id: int = int(sim.get_weapon_id(0))
 	var model_index: int = weapon_id - 1
@@ -78,10 +82,13 @@ func _record_loadout(weapon_id: int) -> void:
 
 
 func _buy_gear(item_id: String) -> bool:
-	if item_id != "kevlar" and item_id != "kevlar_helmet":
-		return false
 	var before: int = int(sim.get_money(0))
-	sim.buy_armor(0)
+	if item_id == "kevlar":
+		sim.buy_armor(0)
+	elif item_id == "kevlar_helmet":
+		sim.buy_helmet(0)
+	else:
+		return false
 	return int(sim.get_money(0)) < before
 
 

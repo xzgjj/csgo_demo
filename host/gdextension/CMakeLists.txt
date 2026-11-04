@@ -14,6 +14,9 @@ endif()
 
 add_library(recoil_host SHARED recoil_host.cpp)
 
+# 输出 DLL 名（CACHE 变量；调试构建可用 -DRECOIL_DLL_NAME=recoil_host_dev 避开运行中进程的 DLL 锁）。
+set(RECOIL_DLL_NAME "recoil_host" CACHE STRING "宿主 GDExtension DLL 输出名")
+
 target_include_directories(recoil_host PRIVATE
     "${GODOTCPP_ROOT}/include"
     "${GODOTCPP_ROOT}/build/gen/include"
@@ -28,7 +31,10 @@ target_compile_options(recoil_host PRIVATE -Wall -Wextra -Wpedantic)
 
 set_target_properties(recoil_host PROPERTIES
     PREFIX "lib"
-    OUTPUT_NAME "recoil_host"
+    # 默认输出名；当用户侧游戏/编辑器正在运行、DLL 被映射锁住时可改用 dev 名构建：
+    #   cmake -S host/gdextension -B build-host-dev -G Ninja -DRECOIL_DLL_NAME=recoil_host_dev
+    # 并临时把 host/bin/recoil_host.gdextension 指向 dev DLL（验证完再切回）。
+    OUTPUT_NAME "${RECOIL_DLL_NAME}"
     SUFFIX ".windows.template_debug.x86_64.dll"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../bin"

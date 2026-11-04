@@ -106,7 +106,7 @@ def project_path(args) -> str:
     return str(Path(args[1]).resolve() if len(args) > 1 else (ROOT / "host").resolve())
 
 
-def print_tools(client: McpClient) -> int:
+def print_tools(client: McpClient, args) -> int:
     for tool in client.tools().get("result", {}).get("tools", []):
         print(f"- {tool['name']}: {tool.get('description', '')[:100]}")
     return 0
