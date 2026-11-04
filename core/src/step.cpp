@@ -165,8 +165,10 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
         target.has_bomb = false;
         target.weapon.reloading = false;
         target.weapon.reload_ticks_left = 0;
-        ++state.players[shooter].kills;
-        AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
+        if (target.team != state.players[shooter].team) {
+            ++state.players[shooter].kills;
+            AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
+        }
         events.Push({EventKind::PlayerDied, shooter, victim, 0});
     }
 }

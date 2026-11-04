@@ -20,6 +20,7 @@ using recoil::HashState;
 using recoil::PlayerState;
 using recoil::Step;
 using recoil::StepResult;
+using recoil::Team;
 using recoil::WorldState;
 
 WorldState MakeDuel() {
@@ -31,6 +32,7 @@ WorldState MakeDuel() {
         player.health = 100;
         player.weapon.mag = 30;
         player.weapon.reserve = 90;
+        player.team = static_cast<uint8_t>(i == 0 ? Team::T : Team::CT);
         player.position = {0.0f, static_cast<float>(i) * 500.0f, 0.0f};
     }
     return state;
