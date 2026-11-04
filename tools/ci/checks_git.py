@@ -9,15 +9,7 @@ import sys
 from pathlib import Path
 
 from checks import (
-    FAIL,
-    PASS,
-    SKIP,
-    ROOT,
-    git,
-    load_json,
-    result,
-    run,
-    source_files,
+    FAIL, PASS, SKIP, ROOT, git, load_json, result, run, source_files,
 )
 
 POLICY = "ci/spec.json"
@@ -47,7 +39,7 @@ BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".glb", ".blend", ".exe", ".dll", ".
 
 
 def _line_count(path):
-    """未跟踪文件的行数：二进制按 0 行计，避免 PNG/GLB 被当文本撑爆行预算。"""
+    """未跟踪文件行数：二进制按 0 行计，避免 PNG/GLB 被当文本撑爆行预算。"""
     if path.suffix.lower() in BINARY_SUFFIXES:
         return 0
     return path.read_text(encoding="utf-8", errors="replace").count("\n") + 1
@@ -70,9 +62,7 @@ def _untracked(spec):
                 if not f.is_file():
                     continue
                 sub = f.relative_to(ROOT).as_posix()
-                if any(
-                    part in sub for part in ("__pycache__", ".godot", "node_modules")
-                ):
+                if any(part in sub for part in ("__pycache__", ".godot", "node_modules")):
                     continue
                 files.add(sub)
                 lines += _line_count(f)
@@ -94,16 +84,10 @@ def check_diff_budget(spec):
     approved = bool((os.environ.get("CI_APPROVED_BY") or "").strip())
     over = len(files) > budgets["changed_files"] or lines > budgets["diff_lines"]
     if over and not approved:
-        detail = (
-            f"文件 {len(files)}/{budgets['changed_files']}，行 {lines}/{budgets['diff_lines']}；"
-            "超限需 CI_APPROVED_BY"
-        )
+        detail = (f"文件 {len(files)}/{budgets['changed_files']}，行 {lines}/{budgets['diff_lines']}；"
+                  "超限需 CI_APPROVED_BY")
         return result("diff_budget", FAIL, detail)
-    return result(
-        "diff_budget",
-        PASS,
-        f"文件 {len(files)}，行 {lines}" + ("（批准例外）" if over else ""),
-    )
+    return result("diff_budget", PASS, f"文件 {len(files)}，行 {lines}" + ("（批准例外）" if over else ""))
 
 
 def _author_issues(spec):
@@ -130,11 +114,8 @@ def check_author(spec):
     if not _head_exists():
         return result("author", SKIP, "尚无提交")
     issues = _author_issues(spec)
-    return result(
-        "author",
-        FAIL if issues else PASS,
-        "; ".join(issues[:5]) if issues else "作者/共同作者仅 xzgjj",
-    )
+    return result("author", FAIL if issues else PASS,
+                  "; ".join(issues[:5]) if issues else "作者/共同作者仅 xzgjj")
 
 
 def check_protected_tests(spec):
@@ -143,21 +124,13 @@ def check_protected_tests(spec):
     files = set(manifest.get("protected_files", []))
     tests_dir = ROOT / "tests"
     if not tests_dir.exists() or not any(tests_dir.rglob("*")):
-        return result(
-            "protected_tests", SKIP, "tests/ 为空（测试本地维护，按约定不入库）"
-        )
+        return result("protected_tests", SKIP, "tests/ 为空（测试本地维护，按约定不入库）")
     issues = [f"缺失文件 {f}" for f in files if not (ROOT / f).exists()]
-    texts = "\n".join(
-        p.read_text(encoding="utf-8", errors="replace")
-        for p in tests_dir.rglob("*")
-        if p.is_file()
-    )
+    texts = "\n".join(p.read_text(encoding="utf-8", errors="replace")
+                      for p in tests_dir.rglob("*") if p.is_file())
     issues += [f"缺失用例 {i}" for i in required if i not in texts]
-    return result(
-        "protected_tests",
-        FAIL if issues else PASS,
-        "; ".join(issues[:5]) if issues else "受保护用例完整",
-    )
+    return result("protected_tests", FAIL if issues else PASS,
+                  "; ".join(issues[:5]) if issues else "受保护用例完整")
 
 
 def _policy_hash(spec):
@@ -167,13 +140,11 @@ def _policy_hash(spec):
         paths = [p] if p.is_file() else sorted(x for x in p.rglob("*") if x.is_file())
         for x in paths:
             rel = x.relative_to(ROOT).as_posix()
-            if any(
-                part in rel for part in ("__pycache__", ".pytest_cache", ".ruff_cache")
-            ):
+            if any(part in rel for part in ("__pycache__", ".pytest_cache", ".ruff_cache")):
                 continue
             if rel in ("ci/baseline_snapshot.json", "ci/spec.json.bak"):
                 continue
-            h.update(x.read_text(encoding="utf-8", errors="replace").encode("utf-8"))
+            h.update(x.read_bytes().replace(b"\r\n", b"\n"))
     return h.hexdigest()
 
 
@@ -184,25 +155,14 @@ def check_policy(spec):
     issues = []
     for key, val in spec["budgets"].items():
         old = baseline.get("budgets", {}).get(key)
-        if (
-            isinstance(old, (int, float))
-            and isinstance(val, (int, float))
-            and val > old
-        ):
+        if isinstance(old, (int, float)) and isinstance(val, (int, float)) and val > old:
             issues.append(f"预算放宽 {key}: {old} -> {val}")
     if _policy_hash(spec) != baseline.get("policy_hash"):
         approver = (os.environ.get("CI_POLICY_APPROVER") or "").strip()
         issues += ["规则文件已变更但未设置 CI_POLICY_APPROVER"] if not approver else []
-        issues += (
-            ["审批人不能是开发者（单人仓库需人工记录例外）"]
-            if approver == spec["author"]["login"]
-            else []
-        )
-    return result(
-        "policy",
-        FAIL if issues else PASS,
-        "; ".join(issues) if issues else "规则未放宽、策略变更已审批",
-    )
+        issues += ["审批人不能是开发者（单人仓库需人工记录例外）"] if approver == spec["author"]["login"] else []
+    return result("policy", FAIL if issues else PASS,
+                  "; ".join(issues) if issues else "规则未放宽、策略变更已审批")
 
 
 def check_assets(spec):
@@ -214,33 +174,16 @@ def check_assets(spec):
     issues = []
     for item in data.get("assets", []):
         fields = ("id", "path", "license", "author", "source")
-        issues += [
-            f"缺少 {k}: {item.get('id', '?')}" for k in fields if not item.get(k)
-        ]
-        issues += (
-            [f"许可不在白名单: {item.get('license')}"]
-            if item.get("license") not in allow
-            else []
-        )
-        issues += (
-            [f"文件不存在: {item.get('path')}"]
-            if not (ROOT / item.get("path", "")).exists()
-            else []
-        )
-    return result(
-        "assets",
-        FAIL if issues else PASS,
-        "; ".join(issues[:5])
-        if issues
-        else f"{len(data.get('assets', []))} 项素材合规",
-    )
+        issues += [f"缺少 {k}: {item.get('id', '?')}" for k in fields if not item.get(k)]
+        issues += [f"许可不在白名单: {item.get('license')}"] if item.get("license") not in allow else []
+        issues += [f"文件不存在: {item.get('path')}"] if not (ROOT / item.get("path", "")).exists() else []
+    return result("assets", FAIL if issues else PASS,
+                  "; ".join(issues[:5]) if issues else f"{len(data.get('assets', []))} 项素材合规")
 
 
 def check_calibration(spec):
-    tools = [
-        ("calibration", "tools/calibrate/run_calibration.py"),
-        ("reference_tests", "tools/verify/run_reference_tests.py"),
-    ]
+    tools = [("calibration", "tools/calibrate/run_calibration.py"),
+             ("reference_tests", "tools/verify/run_reference_tests.py")]
     issues = []
     for name, rel in tools:
         script = ROOT / rel
@@ -250,11 +193,8 @@ def check_calibration(spec):
         rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=300)
         if rc != 0:
             issues.append(f"{name} FAIL: " + (out.strip().splitlines() or [""])[-1])
-    return result(
-        "calibration",
-        FAIL if issues else PASS,
-        "; ".join(issues) if issues else "校准门与 reference 靶场全过",
-    )
+    return result("calibration", FAIL if issues else PASS,
+                  "; ".join(issues) if issues else "校准门与 reference 靶场全过")
 
 
 def check_map_layout(spec):
@@ -276,20 +216,14 @@ def check_scenarios(spec):
         if not isinstance(data, dict):
             issues.append(f"{p.name}: 非法 JSON")
             continue
-        issues += [
-            f"{p.name}: 缺少 {k}"
-            for k in ("id", "map", "script", "asserts")
-            if k not in data
-        ]
+        issues += [f"{p.name}: 缺少 {k}" for k in ("id", "map", "script", "asserts") if k not in data]
     if issues:
         return result("scenarios", FAIL, "; ".join(issues[:5]))
     runner = ROOT / "tools/verify/run_scenarios.py"
     godot = _find_godot()
     dlls = list((ROOT / "host/bin").glob("*.dll"))
     if runner.exists() and godot and dlls:
-        rc, out = run(
-            [sys.executable, "-X", "utf8", str(runner), "--headless"], timeout=300
-        )
+        rc, out = run([sys.executable, "-X", "utf8", str(runner), "--headless"], timeout=300)
         tail = (out.strip().splitlines() or [""])[-1]
         return result("scenarios", PASS if rc == 0 else FAIL, f"场景执行: {tail}")
     return result("scenarios", PASS, "场景 schema 正常（宿主未构建，跳过执行）")
@@ -303,21 +237,10 @@ def check_logs(spec):
     files = [p for p in logdir.rglob("*") if p.is_file()]
     size = sum(p.stat().st_size for p in files)
     issues = []
-    issues += (
-        [f"日志 {size} > {budgets['log_bytes']} 字节"]
-        if size > budgets["log_bytes"]
-        else []
-    )
-    issues += (
-        [f"日志文件 {len(files)} > {budgets['log_files']}"]
-        if len(files) > budgets["log_files"]
-        else []
-    )
-    return result(
-        "logs",
-        FAIL if issues else PASS,
-        "; ".join(issues) if issues else f"{len(files)} 文件 / {size} 字节",
-    )
+    issues += [f"日志 {size} > {budgets['log_bytes']} 字节"] if size > budgets["log_bytes"] else []
+    issues += [f"日志文件 {len(files)} > {budgets['log_files']}"] if len(files) > budgets["log_files"] else []
+    return result("logs", FAIL if issues else PASS,
+                  "; ".join(issues) if issues else f"{len(files)} 文件 / {size} 字节")
 
 
 def _detect_lint_tools():
@@ -325,11 +248,7 @@ def _detect_lint_tools():
     venv = ROOT.parent / "web——game/.ci-venv/Scripts/gdformat.exe"
     if not gdformat and venv.exists():
         gdformat = str(venv)
-    ruff = (
-        [sys.executable, "-m", "ruff"]
-        if run([sys.executable, "-m", "ruff", "--version"], timeout=20)[0] == 0
-        else None
-    )
+    ruff = [sys.executable, "-m", "ruff"] if run([sys.executable, "-m", "ruff", "--version"], timeout=20)[0] == 0 else None
     return shutil.which("clang-format"), gdformat, ruff
 
 
@@ -339,9 +258,7 @@ def _lint_issues(spec, tools):
     for p, rel in source_files(spec):
         checks = []
         if p.suffix in (".cpp", ".hpp", ".h", ".cc") and clang:
-            checks.append(
-                ([clang, "--dry-run", "--Werror", str(p)], f"{rel}: clang-format")
-            )
+            checks.append(([clang, "--dry-run", "--Werror", str(p)], f"{rel}: clang-format"))
         if p.suffix == ".gd" and gdformat:
             checks.append(([gdformat, "--check", str(p)], f"{rel}: gdformat"))
         if p.suffix == ".py" and ruff:
@@ -355,25 +272,14 @@ def _lint_issues(spec, tools):
 def check_lint(spec):
     tools = _detect_lint_tools()
     issues, checked = _lint_issues(spec, tools)
-    rc, out = run(
-        [sys.executable, "-m", "compileall", "-q", "tools/ci", "build.py"], timeout=120
-    )
+    rc, out = run([sys.executable, "-m", "compileall", "-q", "tools/ci", "build.py"], timeout=120)
     issues += ["Python 编译检查失败: " + out.strip()[:120]] if rc != 0 else []
     installed = [n for n, t in zip(("clang-format", "gdformat", "ruff"), tools) if t]
     if not installed:
         status = FAIL if issues else SKIP
-        return result(
-            "lint",
-            status,
-            "; ".join(issues) if issues else "无可用的 clang-format/gdformat/ruff",
-        )
-    return result(
-        "lint",
-        FAIL if issues else PASS,
-        "; ".join(issues[:5])
-        if issues
-        else f"用 {','.join(installed)} 检查 {checked} 个文件",
-    )
+        return result("lint", status, "; ".join(issues) if issues else "无可用的 clang-format/gdformat/ruff")
+    return result("lint", FAIL if issues else PASS,
+                  "; ".join(issues[:5]) if issues else f"用 {','.join(installed)} 检查 {checked} 个文件")
 
 
 def _find_godot():
@@ -394,34 +300,21 @@ def check_tests(spec):
         return result("tests", PASS if rc == 0 else FAIL, f"pytest: {tail}")
     build = ROOT / "build"
     if build.exists() and any(build.rglob("CTestTestfile.cmake")):
-        rc, out = run(
-            ["ctest", "--test-dir", "build", "--output-on-failure"], timeout=600
-        )
+        rc, out = run(["ctest", "--test-dir", "build", "--output-on-failure"], timeout=600)
         tail = (out.strip().splitlines() or [""])[-1]
         return result("tests", PASS if rc == 0 else FAIL, f"ctest: {tail}")
     smoke = ROOT / "host/tests/smoke.gd"
     godot = _find_godot()
     dlls = list((ROOT / "host/bin").glob("*.dll"))
     if smoke.exists() and godot and dlls:
-        rc, out = run(
-            [godot, "--headless", "--path", "host", "--script", "res://tests/smoke.gd"],
-            timeout=180,
-        )
+        rc, out = run([godot, "--headless", "--path", "host", "--script",
+                       "res://tests/smoke.gd"], timeout=180)
         return result("tests", PASS if rc == 0 else FAIL, f"godot smoke: exit {rc}")
     return result("tests", SKIP, "暂无测试（tests/、build/、host smoke 均不可用）")
 
 
 ALL_CHECKS = [
-    check_diff_budget,
-    check_author,
-    check_protected_tests,
-    check_policy,
-    check_assets,
-    check_calibration,
-    check_map_layout,
-    check_scenarios,
-    check_logs,
-    check_lint,
-    check_tests,
+    check_diff_budget, check_author, check_protected_tests, check_policy,
+    check_assets, check_calibration, check_map_layout, check_scenarios, check_logs, check_lint, check_tests,
 ]
 RETRYABLE = {"tests"}

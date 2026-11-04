@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "created_at": "2026-11-04T18:40:07",
-  "commit": "1e7ea482909c59c0f8d1ba7ac5b56dc0d3d39394",
+  "created_at": "2026-11-04T18:41:03",
+  "commit": "091b28a875ea74544c880feb09237e9ca1bb9871",
   "budgets": {
     "planning_doc_chars": 3000,
     "doc_bytes": 20480,
@@ -23,7 +23,7 @@
       "verification/actual/"
     ]
   },
-  "policy_hash": "d6dc55f87d0cef024c345615d2c24356c9e9a7067a559aaf6b38bbfe47a4fe65",
+  "policy_hash": "c12adab32b4c4e25667a884109931f9ffbfaf29436bc2c86b2eff95cb4a05814",
   "protected": {
     "version": 1,
     "note": "受保护回归用例清单：只增不减。文件/用例删除需人工批准并记录 diff.md。",
