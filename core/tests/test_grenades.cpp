@@ -163,3 +163,18 @@ TEST_CASE("HE 伤害受护甲吸收") {
 
     CHECK(result.state.players[1].health == 100 - 44);
 }
+
+TEST_CASE("烟雾到时消散并发出 SmokeEnded") {
+    WorldState state = MakeArena();
+    state.smoke.active = true;
+    state.smoke.position = {0.0f, 250.0f, 0.0f};
+    state.smoke.radius = 144.0f;
+    state.smoke.ticks_left = 2;
+    const Content content = DefaultContent();
+
+    auto result = Step(state, content, {});
+    result = Step(result.state, content, {});
+
+    CHECK(result.state.smoke.active == false);
+    CHECK(CountEvents(result.events, EventKind::SmokeEnded) == 1);
+}
