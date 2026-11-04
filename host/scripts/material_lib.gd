@@ -93,18 +93,18 @@ static func _create(id: String) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	match id:
 		"concrete":
-			_set_pbr(material, Color(0.46, 0.45, 0.43), 0.92, 0.0)
+			_set_pbr(material, Color(0.58, 0.48, 0.36), 0.95, 0.0)
 		"metal":
-			_set_pbr(material, Color(0.56, 0.58, 0.62), 0.32, 0.95)
+			_set_pbr(material, Color(0.52, 0.54, 0.58), 0.35, 0.90)
 		"wood":
-			_set_pbr(material, Color(0.45, 0.30, 0.17), 0.78, 0.0)
+			_set_pbr(material, Color(0.42, 0.29, 0.17), 0.80, 0.0)
 		"glass":
 			_set_pbr(material, Color(0.70, 0.82, 0.88, 0.34), 0.06, 0.10)
 			material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		"fabric":
-			_set_pbr(material, Color(0.42, 0.37, 0.29), 1.0, 0.0)
+			_set_pbr(material, Color(0.45, 0.40, 0.32), 1.0, 0.0)
 		"dirt":
-			_set_pbr(material, Color(0.34, 0.28, 0.21), 0.98, 0.0)
+			_set_pbr(material, Color(0.42, 0.34, 0.24), 1.0, 0.0)
 		"site":
 			_set_pbr(material, Color(0.62, 0.22, 0.18), 0.88, 0.0)
 			_set_emission(material, Color(0.85, 0.18, 0.12), 0.9)

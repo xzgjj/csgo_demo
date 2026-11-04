@@ -22,14 +22,17 @@
 
 | id | albedo（sRGB 0–1） | roughness | metallic | transparency | emission |
 |---|---|---|---|---|---|
-| `concrete` | 0.46, 0.45, 0.43 | 0.92 | 0.0 | opaque | — |
-| `metal` | 0.56, 0.58, 0.62 | 0.32 | 0.95 | opaque | — |
-| `wood` | 0.45, 0.30, 0.17 | 0.78 | 0.0 | opaque | — |
+| `concrete` | 0.58, 0.48, 0.36 | 0.95 | 0.0 | opaque | — |
+| `metal` | 0.52, 0.54, 0.58 | 0.35 | 0.90 | opaque | — |
+| `wood` | 0.42, 0.29, 0.17 | 0.80 | 0.0 | opaque | — |
 | `glass` | 0.70, 0.82, 0.88 @ a=0.34 | 0.06 | 0.10 | alpha | — |
-| `fabric` | 0.42, 0.37, 0.29 | 1.00 | 0.0 | opaque | — |
-| `dirt` | 0.34, 0.28, 0.21 | 0.98 | 0.0 | opaque | — |
+| `fabric` | 0.45, 0.40, 0.32 | 1.00 | 0.0 | opaque | — |
+| `dirt` | 0.42, 0.34, 0.24 | 1.00 | 0.0 | opaque | — |
 | `site` | 0.62, 0.22, 0.18 | 0.88 | 0.0 | opaque | 0.85,0.18,0.12 ×0.9 |
 | `spawn` | 0.20, 0.38, 0.62 | 0.88 | 0.0 | opaque | 0.15,0.40,0.85 ×0.9 |
+
+> 2026-11-04 v4：concrete/dirt 调成夯土-沙地暖色（对齐 de_ash 的 Ait Benhaddou 参考），
+> 同步 `tools/mapgen/geom.py` 的 `MATERIAL_COLORS`（派生引擎用同一组颜色）。
 
 ## 3 场景映射
 
