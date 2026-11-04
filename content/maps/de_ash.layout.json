@@ -33,12 +33,13 @@
     }
   ],
   "reach": {
-    "jump_max": 54,
+    "jump_max": 57,
     "step_max": 32,
     "door_width": 96,
     "door_height": 128,
     "roof_walkable": false,
-    "max_building_height": 256
+    "max_building_height": 256,
+    "note": "CS:GO 参考跳高 57u（301.993²/1600）；离散 tick 实测约 59.4，仍 <64，故 +64 仍不可直接到达"
   },
   "materials": [
     "concrete",
@@ -340,8 +341,8 @@
           "id": "B_catwalk_gap",
           "wall": "N",
           "kind": "full",
-          "offset": -172,
-          "width": 344,
+          "offset": -150,
+          "width": 380,
           "height": 256,
           "sill": 0
         }
@@ -390,12 +391,12 @@
           "id": "B_catwalk_stairs",
           "kind": "stairs",
           "start": [
-            1120,
-            1328
+            1072,
+            1456
           ],
           "axis": "y",
           "dir": -1,
-          "length": 128,
+          "length": 256,
           "width": 96,
           "z0": 0,
           "z1": 128,
@@ -480,12 +481,12 @@
           "id": "mid_bridge_stairs",
           "kind": "stairs",
           "start": [
-            320,
+            192,
             112
           ],
           "axis": "x",
           "dir": -1,
-          "length": 128,
+          "length": 256,
           "width": 96,
           "z0": 0,
           "z1": 128,
@@ -702,7 +703,19 @@
         ],
         [
           0,
+          -200
+        ],
+        [
+          130,
           0
+        ],
+        [
+          260,
+          140
+        ],
+        [
+          0,
+          340
         ],
         [
           0,
@@ -901,17 +914,43 @@
   ],
   "sightlines": [
     {
-      "id": "mid_spine",
+      "id": "mid_spine_south",
       "from": [
         0,
         -1500
       ],
       "to": [
         0,
+        -100
+      ],
+      "expect": "clear",
+      "note": "中路南段（T 侧到中央掩体前）"
+    },
+    {
+      "id": "mid_spine_north",
+      "from": [
+        0,
+        300
+      ],
+      "to": [
+        0,
         1500
       ],
       "expect": "clear",
-      "note": "中路主视线：门洞/天桥下方/两侧出生门洞均不得误挡"
+      "note": "中路北段（中央掩体后到 CT 侧）"
+    },
+    {
+      "id": "spawn_cross_blocked",
+      "from": [
+        0,
+        -1700
+      ],
+      "to": [
+        0,
+        1700
+      ],
+      "expect": "blocked",
+      "note": "T/CT 出生点不得对穿（中央掩体 + 门洞错位）"
     },
     {
       "id": "A_long_entry",
@@ -1138,7 +1177,7 @@
       "id": "mid_crate",
       "kind": "prop",
       "center": [
-        220,
+        -220,
         250,
         0
       ],
@@ -1245,12 +1284,28 @@
       ],
       "material": "metal",
       "collision": false
+    },
+    {
+      "id": "mid_cover",
+      "kind": "prop",
+      "center": [
+        0,
+        0,
+        0
+      ],
+      "size": [
+        192,
+        64,
+        96
+      ],
+      "material": "wood",
+      "walkable": false
     }
   ],
   "rotation_seconds_target": {
     "A_long": 5.2,
     "A_short": 3.9,
-    "mid": 12.6,
+    "mid": 13.4,
     "B_long": 12.4,
     "B_short": 3.9,
     "CT_rotate_A": 16.0,

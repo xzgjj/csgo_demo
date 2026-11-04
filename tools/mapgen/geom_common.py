@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 STEP_RISE_MAX = 32.0
-JUMP_MAX = 54.0
+JUMP_MAX = 57.0  # CS:GO 参考跳高 57u（离散 tick 实测 ~59.4，仍 <64）
 BRIDGE_THICKNESS = 16.0
 
 MATERIAL_COLORS = {

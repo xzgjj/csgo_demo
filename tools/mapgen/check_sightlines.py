@@ -59,6 +59,30 @@ def blocked(layout, boxes, sightline) -> str | None:
     return None
 
 
+SPAWN_OFFSETS = [(0, 0), (64, 0), (-64, 0), (0, 64), (0, -64)]
+
+
+def spawn_safety(layout, boxes) -> list[str]:
+    """T/CT 全部出生位组合在视线高度上必须互相遮挡（禁止开局对穿）。"""
+    issues = []
+    teams = layout.get("spawns", {})
+    if "T" not in teams or "CT" not in teams:
+        return ["缺少 T/CT 出生点"]
+    for tox, toy in SPAWN_OFFSETS:
+        for cox, coy in SPAWN_OFFSETS:
+            start = (teams["T"]["center"][0] + tox, teams["T"]["center"][1] + toy, EYE_Z)
+            end = (teams["CT"]["center"][0] + cox, teams["CT"]["center"][1] + coy, EYE_Z)
+            direction = (end[0] - start[0], end[1] - start[1], end[2] - start[2])
+            clear = True
+            for box in boxes:
+                if box["collision"] and ray_hits_box(start, direction, box):
+                    clear = False
+                    break
+            if clear:
+                issues.append(f"出生点对穿 T({tox},{toy}) -> CT({cox},{coy})")
+    return issues
+
+
 def check(layout, boxes) -> list[str]:
     issues = []
     sightlines = layout.get("sightlines", [])
@@ -71,6 +95,7 @@ def check(layout, boxes) -> list[str]:
             issues.append(f"视线被误挡 {sightline['id']} by {hit}")
         elif expect == "blocked" and hit is None:
             issues.append(f"应被遮挡却通视 {sightline['id']}")
+    issues += spawn_safety(layout, boxes)
     return issues
 
 

@@ -58,3 +58,6 @@ untitled.pen
 
 # Godot 自动导入元数据（运行时 GLTFDocument 加载，不需要 .import）
 /host/models/**/*.import
+
+# Blender 自动备份
+*.blend1
