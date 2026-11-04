@@ -33,6 +33,7 @@ void ApplyBombCommand(WorldState& state, const Content& content, const Command& 
             return;
         }
         state.bomb.defusing = true;
+        state.bomb.defuser = command.player;
     }
 }
 
@@ -41,7 +42,8 @@ void StepBomb(WorldState& state, const Content& content, EventList& events) {
         return;
     }
     if (state.bomb.defusing) {
-        const bool kit = state.players[0].has_defuser;
+        const uint8_t defuser = state.bomb.defuser;
+        const bool kit = defuser < state.player_count && state.players[defuser].has_defuser;
         const uint16_t required = kit ? content.round.defuse_kit_ticks : content.round.defuse_ticks;
         ++state.bomb.defuse_progress;
         state.bomb.defusing = false;

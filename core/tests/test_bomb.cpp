@@ -134,3 +134,19 @@ TEST_CASE("C4 携带者死亡时失去携带状态") {
     CHECK(result.state.players[0].alive == false);
     CHECK(result.state.players[0].has_bomb == false);
 }
+
+TEST_CASE("拆弹器计时按实际拆包者生效") {
+    WorldState state = MakeBombWorld();
+    state.bomb.planted = true;
+    state.bomb.timer_ticks = 1000;
+    state.players[1].has_defuser = true;
+    Content content = DefaultContent();
+    content.round.defuse_ticks = 4;
+    content.round.defuse_kit_ticks = 2;
+    const std::array<Command, 1> defuse{Cmd(CommandKind::Defuse, 1)};
+
+    auto result = Step(state, content, defuse);
+    result = Step(result.state, content, defuse);
+
+    CHECK(result.state.bomb.defused);
+}

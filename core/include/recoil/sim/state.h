@@ -54,6 +54,7 @@ struct BombState {
     uint16_t timer_ticks = 0;
     uint16_t defuse_progress = 0;
     uint8_t carrier = 0xFF;
+    uint8_t defuser = 0xFF;
     Vec3 position{};
 };
 
