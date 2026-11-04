@@ -18,6 +18,11 @@ enum class EventKind : uint8_t {
     RoundReset,
     BuySucceeded,
     BuyFailed,
+    GrenadeThrown,
+    GrenadeExploded,
+    FlashBlinded,
+    SmokeStarted,
+    SmokeEnded,
 };
 
 enum class RejectReason : int32_t {

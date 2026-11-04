@@ -224,9 +224,10 @@ def _norm_lines(text):
 
 def _scan_duplicate_blocks(spec):
     size = spec["budgets"]["duplicate_block_lines"]
+    skip = tuple(spec.get("duplicates_exclude_prefixes", []))
     seen, hits = {}, []
     for p, rel in source_files(spec):
-        if p.suffix.lower() in (".json", ".txt", ".cmake"):
+        if p.suffix.lower() in (".json", ".txt", ".cmake") or rel.startswith(skip):
             continue
         lines = _norm_lines(p.read_text(encoding="utf-8", errors="replace"))
         for i in range(max(0, len(lines) - size + 1)):

@@ -30,10 +30,23 @@ struct RoundDef {
     uint16_t armor_price = 650;
 };
 
+struct GrenadeDef {
+    uint16_t fuse_ticks = 96;
+    float throw_speed = 700.0f;
+    float gravity = 800.0f;
+    uint16_t he_damage = 57;
+    float he_radius = 350.0f;
+    float flash_radius = 512.0f;
+    uint16_t flash_max_ticks = 128;
+    float smoke_radius = 144.0f;
+    uint16_t smoke_ticks = 640;
+};
+
 struct Content {
     WeaponDef rifle{};
     MovementDef movement{};
     RoundDef round{};
+    GrenadeDef grenades{};
 };
 
 Content DefaultContent();

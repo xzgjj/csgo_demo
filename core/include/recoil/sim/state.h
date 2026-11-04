@@ -22,6 +22,30 @@ enum class RoundPhase : uint8_t {
     MatchEnd = 3,
 };
 
+enum class GrenadeKind : uint8_t {
+    HE = 0,
+    Flash = 1,
+    Smoke = 2,
+};
+
+struct GrenadeState {
+    bool active = false;
+    uint8_t kind = 0;
+    uint8_t owner = 0;
+    Vec3 position{};
+    Vec3 velocity{};
+    uint16_t fuse_ticks = 0;
+};
+
+struct SmokeZone {
+    bool active = false;
+    Vec3 position{};
+    float radius = 144.0f;
+    uint16_t ticks_left = 0;
+};
+
+constexpr int kMaxGrenades = 8;
+
 struct RoundState {
     RoundPhase phase = RoundPhase::Freeze;
     uint16_t phase_ticks = 0;
@@ -51,6 +75,7 @@ struct PlayerState {
     uint16_t armor = 0;
     uint16_t money = 0;
     uint16_t kills = 0;
+    uint16_t blind_ticks = 0;
     float wish_forward = 0.0f;
     float wish_side = 0.0f;
     Vec3 position{};
@@ -63,6 +88,8 @@ struct WorldState {
     uint64_t rng = 0x9E3779B97F4A7C15ull;
     uint8_t player_count = 0;
     RoundState round{};
+    SmokeZone smoke{};
+    std::array<GrenadeState, kMaxGrenades> grenades{};
     std::array<PlayerState, kMaxPlayers> players{};
 };
 

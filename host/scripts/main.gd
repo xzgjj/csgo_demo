@@ -13,6 +13,9 @@ var yaw := 0.0
 var pitch := 0.0
 var camera: Camera3D
 var target_mesh: MeshInstance3D
+var smoke_mesh: MeshInstance3D
+var blind_overlay: ColorRect
+var throw_was := {"he": false, "flash": false, "smoke": false}
 var hud_label: Label
 var menu_layer: CanvasLayer
 var pause_layer: CanvasLayer
@@ -80,6 +83,18 @@ func _build_world() -> void:
 	target_mesh.mesh = capsule
 	add_child(target_mesh)
 
+	smoke_mesh = MeshInstance3D.new()
+	var smoke_sphere := SphereMesh.new()
+	smoke_sphere.radius = 144.0
+	smoke_sphere.height = 288.0
+	var smoke_mat := StandardMaterial3D.new()
+	smoke_mat.albedo_color = Color(0.75, 0.78, 0.82, 0.85)
+	smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	smoke_sphere.material = smoke_mat
+	smoke_mesh.mesh = smoke_sphere
+	smoke_mesh.visible = false
+	add_child(smoke_mesh)
+
 	camera = Camera3D.new()
 	camera.fov = 90.0
 	camera.near = 0.05
@@ -112,6 +127,12 @@ func _build_ui() -> void:
 	crosshair.set_anchors_preset(Control.PRESET_CENTER)
 	crosshair.position = Vector2(632, 344)
 	hud.add_child(crosshair)
+
+	blind_overlay = ColorRect.new()
+	blind_overlay.color = Color(1, 1, 1, 0)
+	blind_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	blind_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(blind_overlay)
 
 	menu_layer = _make_menu("PROJECT RECOIL — GRAYBOX DEMO",
 			["开始游戏", "设置", "退出"], [_start_play, _show_settings, _quit])
@@ -208,6 +229,9 @@ func _physics_process(_delta: float) -> void:
 	if buy_down and not buy_was_down:
 		sim.buy_armor(0)
 	buy_was_down = buy_down
+	_throw_input("he", KEY_G, 0)
+	_throw_input("flash", KEY_F, 1)
+	_throw_input("smoke", KEY_V, 2)
 	sim.tick()
 	_update_view()
 	_update_hud()
@@ -222,6 +246,11 @@ func _update_view() -> void:
 	var ty: float = sim.get_y(1)
 	target_mesh.position = Vector3(-ty, 36.0, -tx)
 	target_mesh.visible = sim.is_alive(1)
+	var smoke_on: bool = sim.get_smoke_active() != 0
+	smoke_mesh.visible = smoke_on
+	if smoke_on:
+		smoke_mesh.position = Vector3(-sim.get_smoke_y(), 144.0, -sim.get_smoke_x())
+	blind_overlay.color = Color(1, 1, 1, clampf(float(sim.get_blind_ticks(0)) / 128.0, 0.0, 0.85))
 
 func _update_hud() -> void:
 	last_hits = sim.get_total_damage_events()
@@ -230,8 +259,15 @@ func _update_hud() -> void:
 	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
 		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
 		sim.get_health(1), 0, _phase_text(), sim.get_money(0),
-		sim.get_score_t(), sim.get_score_ct(), last_shots, last_hits, last_dry,
+		sim.get_score_t(), sim.get_score_ct(), sim.get_smoke_active(), sim.get_blind_ticks(0),
+		last_shots, last_hits, last_dry,
 	]
+
+func _throw_input(name: String, key: int, kind: int) -> void:
+	var down := Input.is_key_pressed(key)
+	if down and not throw_was[name]:
+		sim.throw_grenade(0, kind, yaw, pitch)
+	throw_was[name] = down
 
 func _phase_text() -> String:
 	match sim.get_round_phase():

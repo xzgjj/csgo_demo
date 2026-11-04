@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "recoil/sim/state.h"
+
 namespace recoil {
 
 enum class CommandKind : uint8_t {
@@ -9,6 +11,7 @@ enum class CommandKind : uint8_t {
     Reload,
     Move,
     Buy,
+    Throw,
     Stop,
 };
 
@@ -27,6 +30,7 @@ struct Command {
     bool jump = false;
     bool duck = false;
     BuyItem item = BuyItem::Armor;
+    GrenadeKind grenade = GrenadeKind::HE;
 };
 
 } // namespace recoil
