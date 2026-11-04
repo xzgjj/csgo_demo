@@ -1,0 +1,82 @@
+{
+  "version": 1,
+  "project": "csgo_demo",
+  "author": {
+    "login": "xzgjj",
+    "emails": ["54426784+xzgjj@users.noreply.github.com"],
+    "allowed_committers": ["GitHub", "noreply@github.com", "xzgjj", "54426784+xzgjj@users.noreply.github.com"]
+  },
+  "policy_approver": "xzgjj",
+  "pins": {
+    "godot": "4.7.2",
+    "python": "3.13",
+    "gcc_min": 16,
+    "cmake_min": "3.25"
+  },
+  "budgets": {
+    "planning_doc_chars": 3000,
+    "doc_bytes": 20480,
+    "changed_files": 50,
+    "diff_lines": 2400,
+    "max_top_level": 14,
+    "max_depth": 3,
+    "max_depth_special": 4,
+    "min_dir_files": 3,
+    "log_bytes": 20971520,
+    "log_files": 100,
+    "max_function_complexity": 12,
+    "max_source_lines": 400,
+    "duplicate_block_lines": 8,
+    "duplicate_para_chars": 80
+  },
+  "planning_docs": [
+    "CLAUDE.md",
+    "SPEC.md",
+    "implementation_plan.md",
+    "AGENT_EXECUTION_PROTOCOL.md",
+    "README.md",
+    "CI.md"
+  ],
+  "unbounded_doc_prefixes": ["docs/", "research/"],
+  "scan_exclude": [
+    ".git", "build", "out", "log", "tests", "docs", "research", "prototypes",
+    ".ci-venv", "__pycache__", ".pytest_cache", ".ruff_cache", "node_modules", "assets/incoming",
+    "ci/__pycache__", "tools/ci/__pycache__"
+  ],
+  "forbidden_dirs": ["application", "domain", "infrastructure", "adapter", "shared", "common"],
+  "test_dirs": ["tests"],
+  "source_exts": [".py", ".cpp", ".hpp", ".h", ".cc", ".gd", ".c", ".cmake", ".txt"],
+  "lint": {
+    "cpp": "clang-format",
+    "gd": "gdformat",
+    "py": "ruff"
+  },
+  "allowed_license_ids": [
+    "CC0-1.0", "PD", "PUBLIC-DOMAIN", "OFL-1.1", "MIT", "Apache-2.0",
+    "Original", "Generated", "CC-BY-4.0"
+  ],
+  "policy_paths": ["ci/", "tools/ci/", "CI.md"],
+  "retries": 3,
+  "rules": [
+    {"id": "docs", "owner": "auto", "name": "文档预算与重复段落"},
+    {"id": "structure", "owner": "auto", "name": "目录结构与深度/命名"},
+    {"id": "author", "owner": "auto", "name": "作者仅为 xzgjj、无共同作者"},
+    {"id": "diff_budget", "owner": "auto", "name": "单次改动文件/行数预算"},
+    {"id": "policy", "owner": "auto", "name": "规则只紧不宽、变更需审批"},
+    {"id": "protected_tests", "owner": "auto", "name": "受保护测试只增不减"},
+    {"id": "complexity", "owner": "auto", "name": "函数复杂度/文件行数"},
+    {"id": "duplicates", "owner": "auto", "name": "重复代码块"},
+    {"id": "dependency", "owner": "auto", "name": "依赖方向（内核无引擎头）"},
+    {"id": "lint", "owner": "auto", "name": "格式与静态检查"},
+    {"id": "assets", "owner": "auto", "name": "素材清单与许可"},
+    {"id": "scenarios", "owner": "auto", "name": "场景 JSON 与引用"},
+    {"id": "env", "owner": "auto", "name": "环境基线"},
+    {"id": "logs", "owner": "auto", "name": "日志大小/数量"},
+    {"id": "tests", "owner": "auto", "name": "测试执行"},
+    {"id": "abstraction", "owner": "human", "name": "抽象是否必要"},
+    {"id": "naming", "owner": "human", "name": "命名与设计审查"},
+    {"id": "scope_approval", "owner": "human", "name": "越界/范围是否批准"},
+    {"id": "behavior_change", "owner": "human", "name": "行为变更是否合理"},
+    {"id": "content_value", "owner": "human", "name": "文档/内容是否值得保留"}
+  ]
+}

@@ -1,0 +1,43 @@
+# ===== csgo_demo 版本控制忽略 =====
+# 规划/文档/测试/日志：本地维护，不入库（用户要求）
+/CLAUDE.md
+/notes.txt
+/diff.md
+/implementation_plan.md
+/AGENT_EXECUTION_PROTOCOL.md
+/implementation-notes.md
+/SPEC.md
+/docs/
+/research/
+/prototypes/
+/tests/
+/log/
+
+# 构建与缓存
+/build/
+/out/
+/.cache/
+/.ci-venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.godot/
+*.o
+*.obj
+*.a
+*.lib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+node_modules/
+
+# 本地素材暂存（未登记许可前不入库）
+/assets/incoming/

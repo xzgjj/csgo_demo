@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "note": "受保护回归用例清单：只增不减。文件/用例删除需人工批准并记录 diff.md。",
+  "required_assertions": [],
+  "protected_files": []
+}
