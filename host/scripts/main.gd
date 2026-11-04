@@ -118,7 +118,7 @@ func _enter_game(is_match: bool) -> void:
 	_last_phase = -1
 	_last_score_t = 0
 	_last_score_ct = 0
-	yaw = 0.0
+	yaw = 90.0 if is_match else 0.0
 	pitch = 0.0
 	hud.visible = true
 	hud.reset_feed()
