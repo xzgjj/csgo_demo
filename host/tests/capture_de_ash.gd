@@ -1,5 +1,5 @@
 extends SceneTree
-## 读取 de_ash_boxes.json 搭建 blockout，输出 6 个机位截图并退出。
+## 输出 de_ash 6 个机位截图（视觉=Blender 细节 GLB，缺失时回退 boxes blockout）。
 ## 用法：godot --path host --script res://tests/capture_de_ash.gd
 
 func _initialize() -> void:
@@ -16,7 +16,11 @@ func _initialize() -> void:
 	var root3d := Node3D.new()
 	root.add_child(root3d)
 	_build_world(root3d)
-	_build_boxes(root3d, data.get("boxes", []))
+	var glb := _load_map_glb()
+	if glb != null:
+		root3d.add_child(glb)
+	else:
+		_build_boxes(root3d, data.get("boxes", []))
 	var out := ProjectSettings.globalize_path("res://captures")
 	DirAccess.make_dir_recursive_absolute(out)
 	var views := {
@@ -85,3 +89,15 @@ func _build_boxes(root3d: Node3D, boxes: Array) -> void:
 		mesh.position = Vector3(item["center"][0], item["center"][1], item["center"][2])
 		mesh.rotation.y = item.get("rot_y", 0.0)
 		root3d.add_child(mesh)
+
+
+func _load_map_glb() -> Node3D:
+	const GLB_PATH := "res://models/map/de_ash.glb"
+	if not FileAccess.file_exists(GLB_PATH):
+		return null
+	var document := GLTFDocument.new()
+	var gltf_state := GLTFState.new()
+	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
+		push_warning("de_ash GLB 解析失败，回退 boxes blockout")
+		return null
+	return document.generate_scene(gltf_state) as Node3D

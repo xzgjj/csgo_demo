@@ -37,12 +37,32 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 		return false
 	source = "de_ash"
 	object_count = blockout.box_count
+	var glb_world := _load_map_glb()
+	if glb_world != null:
+		# 视觉用 Blender 细节 GLB（212 mesh/装饰件），碰撞仍以 boxes JSON / 内核 MapDef 为准。
+		blockout.visible = false
+		add_child(glb_world)
+		source = "de_ash_glb"
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)
 	for anchor: Vector3 in blockout.site_anchors:
 		site_anchors.append(anchor)
 	_add_anchor_labels()
 	return true
+
+
+## 加载 Blender 导出的细节地图；缺失/失败时返回 null（保留 blockout 视觉）。
+func _load_map_glb() -> Node3D:
+	const GLB_PATH := "res://models/map/de_ash.glb"
+	if not FileAccess.file_exists(GLB_PATH):
+		return null
+	var document := GLTFDocument.new()
+	var gltf_state := GLTFState.new()
+	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
+		push_warning("de_ash GLB 解析失败，回退 blockout 视觉")
+		return null
+	var scene := document.generate_scene(gltf_state)
+	return scene as Node3D
 
 
 func _build_environment() -> void:
