@@ -247,3 +247,116 @@ TEST_CASE("相同输入产生完全相同的结果（确定性）") {
     CHECK(HashState(a.state) == HashState(b.state));
     CHECK(a.events.count == b.events.count);
 }
+
+TEST_CASE("满弹匣换弹被拒绝") {
+    WorldState state = MakeDuel();
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{ReloadCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[0].weapon.reloading == false);
+    CHECK(HasEvent(result.events, EventKind::CommandRejected));
+    CHECK(result.events.items[0].value == static_cast<int32_t>(recoil::RejectReason::MagazineFull));
+}
+
+TEST_CASE("没有备弹时换弹被拒绝") {
+    WorldState state = MakeDuel();
+    state.players[0].weapon.mag = 10;
+    state.players[0].weapon.reserve = 0;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{ReloadCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[0].weapon.reloading == false);
+    CHECK(result.state.players[0].weapon.mag == 10);
+    CHECK(HasEvent(result.events, EventKind::CommandRejected));
+}
+
+TEST_CASE("备弹不足时换弹只填充可用部分") {
+    WorldState state = MakeDuel();
+    state.players[0].weapon.mag = 10;
+    state.players[0].weapon.reserve = 5;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> reload{ReloadCommand(0)};
+    const std::array<Command, 0> idle{};
+
+    StepResult result = StepOne(state, content, reload);
+    for (int i = 0; i < 200 && result.state.players[0].weapon.reloading; ++i) {
+        result = StepOne(result.state, content, idle);
+    }
+
+    CHECK(result.state.players[0].weapon.mag == 15);
+    CHECK(result.state.players[0].weapon.reserve == 0);
+}
+
+TEST_CASE("护甲损耗按吸收伤害的一半计算") {
+    WorldState state = MakeDuel();
+    state.players[1].armor = 100;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{FireCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[1].health == 72);
+    CHECK(result.state.players[1].armor == 86);
+}
+
+TEST_CASE("Stop 命令不改变状态") {
+    const WorldState state = MakeDuel();
+    const Content content = DefaultContent();
+    Command stop;
+    stop.kind = CommandKind::Stop;
+    stop.player = 0;
+    const std::array<Command, 1> commands{stop};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[0].weapon.mag == 30);
+    CHECK(result.state.players[1].health == 100);
+    CHECK(result.state.tick == state.tick + 1);
+}
+
+TEST_CASE("两名玩家同 tick 各自开火互不干扰") {
+    WorldState state = MakeDuel();
+    state.players[1].position = {0.0f, 500.0f, 0.0f};
+    const Content content = DefaultContent();
+    const std::array<Command, 2> commands{FireCommand(0), FireCommand(1, 270.0f)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[0].weapon.mag == 29);
+    CHECK(result.state.players[1].weapon.mag == 29);
+    CHECK(result.state.players[0].health == 64);
+    CHECK(result.state.players[1].health == 64);
+    CHECK(CountEvents(result.events, EventKind::DamageApplied) == 2);
+}
+
+TEST_CASE("击杀后目标死亡且击杀数增加") {
+    WorldState state = MakeDuel();
+    state.players[1].health = 36;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{FireCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[1].health == 0);
+    CHECK(result.state.players[1].alive == false);
+    CHECK(result.state.players[0].kills == 1);
+    CHECK(HasEvent(result.events, EventKind::PlayerDied));
+}
+
+TEST_CASE("干火后可以立即换弹") {
+    WorldState state = MakeDuel();
+    state.players[0].weapon.mag = 0;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> fire{FireCommand(0)};
+
+    const StepResult dry = StepOne(state, content, fire);
+    const std::array<Command, 1> reload{ReloadCommand(0)};
+    const StepResult result = StepOne(dry.state, content, reload);
+
+    CHECK(HasEvent(dry.events, EventKind::WeaponDryFire));
+    CHECK(result.state.players[0].weapon.reloading);
+}

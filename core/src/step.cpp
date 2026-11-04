@@ -5,14 +5,13 @@
 #include <cmath>
 
 #include "recoil/base/vec3.h"
+#include "recoil/movement/movement.h"
 
 namespace recoil {
 namespace {
 
-constexpr float kEyeHeight = 64.0f;
 constexpr float kHalfWidth = 16.0f;
 constexpr float kBodyHeight = 72.0f;
-
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
@@ -54,8 +53,9 @@ void PushReject(EventList& events, uint8_t player, RejectReason reason) {
 }
 
 void FinishReload(PlayerState& player, const Content& content, uint8_t source, EventList& events) {
-    const uint16_t capacity = static_cast<uint16_t>(content.rifle.magazine - player.weapon.mag);
-    const uint16_t take = std::min(player.weapon.reserve, capacity);
+    const int capacity =
+        std::max(0, static_cast<int>(content.rifle.magazine) - static_cast<int>(player.weapon.mag));
+    const int take = std::min(static_cast<int>(player.weapon.reserve), capacity);
     player.weapon.mag = static_cast<uint16_t>(player.weapon.mag + take);
     player.weapon.reserve = static_cast<uint16_t>(player.weapon.reserve - take);
     player.weapon.reloading = false;
@@ -180,7 +180,7 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
     shooter.weapon.cooldown_ticks = content.rifle.fire_interval_ticks;
     events.Push({EventKind::WeaponFired, command.player, 0, shooter.weapon.mag});
 
-    const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, kEyeHeight};
+    const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, content.movement.eye_height};
     const Vec3 dir = DirectionFromAngles(command.yaw_degrees, command.pitch_degrees);
     const RayHit hit = TraceAgainstPlayers(state, command.player, origin, dir, content.rifle.range);
     if (!hit.hit) {
@@ -190,9 +190,36 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
     ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), events);
 }
 
+void ApplyMove(WorldState& state, const Command& command, EventList& events) {
+    if (command.player >= state.player_count) {
+        PushReject(events, command.player, RejectReason::InvalidPlayer);
+        return;
+    }
+    PlayerState& player = state.players[command.player];
+    if (!player.alive) {
+        PushReject(events, command.player, RejectReason::Dead);
+        return;
+    }
+    constexpr float kPi = 3.14159265358979323846f;
+    const float yaw = command.yaw_degrees * (kPi / 180.0f);
+    const float forward_x = std::cos(yaw);
+    const float forward_y = std::sin(yaw);
+    const float left_x = -forward_y;
+    const float left_y = forward_x;
+    player.wish_forward = forward_x * command.move_forward + left_x * command.move_side;
+    player.wish_side = forward_y * command.move_forward + left_y * command.move_side;
+    player.ducking = command.duck;
+    const bool jump_edge = command.jump && !player.jump_held;
+    player.jump_held = command.jump;
+    if (jump_edge) {
+        player.jump_queued = true;
+    }
+}
+
 } // namespace
 
-StepResult Step(const WorldState& prev, const Content& content, std::span<const Command> commands) {
+StepResult Step(const WorldState& prev, const Content& content, std::span<const Command> commands,
+                const MapDef* map) {
     StepResult out;
     out.state = prev;
     ++out.state.tick;
@@ -205,9 +232,15 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
         case CommandKind::Reload:
             StartReload(out.state, content, command, out.events);
             break;
+        case CommandKind::Move:
+            ApplyMove(out.state, command, out.events);
+            break;
         case CommandKind::Stop:
             break;
         }
+    }
+    for (uint8_t i = 0; i < out.state.player_count; ++i) {
+        StepMovement(out.state.players[i], content.movement, map);
     }
     return out;
 }
@@ -230,6 +263,11 @@ uint64_t HashState(const WorldState& state) {
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.x)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.y)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.z)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.velocity.x)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.velocity.y)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.velocity.z)));
+        mix(static_cast<uint64_t>(player.on_ground) | (static_cast<uint64_t>(player.ducking) << 1) |
+            (static_cast<uint64_t>(player.jump_held) << 2));
         mix(static_cast<uint64_t>(player.weapon.mag) |
             (static_cast<uint64_t>(player.weapon.reserve) << 16) |
             (static_cast<uint64_t>(player.weapon.cooldown_ticks) << 32) |

@@ -20,10 +20,17 @@ struct WeaponState {
 struct PlayerState {
     bool alive = false;
     bool helmet = false;
+    bool on_ground = false;
+    bool ducking = false;
+    bool jump_queued = false;
+    bool jump_held = false;
     uint16_t health = 0;
     uint16_t armor = 0;
     uint16_t kills = 0;
+    float wish_forward = 0.0f;
+    float wish_side = 0.0f;
     Vec3 position{};
+    Vec3 velocity{};
     WeaponState weapon{};
 };
 

@@ -37,11 +37,14 @@ struct EventList {
     static constexpr int kMaxEvents = 32;
     Event items[kMaxEvents]{};
     int count = 0;
+    int dropped = 0;
 
     void Push(Event event) {
         if (count < kMaxEvents) {
             items[count++] = event;
+            return;
         }
+        ++dropped;
     }
 };
 

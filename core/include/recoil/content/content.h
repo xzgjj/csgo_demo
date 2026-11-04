@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "recoil/movement/movement.h"
+
 namespace recoil {
 
 // 数值为 CS:GO 参考基线（AK-47 量级）；后续由 content/defs JSON 加载并校准。
@@ -17,6 +19,7 @@ struct WeaponDef {
 
 struct Content {
     WeaponDef rifle{};
+    MovementDef movement{};
 };
 
 Content DefaultContent();
