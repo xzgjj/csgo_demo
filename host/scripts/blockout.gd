@@ -10,22 +10,24 @@ const TARGET_SPAN := 1600.0
 
 var box_count := 0
 var material_counts: Dictionary = {}
+var spawn_anchors: Array[Vector3] = []
+var site_anchors: Array[Vector3] = []
 var scale_factor := 1.0
 var ground_offset := 0.0
 
 
-func build() -> bool:
-	var text := FileAccess.get_file_as_string(BOXES_PATH)
+func build(boxes_path: String = BOXES_PATH) -> bool:
+	var text := FileAccess.get_file_as_string(boxes_path)
 	if text.is_empty():
-		push_error("缺少 %s，先跑 tools/mapgen/gen_blockout.py" % BOXES_PATH)
+		push_error("缺少 %s，先跑 tools/mapgen/gen_blockout.py" % boxes_path)
 		return false
 	var data: Variant = JSON.parse_string(text)
 	if typeof(data) != TYPE_DICTIONARY:
-		push_error("blockout JSON 非法: " + BOXES_PATH)
+		push_error("blockout JSON 非法: " + boxes_path)
 		return false
 	var boxes: Array = data.get("boxes", [])
 	if boxes.is_empty():
-		push_error("blockout 无盒子: " + BOXES_PATH)
+		push_error("blockout 无盒子: " + boxes_path)
 		return false
 	scale_factor = TARGET_SPAN / maxf(_source_span(boxes), 1.0)
 	ground_offset = _ground_offset(boxes, scale_factor)
@@ -68,6 +70,10 @@ func _add_box(item: Dictionary) -> void:
 	mesh_instance.rotation.y = float(item.get("rot_y", 0.0))
 	add_child(mesh_instance)
 	box_count += 1
+	if kind == "spawn":
+		spawn_anchors.append(mesh_instance.position)
+	elif kind == "site":
+		site_anchors.append(mesh_instance.position)
 	var label := kind if kind != "prop" else "prop/" + MaterialLib.prop_material_id(size)
 	material_counts[label] = int(material_counts.get(label, 0)) + 1
 
