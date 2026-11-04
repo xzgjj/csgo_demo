@@ -1,4 +1,4 @@
-extends SceneTree
+﻿extends SceneTree
 ## 宿主脚本型 smoke 的公共骨架（避免各 smoke 重复 bootstrap）：
 ## 实例化 main.tscn → 子类实现 `_run()` → 用 `expect()` 收集失败 → `finish()` 统一退出码。
 ## 用法：`extends "res://tests/scene_test.gd"`，实现 `_run()`；无 class_name（不依赖 .godot 类缓存）。
@@ -31,3 +31,34 @@ func finish(label: String) -> void:
 		for item in failures:
 			print("%s_FAIL %s" % [label, item])
 		quit(1)
+
+
+
+func _press_key(code: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = true
+	Input.parse_input_event(event)
+
+
+func _release_key(code: Key) -> void:
+	var event := InputEventKey.new()
+	event.physical_keycode = code
+	event.keycode = code
+	event.pressed = false
+	Input.parse_input_event(event)
+
+
+func _press_mouse(button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = true
+	Input.parse_input_event(event)
+
+
+func _release_mouse(button: MouseButton) -> void:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.pressed = false
+	Input.parse_input_event(event)

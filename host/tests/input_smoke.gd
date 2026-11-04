@@ -1,17 +1,8 @@
-﻿extends SceneTree
-## 输入契约回归（headless CLI）：WASD/跳/换弹/切枪/右键瞄准/F5 视角/F3 调试。
+﻿extends "res://tests/scene_test.gd"
+## 输入契约回归（headless CLI）：WASD/跳/换弹/切枪/右键瞄准/F5 视角/F3 调试/开火与命中反馈归因/击杀 feed。
 ## 用法：godot --headless --path host --script res://tests/input_smoke.gd
-## 失败时输出 INPUT_FAIL 行并以非 0 退出；run_all.py / CI 可据此断言。
 
-var main: Node
-var failures: Array[String] = []
 var player_id := 0
-
-
-func _initialize() -> void:
-	main = load("res://main.tscn").instantiate()
-	root.add_child(main)
-	_run.call_deferred()
 
 
 func _run() -> void:
@@ -27,14 +18,7 @@ func _run() -> void:
 	await _check_combat_fx()
 	await _check_hit_fx_attribution()
 	await _check_kill_feed()
-	if failures.is_empty():
-		print("INPUT_SMOKE PASS")
-		quit(0)
-	else:
-		for item in failures:
-			print("INPUT_FAIL ", item)
-		quit(1)
-
+	finish("INPUT_SMOKE")
 
 func _check_move() -> void:
 	var start := Vector2(float(main.sim.get_x(player_id)), float(main.sim.get_y(player_id)))
@@ -60,36 +44,6 @@ func _check_jump() -> void:
 		peak = maxf(peak, float(main.sim.get_z(player_id)))
 	if peak < z0 + 2.0:
 		failures.append("Space 未起跳：z %.1f -> %.1f" % [z0, peak])
-
-
-func _press_key(code: Key) -> void:
-	var event := InputEventKey.new()
-	event.physical_keycode = code
-	event.keycode = code
-	event.pressed = true
-	Input.parse_input_event(event)
-
-
-func _release_key(code: Key) -> void:
-	var event := InputEventKey.new()
-	event.physical_keycode = code
-	event.keycode = code
-	event.pressed = false
-	Input.parse_input_event(event)
-
-
-func _press_mouse(button: MouseButton) -> void:
-	var event := InputEventMouseButton.new()
-	event.button_index = button
-	event.pressed = true
-	Input.parse_input_event(event)
-
-
-func _release_mouse(button: MouseButton) -> void:
-	var event := InputEventMouseButton.new()
-	event.button_index = button
-	event.pressed = false
-	Input.parse_input_event(event)
 
 
 func _check_weapon_switch() -> void:

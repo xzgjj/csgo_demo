@@ -201,15 +201,3 @@ func _check_mouse_lock() -> void:
 		failures.append("关闭菜单后对局应继续")
 
 
-func _press_mouse(button: MouseButton) -> void:
-	var event := InputEventMouseButton.new()
-	event.button_index = button
-	event.pressed = true
-	Input.parse_input_event(event)
-
-
-func _release_mouse(button: MouseButton) -> void:
-	var event := InputEventMouseButton.new()
-	event.button_index = button
-	event.pressed = false
-	Input.parse_input_event(event)

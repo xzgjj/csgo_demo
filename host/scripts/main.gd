@@ -1,4 +1,4 @@
-extends Node3D
+﻿extends Node3D
 ## Project Recoil demo 宿主：输入 → Command，内核 tick → 只读状态 → 相机 / HUD / 页面。
 ## 页面流：主菜单 → 对局 →（Esc）暂停 → 设置；回合/比赛结束自动弹结算；Tab 比分板。
 ## run_scenario.gd / capture.gd 依赖 sim、_start_play()、_update_view()、_update_hud()，签名不变。
@@ -279,11 +279,7 @@ func _physics_process(_delta: float) -> void:
 
 ## 是否有会抢鼠标的页面打开（暂停/设置/结算/比分板/购买菜单/物品栏/主菜单）。
 func _ui_page_open() -> bool:
-	var pages: Array[bool] = [menu.visible, pause_page.visible, settings_page.visible,
-			result_page.visible, scoreboard.visible,
-			purchase != null and purchase.is_open(),
-			loadout_page != null and loadout_page.visible]
-	return pages.has(true)
+	return HostPages.page_open(self)
 
 
 func want_mouse_mode() -> int:

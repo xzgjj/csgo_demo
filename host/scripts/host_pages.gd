@@ -1,4 +1,4 @@
-class_name HostPages
+﻿class_name HostPages
 extends RefCounted
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const RadarPanelScript = preload("res://scripts/radar.gd")
@@ -83,3 +83,12 @@ static func build(main: Node) -> void:
 	main.add_child(overlay_layer)
 	overlay_layer.add_child(blind_overlay)
 	main.set("blind_overlay", blind_overlay)
+
+
+## 是否有会抢鼠标的页面打开（主菜单/暂停/设置/结算/比分板/购买菜单/物品栏）。
+static func page_open(main: Node) -> bool:
+	var pages: Array[bool] = [main.menu.visible, main.pause_page.visible,
+			main.settings_page.visible, main.result_page.visible, main.scoreboard.visible,
+			main.buy_menu != null and main.buy_menu.is_open(),
+			main.loadout_page != null and main.loadout_page.visible]
+	return pages.has(true)
