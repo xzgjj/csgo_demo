@@ -93,3 +93,14 @@ TEST_CASE("已满护甲时重复购买护甲被拒绝") {
 
     CHECK(second.state.players[0].money == first.state.players[0].money);
 }
+
+TEST_CASE("购买拆弹器扣钱并生效") {
+    WorldState state = Duel();
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{Buy(BuyItem::DefuseKit)};
+
+    const auto result = Step(state, content, commands);
+
+    CHECK(result.state.players[0].has_defuser);
+    CHECK(result.state.players[0].money == 2000 - 400);
+}

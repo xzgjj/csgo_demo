@@ -144,6 +144,16 @@ void ApplyBuy(WorldState& state, const Content& content, const Command& command,
         events.Push({EventKind::BuyFailed, command.player, 0, 0});
         return;
     }
+    if (command.item == BuyItem::DefuseKit) {
+        if (player.has_defuser || player.money < content.round.defuse_kit_price) {
+            events.Push({EventKind::BuyFailed, command.player, 0, 3});
+            return;
+        }
+        player.money = static_cast<uint16_t>(player.money - content.round.defuse_kit_price);
+        player.has_defuser = true;
+        events.Push({EventKind::BuySucceeded, command.player, 0, player.money});
+        return;
+    }
     const bool helmet = command.item == BuyItem::Helmet;
     if (!helmet && player.armor >= 100) {
         events.Push({EventKind::BuyFailed, command.player, 0, 2});
