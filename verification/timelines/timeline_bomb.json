@@ -1,0 +1,24 @@
+{
+  "id": "timeline_bomb",
+  "title": "C4 时间线：安放后 2559 tick 爆炸（bomb_ticks 2560 的首 tick 已被安放消耗）→ RoundEnd 320",
+  "level": "sim",
+  "mode": "match",
+  "sample_every": 4,
+  "expect": {
+    "rounds": 1,
+    "freeze_ticks": 192,
+    "end_ticks": 319,
+    "bomb_ticks": 2560,
+    "bomb_explode_delay": 2559,
+    "max_step_per_tick": 12.0,
+    "max_ms_per_tick": 0.3,
+    "max_wall_ms": 60000
+  },
+  "script": [
+    {"action": "wait_until", "field": "phase", "equals": 1, "max_ticks": 400, "auto": false},
+    {"action": "teleport", "player": 0, "x": -1200, "y": -900, "z": 0},
+    {"action": "plant", "player": 0},
+    {"action": "mark", "name": "planted"},
+    {"action": "wait_until", "field": "round", "equals": 2, "max_ticks": 4000, "auto": false}
+  ]
+}

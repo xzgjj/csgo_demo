@@ -21,8 +21,7 @@ var crosshair: Label
 var kill_total := 0
 var death_total := 0
 var _feed: Array[String] = []
-var _prev_alive: Array = []
-var _prev_kills: Array = []
+var _kill_seen := 0
 
 
 func build() -> void:
@@ -65,8 +64,7 @@ func refresh(sim: RefCounted, weapon_name: String) -> void:
 
 func reset_feed() -> void:
 	_feed.clear()
-	_prev_alive.clear()
-	_prev_kills.clear()
+	_kill_seen = 0
 	kill_total = 0
 	death_total = 0
 	if feed_label != null:
@@ -109,33 +107,16 @@ func _c4_text(sim: RefCounted) -> String:
 
 
 func _track_feed(sim: RefCounted) -> void:
-	var count := UiFactory.player_count(sim)
-	var alive: Array = []
-	var kills: Array = []
-	for index in count:
-		alive.append(sim.is_alive(index))
-		kills.append(sim.get_kills(index))
-	while _prev_alive.size() < count:
-		_prev_alive.append(true)
-		_prev_kills.append(0)
-	var deaths: Array = []
-	for index in count:
-		if bool(_prev_alive[index]) and not bool(alive[index]):
-			deaths.append(index)
-	death_total += deaths.size()
-	for index in count:
-		var gained: int = int(kills[index]) - int(_prev_kills[index])
-		kill_total += maxi(gained, 0)
-		for _hit in maxi(gained, 0):
-			if deaths.is_empty():
-				_push_feed("%s 击杀" % _player_tag(sim, index))
-			else:
-				_push_feed("%s 击杀 %s" % [
-					_player_tag(sim, index), _player_tag(sim, deaths.pop_front())])
-	while not deaths.is_empty():
-		_push_feed("%s 阵亡" % _player_tag(sim, deaths.pop_front()))
-	_prev_alive = alive
-	_prev_kills = kills
+	var total: int = int(sim.get_kill_count())
+	while _kill_seen < total:
+		var shooter: int = int(sim.get_kill_shooter(_kill_seen))
+		var victim: int = int(sim.get_kill_victim(_kill_seen))
+		_push_feed("%s 击杀 %s" % [_player_tag(sim, shooter), _player_tag(sim, victim)])
+		if shooter == 0:
+			kill_total += 1
+		if victim == 0:
+			death_total += 1
+		_kill_seen += 1
 	feed_label.text = "\n".join(PackedStringArray(_feed))
 
 

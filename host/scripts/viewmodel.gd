@@ -16,6 +16,7 @@ const MODEL_PATHS := {
 	"awp": "res://models/weapons/awp.glb",
 }
 const MODEL_ROOT_NAMES := {"ak": "ak47", "m4": "m4a4", "awp": "awp"}
+const SCOPE_MAGNIFICATION := {"ak": 1.0, "m4": 1.0, "awp": 4.0}
 const REST_POSITION := Vector3(0.24, -0.26, -0.58)
 const REST_ROTATION := Vector3(0.0, -2.0, 0.0)
 const VIEWMODEL_SCALE := 0.85
@@ -109,6 +110,10 @@ func select_weapon(weapon_id: String) -> void:
 	for key in _models:
 		var model: Node3D = _models[key]
 		model.visible = key == weapon_id
+
+
+func scope_magnification() -> float:
+	return float(SCOPE_MAGNIFICATION.get(current_id, 1.0))
 
 
 func display_name() -> String:

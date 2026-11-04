@@ -1,0 +1,18 @@
+{
+  "ticks": 3071,
+  "final": {
+    "round": 2,
+    "phase": 0,
+    "score_t": 1,
+    "score_ct": 0
+  },
+  "rounds": [
+    {
+      "number": 1,
+      "freeze": 192,
+      "live": 2560,
+      "end": 319,
+      "winner": "T"
+    }
+  ]
+}

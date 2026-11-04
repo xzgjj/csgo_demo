@@ -1,5 +1,6 @@
 class_name HostPages
 extends RefCounted
+const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 ## 宿主页面装配：由 main.gd 调用，创建 HUD / 主菜单 / 暂停 / 设置 / 结算 / 比分板与致盲层。
 ## 只做节点与信号连线，不持有规则状态（main 仍是对外入口）。
 
@@ -25,6 +26,13 @@ static func build(main: Node) -> void:
 	pause_page.resume_button.pressed.connect(Callable(main, "_resume"))
 	pause_page.settings_button.pressed.connect(Callable(main, "show_settings_page"))
 	pause_page.menu_button.pressed.connect(Callable(main, "_show_menu"))
+
+	var loadout_page := LoadoutPageScript.new()
+	main.add_child(loadout_page)
+	loadout_page.build(main.get("account"))
+	main.set("loadout_page", loadout_page)
+	menu.loadout_button.pressed.connect(Callable(main, "show_loadout_page"))
+	loadout_page.back_button.pressed.connect(Callable(main, "close_loadout_page"))
 
 	var settings_page := SettingsPage.new()
 	main.add_child(settings_page)

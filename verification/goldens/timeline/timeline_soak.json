@@ -1,0 +1,95 @@
+{
+  "ticks": 94464,
+  "final": {
+    "round": 13,
+    "phase": 0,
+    "score_t": 0,
+    "score_ct": 12
+  },
+  "rounds": [
+    {
+      "number": 1,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 2,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 3,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 4,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 5,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 6,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 7,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 8,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 9,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 10,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 11,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    },
+    {
+      "number": 12,
+      "freeze": 192,
+      "live": 7360,
+      "end": 320,
+      "winner": "CT"
+    }
+  ]
+}

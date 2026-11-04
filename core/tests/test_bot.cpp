@@ -55,7 +55,7 @@ TEST_CASE("Bot 看到敌人时开火并朝向敌人") {
     const WorldState state = Duel();
     const auto command = BotDecide(state, DefaultContent(), 0);
     CHECK(command.kind == CommandKind::Fire);
-    CHECK(command.yaw_degrees == doctest::Approx(90.0).epsilon(0.01));
+    CHECK(std::abs(command.yaw_degrees - 90.0f) <= DefaultContent().round.bot_aim_error_deg + 0.2f);
 }
 
 TEST_CASE("Bot 被烟雾遮挡时不开火") {
@@ -89,7 +89,7 @@ TEST_CASE("最近敌人被烟雾遮挡时改打可见的较远敌人") {
     const auto command = BotDecide(state, DefaultContent(), 0);
 
     CHECK(command.kind == CommandKind::Fire);
-    CHECK(command.yaw_degrees == doctest::Approx(-90.0).epsilon(0.01));
+    CHECK(std::abs(command.yaw_degrees + 90.0f) <= DefaultContent().round.bot_aim_error_deg + 0.2f);
 }
 
 TEST_CASE("无可见敌人时沿导航路径推进") {
@@ -128,7 +128,7 @@ TEST_CASE("导航不可达时仍朝敌人方向推进") {
 
     CHECK(command.kind == CommandKind::Move);
     CHECK(command.move_forward == doctest::Approx(1.0f));
-    CHECK(command.yaw_degrees == doctest::Approx(90.0).epsilon(0.01));
+    CHECK(std::abs(command.yaw_degrees - 90.0f) <= DefaultContent().round.bot_aim_error_deg + 0.2f);
 }
 
 TEST_CASE("Bot 被墙体遮挡时不开火而是推进") {

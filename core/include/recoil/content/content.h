@@ -17,13 +17,17 @@ struct WeaponDef {
     float range = 8192.0f;
     float range_modifier = 1.0f;
     float range_modifier_unit = 500.0f;
+    float scope_magnification = 1.0f; // 1=无倍镜；AWP=4x
 };
 
 struct RoundDef {
     uint16_t freeze_ticks = 192;
     uint16_t live_ticks = 7360; // 115s @64tick（CS:GO 回合时长）
     uint16_t end_ticks = 320;
-    uint16_t max_score = 13; // MR12：先到 13 胜
+    uint16_t max_score = 13;        // MR12：先到 13 胜
+    uint16_t spawn_armor = 100;     // 匹配局出生默认护甲
+    bool spawn_helmet = true;       // 匹配局出生默认头盔
+    float bot_aim_error_deg = 2.4f; // 机器人瞄准误差上限（真实化）
     uint16_t start_money = 800;
     uint16_t max_money = 16000;
     uint16_t win_reward = 3250;

@@ -2,14 +2,16 @@ extends Node3D
 ## Project Recoil demo 宿主：输入 → Command，内核 tick → 只读状态 → 相机 / HUD / 页面。
 ## 页面流：主菜单 → 对局 →（Esc）暂停 → 设置；回合/比赛结束自动弹结算；Tab 比分板。
 ## run_scenario.gd / capture.gd 依赖 sim、_start_play()、_update_view()、_update_hud()，签名不变。
-
 const EYE_HEIGHT := 64.0
 const TICKS_PER_SECOND := 64.0
+const AccountStoreScript = preload("res://scripts/account_store.gd")
+const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const CombatFxScript = preload("res://scripts/combat_fx.gd")
-
 var sim: RefCounted
 var world: DeAshWorld
 var settings: SettingsStore
+var account
+var loadout_page
 var hud: GameHud
 var menu: MainMenuPage
 var pause_page: PausePage
@@ -27,7 +29,7 @@ var pitch := 0.0
 var playing := false
 var paused := false
 var match_mode := false
-var bot_meshes: Array[MeshInstance3D] = []
+var bot_meshes: Array[Node3D] = []
 var _settings_return_pause := false
 var _last_phase := -1
 var _last_score_t := 0
@@ -51,6 +53,8 @@ func _ready() -> void:
 	sim.reset()
 	settings = SettingsStore.new()
 	settings.load_settings()
+	account = AccountStoreScript.new()
+	account.load_account()
 	_build_world()
 	_build_ui()
 	_apply_settings()
@@ -74,17 +78,22 @@ func _build_world() -> void:
 	add_child(fx)
 	_player_mesh = ActorVisuals.make_capsule(self, Color(0.35, 0.55, 0.90), "Player")
 	_player_mesh.visible = false
-
 func _build_ui() -> void:
 	HostPages.build(self)
 	_death_label = HudOverlays.make_death_label(hud)
 	_debug_label = HudOverlays.make_debug_label(hud)
-
 func _make_target_mesh() -> MeshInstance3D:
 	return ActorVisuals.make_capsule(self, Color(0.75, 0.20, 0.20), "Target")
-
 func _make_smoke_mesh() -> MeshInstance3D:
 	return ActorVisuals.make_smoke(self)
+func show_loadout_page() -> void:
+	menu.visible = false
+	loadout_page.open()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func close_loadout_page() -> void:
+	loadout_page.close()
+	_show_menu()
 
 func _show_menu() -> void:
 	playing = false
@@ -109,13 +118,11 @@ func _start_match() -> void:
 	sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
 	sim.begin_match()
 	_enter_game(true)
-
 func _restart() -> void:
 	if match_mode:
 		_start_match()
 	else:
 		_start_play()
-
 func _enter_game(is_match: bool) -> void:
 	match_mode = is_match
 	playing = true
@@ -162,7 +169,6 @@ func _configure_sim_map() -> void:
 			-gz + sz * 0.5, -gx + sx * 0.5, gy + sy * 0.5,
 		]))
 	sim.set_map_boxes(flat)
-
 func _show_pause() -> void:
 	if not playing:
 		return
@@ -170,7 +176,6 @@ func _show_pause() -> void:
 	paused = true
 	pause_page.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 func _resume() -> void:
 	if not paused:
 		return
@@ -179,7 +184,6 @@ func _resume() -> void:
 	pause_page.visible = false
 	settings_page.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-
 func show_settings_page() -> void:
 	_settings_return_pause = paused
 	menu.visible = false
@@ -187,7 +191,6 @@ func show_settings_page() -> void:
 	settings_page.sync_from_store()
 	settings_page.visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 func close_settings_page() -> void:
 	settings_page.save_settings()
 	settings_page.visible = false
@@ -241,7 +244,8 @@ func _physics_process(_delta: float) -> void:
 	sim.set_move(0, yaw, pitch, forward, side, Input.is_action_pressed("jump"),
 			Input.is_action_pressed("duck"))
 	aiming = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-	var aim_fov := 30.0 if viewmodel.current_id == "awp" else 50.0
+	var magnification: float = viewmodel.scope_magnification()
+	var aim_fov: float = settings.fov / magnification if magnification > 1.0 else settings.fov / 1.15
 	camera.fov = lerpf(camera.fov, aim_fov if aiming else settings.fov, 0.25)
 	viewmodel.set_aiming(aiming)
 	_toggle_debug()

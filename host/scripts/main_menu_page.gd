@@ -4,6 +4,7 @@ extends CanvasLayer
 
 var start_button: Button
 var settings_button: Button
+var loadout_button: Button
 var quit_button: Button
 var hint_label: Label
 
@@ -13,6 +14,7 @@ func build() -> void:
 	var box := UiFactory.build_card(self, "PROJECT RECOIL", 400.0)
 	UiFactory.add_label(box, "de_ash 灰盒 Demo · C++ 纯函数内核 + Godot 表现层", 15)
 	start_button = UiFactory.add_button(box, "开始游戏")
+	loadout_button = UiFactory.add_button(box, "物品栏 / 装备")
 	settings_button = UiFactory.add_button(box, "设置")
 	quit_button = UiFactory.add_button(box, "退出")
 	hint_label = UiFactory.add_label(
@@ -22,6 +24,6 @@ func build() -> void:
 
 func button_texts() -> Array[String]:
 	var texts: Array[String] = []
-	for button in [start_button, settings_button, quit_button]:
+	for button in [start_button, loadout_button, settings_button, quit_button]:
 		texts.append(str(button.text))
 	return texts

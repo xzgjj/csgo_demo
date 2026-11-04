@@ -41,8 +41,9 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         PlayerState& player = state.players[i];
         player.alive = true;
         player.health = 100;
-        player.armor = 0;
-        player.helmet = false;
+        const bool default_armor = full_team; // 5v5 匹配局出生默认甲盔
+        player.armor = default_armor ? content.round.spawn_armor : 0;
+        player.helmet = default_armor && content.round.spawn_helmet;
         player.velocity = {};
         player.wish_forward = 0.0f;
         player.wish_side = 0.0f;

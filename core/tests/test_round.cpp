@@ -241,3 +241,13 @@ TEST_CASE("默认赛制对齐 CS:GO：Live 115s / 先到 13 胜（避免开局�
     CHECK(content.round.end_ticks == 320);
     CHECK(content.round.max_score == 13);
 }
+
+TEST_CASE("5v5 匹配局出生默认护甲 100 + 头盔") {
+    recoil::WorldState state;
+    recoil::EventList events{};
+    recoil::BeginMatch(state, recoil::DefaultContent(), events);
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        CHECK(state.players[i].armor == 100);
+        CHECK(state.players[i].helmet);
+    }
+}

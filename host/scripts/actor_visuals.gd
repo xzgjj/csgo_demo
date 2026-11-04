@@ -33,17 +33,52 @@ static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:
 
 
 static func update_bot_meshes(parent: Node3D, sim: RefCounted,
-		meshes: Array[MeshInstance3D]) -> void:
+		meshes: Array[Node3D]) -> void:
 	var count: int = int(sim.get_player_count())
 	for index in range(1, count):
 		while meshes.size() < index:
-			meshes.append(make_bot_mesh(parent, meshes.size() + 1))
-		var mesh: MeshInstance3D = meshes[index - 1]
+			var team: int = int(sim.get_team(meshes.size() + 1))
+			meshes.append(make_humanoid_bot(parent, meshes.size() + 1, team))
+		var mesh: Node3D = meshes[index - 1]
 		var alive: bool = sim.is_alive(index)
 		mesh.visible = alive
 		if alive:
-			mesh.position = Vector3(-float(sim.get_y(index)), 36.0, -float(sim.get_x(index)))
+			mesh.position = Vector3(-float(sim.get_y(index)), 0.0, -float(sim.get_x(index)))
 
 
-static func make_bot_mesh(parent: Node3D, slot: int) -> MeshInstance3D:
-	return make_capsule(parent, Color(0.80, 0.30, 0.20), "Bot%d" % slot)
+## 类人低模：T 红装、CT 黑色复杂轮廓（肩甲 + 红色目镜），替代“红色药丸”胶囊。
+static func make_humanoid_bot(parent: Node3D, slot: int, team: int) -> Node3D:
+	var root := Node3D.new()
+	root.name = "Bot%d" % slot
+	var body_color := Color(0.55, 0.16, 0.14) if team == 1 else Color(0.06, 0.06, 0.07)
+	var head_color := Color(0.82, 0.68, 0.55) if team == 1 else Color(0.10, 0.10, 0.11)
+	_humanoid_part(root, Vector3(40, 66, 26), Vector3(0, 40, 0), body_color)
+	_humanoid_part(root, Vector3(30, 20, 24), Vector3(0, 13, 0), Color(0.20, 0.18, 0.16))
+	_humanoid_part(root, Vector3(24, 24, 24), Vector3(0, 84, 0), head_color)
+	_humanoid_part(root, Vector3(34, 10, 28), Vector3(0, 94, 0), Color(0.10, 0.10, 0.11))
+	_humanoid_part(root, Vector3(12, 38, 12), Vector3(-26, 42, 0), body_color)
+	_humanoid_part(root, Vector3(12, 38, 12), Vector3(26, 42, 0), body_color)
+	_humanoid_part(root, Vector3(14, 40, 14), Vector3(-11, -8, 0), Color(0.14, 0.14, 0.15))
+	_humanoid_part(root, Vector3(14, 40, 14), Vector3(11, -8, 0), Color(0.14, 0.14, 0.15))
+	if team == 2:
+		_humanoid_part(root, Vector3(40, 8, 30), Vector3(0, 70, 0), Color(0.25, 0.04, 0.04))
+		_humanoid_part(root, Vector3(26, 6, 4), Vector3(0, 86, 12), Color(0.95, 0.15, 0.10))
+	parent.add_child(root)
+	return root
+
+
+static func _humanoid_part(parent: Node3D, size: Vector3, offset: Vector3, color: Color) -> void:
+	var mesh_instance := MeshInstance3D.new()
+	var box := BoxMesh.new()
+	box.size = size
+	box.material = _flat_material(color)
+	mesh_instance.mesh = box
+	mesh_instance.position = offset
+	parent.add_child(mesh_instance)
+
+
+static func _flat_material(color: Color) -> StandardMaterial3D:
+	var material := StandardMaterial3D.new()
+	material.albedo_color = color
+	material.roughness = 0.9
+	return material

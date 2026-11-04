@@ -25,6 +25,8 @@ func _run() -> void:
 	await _check_debug_toggle()
 	await _check_reload()
 	await _check_combat_fx()
+	await _check_kill_feed()
+	await _check_loadout()
 	if failures.is_empty():
 		print("INPUT_SMOKE PASS")
 		quit(0)
@@ -180,3 +182,42 @@ func _check_combat_fx() -> void:
 		failures.append("命中未触发命中音/火花（dmg=%d last=%d hit=%d target_alive=%s hp=%d）" % [int(main.sim.get_total_damage_events()), int(main._last_damage), int(main.fx.hit_count), str(main.sim.is_alive(1)), int(main.sim.get_health(1))])
 	if not bool(main.fx.spark.emitting):
 		failures.append("命中火花未发射")
+
+
+func _check_kill_feed() -> void:
+	# 直接驱动内核保证命中（每枪等 8 tick 冷却）：HUD 只应收到真实 PlayerDied。
+	main.yaw = atan2(float(main.sim.get_y(1)), float(main.sim.get_x(1))) * 180.0 / PI
+	for shot in 3:
+		main.sim.fire(0, main.yaw, 0.0)
+		for tick in 8:
+			main.sim.tick()
+			await physics_frame
+	for frame in 3:
+		await physics_frame
+	var lines: Array[String] = main.hud.feed_lines()
+	if int(main.sim.get_kill_count()) != 1:
+		failures.append("击杀事件数应为 1（实际 %d，hp=%d）" % [
+			int(main.sim.get_kill_count()), int(main.sim.get_health(1))])
+	if bool(main.sim.is_alive(1)):
+		failures.append("目标未死亡（hp=%d）" % int(main.sim.get_health(1)))
+	if lines.is_empty():
+		failures.append("击杀 feed 为空（真实击杀事件未送达 HUD）")
+	elif not lines[-1].contains("击杀"):
+		failures.append("击杀 feed 内容异常：%s" % lines[-1])
+	if int(main.hud.kill_total) < 1:
+		failures.append("个人击杀数未增加（kill_total=%d）" % int(main.hud.kill_total))
+
+
+func _check_loadout() -> void:
+	main.show_loadout_page()
+	await process_frame
+	if not bool(main.loadout_page.visible):
+		failures.append("物品栏页面未打开")
+	main.account.set_primary("awp")
+	await process_frame
+	if str(main.account.loadout["primary"]) != "awp":
+		failures.append("物品栏主武器选择未持久化")
+	main.close_loadout_page()
+	await process_frame
+	if bool(main.loadout_page.visible):
+		failures.append("物品栏页面未关闭")

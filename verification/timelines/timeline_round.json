@@ -1,0 +1,27 @@
+{
+  "id": "timeline_round",
+  "title": "整回合时间线：Freeze 192 → Live ≤7360 → RoundEnd 320 → 下一回合 Freeze",
+  "level": "host",
+  "mode": "match",
+  "sample_every": 8,
+  "expect": {
+    "rounds": 1,
+    "freeze_ticks": 192,
+    "end_ticks": 320,
+    "min_live_ticks": 64,
+    "max_live_ticks": 7360,
+    "max_step_per_tick": 12.0,
+    "max_ms_per_tick": 3.0,
+    "max_wall_ms": 60000
+  },
+  "script": [
+    {"action": "wait_until", "field": "round", "equals": 2, "max_ticks": 10000}
+  ],
+  "screenshots": [
+    {"tick": 96, "name": "t_freeze"},
+    {"tick": 192, "name": "t_live_start"},
+    {"tick": 1024, "name": "t_live_1k"},
+    {"tick": 4096, "name": "t_live_4k"},
+    {"tick": 7360, "name": "t_live_last"}
+  ]
+}

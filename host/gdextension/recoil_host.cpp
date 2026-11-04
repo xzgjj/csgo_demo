@@ -51,6 +51,9 @@ protected:
         BIND(get_helmet, "player");
         BIND(get_team, "player");
         BIND(get_player_count);
+        BIND(get_kill_count);
+        BIND(get_kill_shooter, "index");
+        BIND(get_kill_victim, "index");
         BIND(get_round_phase);
         BIND(get_round_ticks);
         BIND(get_score_t);
@@ -74,10 +77,8 @@ protected:
         BIND(get_tick);
         BIND(get_last_damage_events);
         BIND(get_last_fire_events);
-        BIND(get_last_dryfire_events);
         BIND(get_total_damage_events);
         BIND(get_total_fire_events);
-        BIND(get_total_dryfire_events);
         BIND(set_map_boxes, "boxes");
         BIND(set_sites, "ax", "ay", "bx", "by");
         BIND(begin_match);
@@ -210,7 +211,7 @@ public:
         last_events_ = result.events;
         total_damage_ += _count(recoil::EventKind::DamageApplied);
         total_fire_ += _count(recoil::EventKind::WeaponFired);
-        total_dry_ += _count(recoil::EventKind::WeaponDryFire);
+        recoil_host::RecordKills(result.events);
         pending_.clear();
     }
 
@@ -241,6 +242,7 @@ public:
         bot_commands_.clear();
         bot_refresh_ = 0;
         total_damage_ = total_fire_ = total_dry_ = 0;
+        recoil_host::ClearKills();
     }
 
     // 人机由内核战术层驱动：每 4 tick 重算一次决策（导航开销分摊），中间复用命令。
@@ -289,6 +291,10 @@ public:
     int name(int player) const {                                                                   \
         return expr;                                                                               \
     }
+#define RECOIL_GETTER0(name, expr)                                                                 \
+    int name() const {                                                                             \
+        return expr;                                                                               \
+    }
     RECOIL_FLOAT_GETTER(get_x, state_.players[player].position.x)
     RECOIL_FLOAT_GETTER(get_y, state_.players[player].position.y)
     RECOIL_FLOAT_GETTER(get_z, state_.players[player].position.z)
@@ -296,9 +302,14 @@ public:
     RECOIL_INT_GETTER(get_armor, state_.players[player].armor)
     RECOIL_INT_GETTER(get_helmet, state_.players[player].helmet ? 1 : 0)
     RECOIL_INT_GETTER(get_team, static_cast<int>(state_.players[player].team))
-    int get_player_count() const {
-        return state_.player_count;
+    RECOIL_GETTER0(get_kill_count, recoil_host::KillCount())
+#define RECOIL_KILL_GETTER(name, expr)                                                             \
+    int name(int index) const {                                                                    \
+        return expr;                                                                               \
     }
+    RECOIL_KILL_GETTER(get_kill_shooter, recoil_host::KillShooter(index))
+    RECOIL_KILL_GETTER(get_kill_victim, recoil_host::KillVictim(index))
+    RECOIL_GETTER0(get_player_count, state_.player_count)
     int get_mag(int player) const {
         return state_.players[player].weapon.mag;
     }
@@ -326,21 +337,11 @@ public:
     int get_blind_ticks(int player) const {
         return state_.players[player].blind_ticks;
     }
-    int get_round_phase() const {
-        return static_cast<int>(state_.round.phase);
-    }
-    int get_round_ticks() const {
-        return state_.round.phase_ticks;
-    }
-    int get_score_t() const {
-        return state_.round.score_t;
-    }
-    int get_score_ct() const {
-        return state_.round.score_ct;
-    }
-    int get_tick() const {
-        return static_cast<int>(state_.tick);
-    }
+    RECOIL_GETTER0(get_round_phase, static_cast<int>(state_.round.phase))
+    RECOIL_GETTER0(get_round_ticks, state_.round.phase_ticks)
+    RECOIL_GETTER0(get_score_t, state_.round.score_t)
+    RECOIL_GETTER0(get_score_ct, state_.round.score_ct)
+    RECOIL_GETTER0(get_tick, static_cast<int>(state_.tick))
     int _count(recoil::EventKind kind) const {
         int total = 0;
         for (int i = 0; i < last_events_.count; ++i) {
@@ -356,17 +357,11 @@ public:
     int get_last_fire_events() const {
         return _count(recoil::EventKind::WeaponFired);
     }
-    int get_last_dryfire_events() const {
-        return _count(recoil::EventKind::WeaponDryFire);
-    }
     int get_total_damage_events() const {
         return total_damage_;
     }
     int get_total_fire_events() const {
         return total_fire_;
-    }
-    int get_total_dryfire_events() const {
-        return total_dry_;
     }
 };
 

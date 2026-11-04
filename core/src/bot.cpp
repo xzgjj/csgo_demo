@@ -100,7 +100,7 @@ Vec3 MoveAim(const WorldState& state, uint8_t self, int target, const MapDef* ma
     return path.empty() ? goal : path.front();
 }
 
-Command FireAt(const WorldState& state, uint8_t self, int target) {
+Command FireAt(const WorldState& state, uint8_t self, int target, const Content& content) {
     const Vec3 eye = state.players[self].position + Vec3{0.0f, 0.0f, kEyeHeight};
     const Vec3 goal =
         state.players[static_cast<size_t>(target)].position + Vec3{0.0f, 0.0f, kChestHeight};
@@ -108,8 +108,14 @@ Command FireAt(const WorldState& state, uint8_t self, int target) {
     Command command;
     command.kind = CommandKind::Fire;
     command.player = self;
-    command.yaw_degrees = std::atan2(d.y, d.x) * (180.0f / kPi);
-    command.pitch_degrees = std::atan2(d.z, std::sqrt(d.x * d.x + d.y * d.y)) * (180.0f / kPi);
+    // 确定性瞄准误差：同一 tick/玩家/目标可复现，避免机器人“见面必中”。
+    const int seed =
+        (static_cast<int>(state.round.phase_ticks) * 37 + self * 101 + target * 17) % 201;
+    const float jitter =
+        (static_cast<float>(seed) / 100.0f - 1.0f) * content.round.bot_aim_error_deg;
+    command.yaw_degrees = std::atan2(d.y, d.x) * (180.0f / kPi) + jitter;
+    command.pitch_degrees =
+        std::atan2(d.z, std::sqrt(d.x * d.x + d.y * d.y)) * (180.0f / kPi) + jitter * 0.35f;
     return command;
 }
 
@@ -129,7 +135,7 @@ Command BotDecide(const WorldState& state, const Content& content, uint8_t self,
         return command;
     }
     if (pick.visible >= 0) {
-        return FireAt(state, self, pick.visible);
+        return FireAt(state, self, pick.visible, content);
     }
     command.kind = CommandKind::Move;
     command.yaw_degrees =
