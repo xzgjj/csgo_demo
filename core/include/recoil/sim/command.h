@@ -20,6 +20,7 @@ enum class CommandKind : uint8_t {
 enum class BuyItem : uint8_t {
     Armor = 0,
     Helmet = 1,
+    DefuseKit = 2,
 };
 
 struct Command {

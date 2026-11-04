@@ -92,3 +92,21 @@ TEST_CASE("比赛结束后不能再开火") {
 
     CHECK(result.state.players[0].weapon.mag == 30);
 }
+
+TEST_CASE("比赛结束后比分与回合不再变化") {
+    WorldState state = MakeDuel();
+    state.round.phase = RoundPhase::MatchEnd;
+    state.round.score_t = 1;
+    state.round.score_ct = 0;
+    const Content content = DefaultContent();
+    const std::array<Command, 0> commands{};
+
+    auto result = Step(state, content, commands);
+    for (int i = 0; i < 50; ++i) {
+        result = Step(result.state, content, commands);
+    }
+
+    CHECK(result.state.round.score_t == 1);
+    CHECK(result.state.round.score_ct == 0);
+    CHECK(result.state.round.phase == RoundPhase::MatchEnd);
+}

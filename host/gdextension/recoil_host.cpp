@@ -51,6 +51,13 @@ protected:
         ClassDB::bind_method(D_METHOD("fire", "player", "yaw", "pitch"), &RecoilSim::fire);
         ClassDB::bind_method(D_METHOD("reload", "player"), &RecoilSim::reload);
         ClassDB::bind_method(D_METHOD("buy_armor", "player"), &RecoilSim::buy_armor);
+        ClassDB::bind_method(D_METHOD("plant_bomb", "player"), &RecoilSim::plant_bomb);
+        ClassDB::bind_method(D_METHOD("defuse_bomb", "player"), &RecoilSim::defuse_bomb);
+        ClassDB::bind_method(D_METHOD("get_bomb_planted"), &RecoilSim::get_bomb_planted);
+        ClassDB::bind_method(D_METHOD("get_bomb_timer"), &RecoilSim::get_bomb_timer);
+        ClassDB::bind_method(D_METHOD("get_helmet", "player"), &RecoilSim::get_helmet);
+        ClassDB::bind_method(D_METHOD("get_team", "player"), &RecoilSim::get_team);
+        ClassDB::bind_method(D_METHOD("get_player_count"), &RecoilSim::get_player_count);
         ClassDB::bind_method(D_METHOD("get_round_phase"), &RecoilSim::get_round_phase);
         ClassDB::bind_method(D_METHOD("get_round_ticks"), &RecoilSim::get_round_ticks);
         ClassDB::bind_method(D_METHOD("get_score_t"), &RecoilSim::get_score_t);
@@ -117,6 +124,11 @@ public:
         dummy.position = {400.0f, 0.0f, 0.0f};
         dummy.weapon.mag = content_.rifle.magazine;
         dummy.weapon.reserve = content_.rifle.reserve;
+
+        // 与 core ResetRound 的分配一致：C4 给 T 方、拆弹器给 CT 方；
+        // 否则首回合任何玩家都没有 C4，E 下包永远不生效（C4 HUD 也就无从显示）。
+        local.has_bomb = true;
+        dummy.has_defuser = true;
 
         state_.round.phase = recoil::RoundPhase::Freeze;
         state_.round.phase_ticks = content_.round.freeze_ticks;
@@ -215,6 +227,15 @@ public:
     }
     int get_armor(int player) const {
         return state_.players[player].armor;
+    }
+    int get_helmet(int player) const {
+        return state_.players[player].helmet ? 1 : 0;
+    }
+    int get_team(int player) const {
+        return static_cast<int>(state_.players[player].team);
+    }
+    int get_player_count() const {
+        return state_.player_count;
     }
     int get_mag(int player) const {
         return state_.players[player].weapon.mag;

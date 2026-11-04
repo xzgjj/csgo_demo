@@ -83,6 +83,14 @@ def do_test():
     return 0
 
 
+def do_verify():
+    script = ROOT / "tools/verify/run_scenarios.py"
+    if not script.exists():
+        print("[verify] 无场景运行器，跳过")
+        return 0
+    return run([PY, "-X", "utf8", str(script), "--headless"])
+
+
 def do_ci():
     return run([PY, "-X", "utf8", "tools/ci/run_local.py"])
 
@@ -134,7 +142,7 @@ def do_clean():
 
 def main():
     ap = argparse.ArgumentParser()
-    for flag in ("--env", "--core", "--host", "--test", "--ci", "--clean", "--all"):
+    for flag in ("--env", "--core", "--host", "--test", "--verify", "--ci", "--clean", "--all"):
         ap.add_argument(flag, action="store_true")
     args = ap.parse_args()
     if not any(vars(args).values()):
@@ -146,6 +154,7 @@ def main():
         rc |= do_core()
         rc |= do_host()
         rc |= do_test()
+        rc |= do_verify()
         rc |= do_ci()
     else:
         if args.env:
@@ -156,6 +165,8 @@ def main():
             rc |= do_host()
         if args.test:
             rc |= do_test()
+        if args.verify:
+            rc |= do_verify()
         if args.ci:
             rc |= do_ci()
         if args.clean:

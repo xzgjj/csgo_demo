@@ -37,7 +37,7 @@
     "README.md",
     "CI.md"
   ],
-  "unbounded_doc_prefixes": ["docs/", "research/"],
+  "unbounded_doc_prefixes": ["docs/", "research/", "diff.md", "notes.txt", "implementation-notes.md"],
   "duplicates_exclude_prefixes": ["core/tests/"],
   "vendored_prefixes": ["third_party/"],
   "scan_exclude": [

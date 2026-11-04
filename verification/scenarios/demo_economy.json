@@ -1,0 +1,32 @@
+{
+  "id": "demo_economy",
+  "map": "host/arena_graybox",
+  "description": "经济/回合阶段靶场：重置后初始金钱 800、冻结期 192 tick；购买护甲 650 后余额 150、护甲 100；冻结期结束进入 Live（1920 tick）。数值来源 verification/reference/economy.json。",
+  "script": [
+    {"action": "check", "name": "initial_state", "asserts": [
+      {"player": 0, "field": "money", "equals": 800},
+      {"player": 1, "field": "money", "equals": 800},
+      {"player": 0, "field": "round_phase", "equals": 0},
+      {"player": 0, "field": "round_ticks", "equals": 192},
+      {"player": 0, "field": "score_t", "equals": 0},
+      {"player": 0, "field": "score_ct", "equals": 0}
+    ]},
+    {"action": "buy_armor", "player": 0},
+    {"action": "check", "name": "after_buy", "asserts": [
+      {"player": 0, "field": "money", "equals": 150},
+      {"player": 0, "field": "armor", "equals": 100}
+    ]},
+    {"action": "tick", "ticks": 191},
+    {"action": "check", "name": "after_freeze", "asserts": [
+      {"player": 0, "field": "round_phase", "equals": 1},
+      {"player": 0, "field": "round_ticks", "equals": 1920}
+    ]}
+  ],
+  "asserts": [
+    {"player": 0, "field": "money", "equals": 150},
+    {"player": 1, "field": "money", "equals": 800},
+    {"player": 0, "field": "armor", "equals": 100},
+    {"player": 0, "field": "round_phase", "equals": 1},
+    {"player": 0, "field": "round_ticks", "equals": 1920}
+  ]
+}

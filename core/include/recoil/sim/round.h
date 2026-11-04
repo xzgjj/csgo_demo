@@ -11,6 +11,9 @@ namespace recoil {
 
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def);
 
+// 队伍分配：前一半玩家为 T，后一半为 CT（10 人即 5v5）。
+void AssignTeams(WorldState& state);
+
 // 回合状态机：冻结 → 进行中 → 结算 → 重置；含胜负判定与经济结算。
 void AdvanceRound(WorldState& state, const Content& content, EventList& events);
 

@@ -1,9 +1,12 @@
 extends SceneTree
 ## 场景执行器：读取 ScenarioSpec，跑内核脚本 → 代码断言 → 截图检查点。
 ## 用法：
-##   godot --path host --script res://tests/run_scenario.gd -- <scenario.json 绝对路径> <out_dir 绝对路径> [--visual]
+##   godot --path host --script res://tests/run_scenario.gd -- <scenario.json 绝对路径> <out_dir> [--visual]
+## 动作：move / fire / tick / buy_armor / check；check 为逐步断言（断言列表写在 step.asserts），
+## 用于在场景中间核对状态（如初始金钱/回合阶段），最终断言仍写在顶层 asserts。
 
 var main: Node
+var failures: Array = []
 
 func _initialize() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
@@ -35,28 +38,10 @@ func _run(data: Dictionary, out_dir: String, visual: bool) -> void:
 	# 场景执行期间关闭自动物理 tick，保证状态只由脚本推进（截图可复现）。
 	main.set_physics_process(false)
 	for step: Dictionary in data.get("script", []):
-		var action: String = step.get("action", "")
-		if action == "move":
-			main.sim.set_move(0, step.get("yaw", 0.0), step.get("pitch", 0.0),
-					step.get("forward", 0.0), step.get("side", 0.0),
-					step.get("jump", false), step.get("duck", false))
-			for i in int(step.get("ticks", 1)):
-				main.sim.tick()
-		elif action == "fire":
-			main.sim.fire(0, step.get("yaw", 0.0), step.get("pitch", 0.0))
-			main.sim.tick()
-		else:
-			push_error("未知 action: " + action)
+		_run_step(step)
 
-	# 代码断言
-	var failures: Array = []
-	for check: Dictionary in data.get("asserts", []):
-		var player: int = int(check.get("player", 0))
-		var field: String = check.get("field", "")
-		var expected: Variant = check.get("equals")
-		var actual: Variant = _read_field(player, field)
-		if actual != expected:
-			failures.append("player %d %s: expected %s got %s" % [player, field, str(expected), str(actual)])
+	# 代码断言（逐步 check 已就地记录失败；此处跑最终断言）
+	_check(data.get("asserts", []))
 
 	# 截图检查点
 	main._update_view()
@@ -77,8 +62,45 @@ func _run(data: Dictionary, out_dir: String, visual: bool) -> void:
 	if file:
 		file.store_string(JSON.stringify(result, "\t"))
 		file.close()
-	print("SCENARIO ", data.get("id", ""), " checks=", data.get("asserts", []).size(), " failures=", failures.size())
+	print("SCENARIO ", data.get("id", ""), " checks=", data.get("asserts", []).size(),
+			" failures=", failures.size())
 	quit(0 if failures.is_empty() else 1)
+
+func _run_step(step: Dictionary) -> void:
+	var action: String = step.get("action", "")
+	var player: int = int(step.get("player", 0))
+	match action:
+		"move":
+			main.sim.set_move(player, step.get("yaw", 0.0), step.get("pitch", 0.0),
+					step.get("forward", 0.0), step.get("side", 0.0),
+					step.get("jump", false), step.get("duck", false))
+			_tick(int(step.get("ticks", 1)))
+		"fire":
+			main.sim.fire(player, step.get("yaw", 0.0), step.get("pitch", 0.0))
+			_tick(1)
+		"tick":
+			_tick(int(step.get("ticks", 1)))
+		"buy_armor":
+			main.sim.buy_armor(player)
+			_tick(1)
+		"check":
+			_check(step.get("asserts", []))
+		_:
+			push_error("未知 action: " + action)
+
+func _tick(count: int) -> void:
+	for i in count:
+		main.sim.tick()
+
+func _check(checks: Array) -> void:
+	for check: Dictionary in checks:
+		var player: int = int(check.get("player", 0))
+		var field: String = check.get("field", "")
+		var expected: Variant = check.get("equals")
+		var actual: Variant = _read_field(player, field)
+		if actual != expected:
+			failures.append("player %d %s: expected %s got %s" %
+					[player, field, str(expected), str(actual)])
 
 func _read_field(player: int, field: String) -> Variant:
 	match field:
@@ -94,6 +116,16 @@ func _read_field(player: int, field: String) -> Variant:
 			return main.sim.is_alive(player)
 		"kills":
 			return main.sim.get_kills(player)
+		"money":
+			return main.sim.get_money(player)
+		"round_phase":
+			return main.sim.get_round_phase()
+		"round_ticks":
+			return main.sim.get_round_ticks()
+		"score_t":
+			return main.sim.get_score_t()
+		"score_ct":
+			return main.sim.get_score_ct()
 		"x":
 			return main.sim.get_x(player)
 		"y":

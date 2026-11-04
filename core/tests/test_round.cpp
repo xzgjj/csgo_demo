@@ -173,3 +173,33 @@ TEST_CASE("回合重置清理烟雾/投掷物/致盲") {
     CHECK(result.state.grenades[0].active == false);
     CHECK(result.state.players[0].blind_ticks == 0);
 }
+
+TEST_CASE("回合重置恢复护甲/头盔/C4 初始状态") {
+    WorldState state = MakeRound();
+    state.round.phase = RoundPhase::RoundEnd;
+    state.round.phase_ticks = 1;
+    state.players[0].armor = 100;
+    state.players[0].helmet = true;
+    state.bomb.planted = true;
+    state.bomb.timer_ticks = 1000;
+    const Content content = DefaultContent();
+
+    const auto result = Step(state, content, {});
+
+    CHECK(result.state.players[0].armor == 0);
+    CHECK(result.state.players[0].helmet == false);
+    CHECK(result.state.bomb.planted == false);
+}
+
+TEST_CASE("回合重置不会把 C4 留在错误玩家身上") {
+    WorldState state = MakeRound();
+    state.round.phase = RoundPhase::RoundEnd;
+    state.round.phase_ticks = 1;
+    state.players[1].has_bomb = true;
+    const Content content = DefaultContent();
+
+    const auto result = Step(state, content, {});
+
+    CHECK(result.state.players[0].has_bomb);
+    CHECK(result.state.players[1].has_bomb == false);
+}

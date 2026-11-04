@@ -31,6 +31,9 @@ struct RoundDef {
     uint16_t kill_reward = 300;
     uint16_t armor_price = 650;
     uint16_t helmet_price = 1000;
+    uint16_t defuse_kit_price = 400;
+    uint16_t plant_reward = 300;
+    uint16_t defuse_reward = 300;
     uint16_t bomb_ticks = 2560;
     uint16_t defuse_ticks = 640;
     uint16_t defuse_kit_ticks = 320;
