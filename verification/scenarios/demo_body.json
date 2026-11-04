@@ -1,0 +1,13 @@
+{
+  "id": "demo_body",
+  "map": "host/arena_graybox",
+  "description": "平射命中靶子躯干：伤害 36，护甲吸收后 28（HP 72）。",
+  "script": [
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0}
+  ],
+  "asserts": [
+    {"player": 1, "field": "health", "equals": 72},
+    {"player": 1, "field": "alive", "equals": true},
+    {"player": 0, "field": "mag", "equals": 29}
+  ]
+}
