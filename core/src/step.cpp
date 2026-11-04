@@ -141,9 +141,11 @@ RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3&
 }
 
 void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, uint8_t victim,
-                   EventList& events) {
+                   float distance, EventList& events) {
     PlayerState& target = state.players[victim];
-    const float raw = static_cast<float>(content.rifle.damage) *
+    const float falloff =
+        std::pow(content.rifle.range_modifier, distance / content.rifle.range_modifier_unit);
+    const float raw = static_cast<float>(content.rifle.damage) * falloff *
                       (target.armor > 0 ? content.rifle.armor_ratio : 1.0f);
     const uint16_t damage = static_cast<uint16_t>(std::lround(raw));
     const uint16_t applied = std::min(damage, target.health);
@@ -195,7 +197,7 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
     }
-    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), events);
+    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), hit.t, events);
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {

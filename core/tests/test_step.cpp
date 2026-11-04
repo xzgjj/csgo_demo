@@ -360,3 +360,16 @@ TEST_CASE("干火后可以立即换弹") {
     CHECK(HasEvent(dry.events, EventKind::WeaponDryFire));
     CHECK(result.state.players[0].weapon.reloading);
 }
+
+TEST_CASE("距离衰减：1000u 处伤害按 range_modifier 下降") {
+    WorldState state = MakeDuel();
+    state.players[1].position = {0.0f, 1000.0f, 0.0f};
+    Content content = DefaultContent();
+    content.rifle.range_modifier = 0.98f;
+    content.rifle.range_modifier_unit = 500.0f;
+    const std::array<Command, 1> commands{FireCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[1].health == 100 - 35);
+}

@@ -15,6 +15,8 @@ struct WeaponDef {
     uint16_t reload_ticks = 156;
     float armor_ratio = 0.775f;
     float range = 8192.0f;
+    float range_modifier = 1.0f;
+    float range_modifier_unit = 500.0f;
 };
 
 struct RoundDef {
