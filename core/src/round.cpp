@@ -20,6 +20,7 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         player.alive = true;
         player.health = 100;
         player.armor = 0;
+        player.helmet = false;
         player.velocity = {};
         player.wish_forward = 0.0f;
         player.wish_side = 0.0f;
