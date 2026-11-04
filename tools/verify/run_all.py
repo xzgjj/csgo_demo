@@ -1,4 +1,4 @@
-"""统一验证管线：运行 → 截图 → 比对 → 报告（制品 + 断言，非“看一眼”）。
+﻿"""统一验证管线：运行 → 截图 → 比对 → 报告（制品 + 断言，非“看一眼”）。
 
 用法：
   python -X utf8 tools/verify/run_all.py                # 全量：ctest/场景/运行时截图/6 机位/校准/reference/CI
@@ -61,7 +61,6 @@ WEAPON_DISTINCT_MAE = 0.5
 ## 镜筒遮罩（scope）天然是大面积纯黑：结构指标（暗部占比）对它无意义，只做像素/golden 比对。
 STRUCTURE_EXEMPT_VIEWS = {"scope"}
 
-
 def run_cmd(cmd, timeout, label):
     start = time.time()
     proc = subprocess.run(
@@ -86,7 +85,6 @@ def run_cmd(cmd, timeout, label):
         "cmd": [str(item) for item in cmd],
     }
 
-
 def image_diff(actual: Path, golden: Path, out: Path) -> None:
     from PIL import Image, ImageChops
 
@@ -95,7 +93,6 @@ def image_diff(actual: Path, golden: Path, out: Path) -> None:
     )
     out.parent.mkdir(parents=True, exist_ok=True)
     diff.save(out)
-
 
 def compare_shot(kind, view, actual, golden_dir, thresholds, update):
     golden = golden_dir / f"{view}.png"
@@ -127,7 +124,6 @@ def compare_shot(kind, view, actual, golden_dir, thresholds, update):
     )
     return entry
 
-
 def _compare_or_missing(entry, actual, golden, thresholds, issues):
     if not golden.exists():
         issues.append("缺少 golden（先跑 --update）")
@@ -140,7 +136,6 @@ def _compare_or_missing(entry, actual, golden, thresholds, issues):
         issues.append(f"golden 对比失败 {detail}")
     return ok, detail
 
-
 def capture_map():
     godot = run_scenarios.find_godot()
     return run_cmd(
@@ -148,7 +143,6 @@ def capture_map():
         600,
         "capture_map",
     )
-
 
 def capture_runtime():
     godot = run_scenarios.find_godot()
@@ -193,7 +187,6 @@ def capture_runtime():
         meta,
     )
 
-
 def weapon_distinctness():
     from PIL import Image
     import numpy as np
@@ -220,7 +213,6 @@ def weapon_distinctness():
         "detail": f"阈值 MAE>={WEAPON_DISTINCT_MAE}",
     }
 
-
 def runtime_meta_assert(meta):
     issues = []
     world = str(meta.get("world", ""))
@@ -235,7 +227,6 @@ def runtime_meta_assert(meta):
     ok = not issues
     print(f"[runtime_meta] {'PASS' if ok else 'FAIL'} {issues or meta}")
     return {"name": "runtime_meta", "ok": ok, "issues": issues, "meta": meta}
-
 
 def phase_build_state(args):
     checks = []
@@ -254,7 +245,6 @@ def phase_build_state(args):
     )
     return checks
 
-
 def phase_map(args, thresholds):
     checks, shots = [], []
     capture = capture_map()
@@ -271,7 +261,6 @@ def phase_map(args, thresholds):
             compare_shot("map", view, dst, MAP_GOLDENS, thresholds, args.update)
         )
     return checks, shots
-
 
 def phase_runtime(args, thresholds):
     checks, shots = [], []
@@ -295,7 +284,6 @@ def phase_runtime(args, thresholds):
         checks.append(weapon_distinctness())
     return checks, shots
 
-
 def phase_gates(args):
     checks = [
         run_cmd(
@@ -309,13 +297,11 @@ def phase_gates(args):
         checks.append(run_cmd([PY, "-X", "utf8", "tools/ci/run_local.py"], 1200, "ci"))
     return checks
 
-
 def _collect_failures(checks, shots):
     shot_failures = [shot for shot in shots if not shot.get("ok", False)]
     failures = [check["name"] for check in checks if not check["ok"]]
     failures += [f"shot:{shot['kind']}:{shot['view']}" for shot in shot_failures]
     return failures
-
 
 def _check_rows(checks):
     rows = []
@@ -325,7 +311,6 @@ def _check_rows(checks):
             f"| {check['name']} | {'PASS' if check['ok'] else 'FAIL'} | {detail} |"
         )
     return rows
-
 
 def _shot_rows(shots):
     rows = []
@@ -338,7 +323,6 @@ def _shot_rows(shots):
             f"{'PASS' if shot['ok'] else 'FAIL'} | {detail} |"
         )
     return rows
-
 
 def write_report(args, checks, shots, started):
     failures = _collect_failures(checks, shots)
@@ -383,7 +367,6 @@ def write_report(args, checks, shots, started):
     print(f"\nrun_all: {'PASS' if ok else 'FAIL'} -> {OUT / 'report.md'}")
     return 0 if ok else 1
 
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--build", action="store_true", help="先增量重建内核与 GDExtension")
@@ -397,7 +380,6 @@ def main() -> int:
     runtime_checks, runtime_shots = phase_runtime(args, thresholds)
     checks += map_checks + runtime_checks + phase_gates(args)
     return write_report(args, checks, map_shots + runtime_shots, started)
-
 
 if __name__ == "__main__":
     sys.exit(main())
