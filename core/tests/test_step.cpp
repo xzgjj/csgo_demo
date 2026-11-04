@@ -18,8 +18,10 @@ using recoil::EventKind;
 using recoil::EventList;
 using recoil::HashState;
 using recoil::PlayerState;
+using recoil::RoundPhase;
 using recoil::Step;
 using recoil::StepResult;
+using recoil::Team;
 using recoil::WorldState;
 
 WorldState MakeDuel() {
@@ -31,6 +33,7 @@ WorldState MakeDuel() {
         player.health = 100;
         player.weapon.mag = 30;
         player.weapon.reserve = 90;
+        player.team = static_cast<uint8_t>(i == 0 ? Team::T : Team::CT);
         player.position = {0.0f, static_cast<float>(i) * 500.0f, 0.0f};
     }
     return state;
@@ -359,4 +362,35 @@ TEST_CASE("干火后可以立即换弹") {
 
     CHECK(HasEvent(dry.events, EventKind::WeaponDryFire));
     CHECK(result.state.players[0].weapon.reloading);
+}
+
+TEST_CASE("距离衰减：1000u 处伤害按 range_modifier 下降") {
+    WorldState state = MakeDuel();
+    state.players[1].position = {0.0f, 1000.0f, 0.0f};
+    Content content = DefaultContent();
+    content.rifle.range_modifier = 0.98f;
+    content.rifle.range_modifier_unit = 500.0f;
+    const std::array<Command, 1> commands{FireCommand(0)};
+
+    const StepResult result = StepOne(state, content, commands);
+
+    CHECK(result.state.players[1].health == 100 - 35);
+}
+
+TEST_CASE("死亡会中断换弹状态") {
+    WorldState state = MakeDuel();
+    state.players[0].health = 30;
+    state.players[0].weapon.reloading = true;
+    state.players[0].weapon.reload_ticks_left = 100;
+    state.players[1].position = {0.0f, 0.0f, 0.0f};
+    Command fire;
+    fire.kind = CommandKind::Fire;
+    fire.player = 1;
+    fire.yaw_degrees = 270.0f;
+    const std::array<Command, 1> commands{fire};
+
+    const StepResult result = StepOne(state, DefaultContent(), commands);
+
+    CHECK(result.state.players[0].alive == false);
+    CHECK(result.state.players[0].weapon.reloading == false);
 }

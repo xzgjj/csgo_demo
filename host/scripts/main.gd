@@ -6,19 +6,26 @@ const ARENA_HALF := 800.0
 const WALL_THICKNESS := 32.0
 const WALL_HEIGHT := 200.0
 const EYE_HEIGHT := 64.0
-const SENSITIVITY := 0.08
+var sensitivity := 0.08
 
 var sim: RefCounted
 var yaw := 0.0
 var pitch := 0.0
 var camera: Camera3D
 var target_mesh: MeshInstance3D
+var smoke_mesh: MeshInstance3D
+var blind_overlay: ColorRect
+var result_label: Label
+var scoreboard_label: Label
+var throw_was := {"he": false, "flash": false, "smoke": false}
 var hud_label: Label
 var menu_layer: CanvasLayer
 var pause_layer: CanvasLayer
 var settings_layer: CanvasLayer
 var playing := false
 var fire_was_down := false
+var buy_was_down := false
+var bomb_was_down := false
 var last_hits := 0
 var last_shots := 0
 var last_dry := 0
@@ -79,6 +86,18 @@ func _build_world() -> void:
 	target_mesh.mesh = capsule
 	add_child(target_mesh)
 
+	smoke_mesh = MeshInstance3D.new()
+	var smoke_sphere := SphereMesh.new()
+	smoke_sphere.radius = 144.0
+	smoke_sphere.height = 288.0
+	var smoke_mat := StandardMaterial3D.new()
+	smoke_mat.albedo_color = Color(0.75, 0.78, 0.82, 0.85)
+	smoke_mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	smoke_sphere.material = smoke_mat
+	smoke_mesh.mesh = smoke_sphere
+	smoke_mesh.visible = false
+	add_child(smoke_mesh)
+
 	camera = Camera3D.new()
 	camera.fov = 90.0
 	camera.near = 0.05
@@ -112,14 +131,32 @@ func _build_ui() -> void:
 	crosshair.position = Vector2(632, 344)
 	hud.add_child(crosshair)
 
+	blind_overlay = ColorRect.new()
+	blind_overlay.color = Color(1, 1, 1, 0)
+	blind_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	blind_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(blind_overlay)
+
 	menu_layer = _make_menu("PROJECT RECOIL — GRAYBOX DEMO",
 			["开始游戏", "设置", "退出"], [_start_play, _show_settings, _quit])
 
 	pause_layer = _make_menu("已暂停", ["继续", "设置", "返回主菜单"], [_resume, _show_settings, _show_menu])
 	pause_layer.visible = false
 
-	settings_layer = _make_menu("设置（占位）", ["返回"], [_hide_settings])
-	settings_layer.visible = false
+	_build_settings()
+
+	result_label = Label.new()
+	result_label.set_anchors_preset(Control.PRESET_CENTER)
+	result_label.position = Vector2(420, 300)
+	result_label.add_theme_font_size_override("font_size", 40)
+	result_label.visible = false
+	hud.add_child(result_label)
+
+	scoreboard_label = Label.new()
+	scoreboard_label.position = Vector2(460, 80)
+	scoreboard_label.add_theme_font_size_override("font_size", 28)
+	scoreboard_label.visible = false
+	hud.add_child(scoreboard_label)
 
 func _make_menu(title: String, buttons: Array, callbacks: Array) -> CanvasLayer:
 	var layer := CanvasLayer.new()
@@ -142,6 +179,53 @@ func _make_menu(title: String, buttons: Array, callbacks: Array) -> CanvasLayer:
 		box.add_child(button)
 	layer.add_child(panel)
 	return layer
+
+func _build_settings() -> void:
+	settings_layer = CanvasLayer.new()
+	add_child(settings_layer)
+	var panel := PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.custom_minimum_size = Vector2(460, 360)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	panel.add_child(box)
+	var title := Label.new()
+	title.text = "设置"
+	title.add_theme_font_size_override("font_size", 26)
+	box.add_child(title)
+	var fov_label := Label.new()
+	fov_label.text = "视野 FOV: 90"
+	box.add_child(fov_label)
+	var fov := HSlider.new()
+	fov.min_value = 70
+	fov.max_value = 110
+	fov.value = 90
+	fov.custom_minimum_size = Vector2(360, 28)
+	fov.value_changed.connect(func(value: float):
+		fov_label.text = "视野 FOV: %d" % int(value)
+		if camera:
+			camera.fov = value)
+	box.add_child(fov)
+	var sens_label := Label.new()
+	sens_label.text = "灵敏度: 0.080"
+	box.add_child(sens_label)
+	var sens := HSlider.new()
+	sens.min_value = 0.02
+	sens.max_value = 0.20
+	sens.step = 0.005
+	sens.value = sensitivity
+	sens.custom_minimum_size = Vector2(360, 28)
+	sens.value_changed.connect(func(value: float):
+		sensitivity = value
+		sens_label.text = "灵敏度: %.3f" % value)
+	box.add_child(sens)
+	var back := Button.new()
+	back.text = "返回"
+	back.custom_minimum_size = Vector2(360, 44)
+	back.pressed.connect(_hide_settings)
+	box.add_child(back)
+	settings_layer.add_child(panel)
+	settings_layer.visible = false
 
 func _show_menu() -> void:
 	playing = false
@@ -181,8 +265,8 @@ func _quit() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * SENSITIVITY
-		pitch = clampf(pitch - event.relative.y * SENSITIVITY, -89.0, 89.0)
+		yaw -= event.relative.x * sensitivity
+		pitch = clampf(pitch - event.relative.y * sensitivity, -89.0, 89.0)
 	if event.is_action_pressed("pause"):
 		if playing:
 			_show_pause()
@@ -203,6 +287,17 @@ func _physics_process(_delta: float) -> void:
 	fire_was_down = fire_down
 	if Input.is_action_just_pressed("reload"):
 		sim.reload(0)
+	var buy_down := Input.is_key_pressed(KEY_B)
+	if buy_down and not buy_was_down:
+		sim.buy_armor(0)
+	buy_was_down = buy_down
+	var bomb_down := Input.is_key_pressed(KEY_E)
+	if bomb_down and not bomb_was_down:
+		sim.plant_bomb(0)
+	bomb_was_down = bomb_down
+	_throw_input("he", KEY_G, 0)
+	_throw_input("flash", KEY_F, 1)
+	_throw_input("smoke", KEY_V, 2)
 	sim.tick()
 	_update_view()
 	_update_hud()
@@ -217,12 +312,45 @@ func _update_view() -> void:
 	var ty: float = sim.get_y(1)
 	target_mesh.position = Vector3(-ty, 36.0, -tx)
 	target_mesh.visible = sim.is_alive(1)
+	var smoke_on: bool = sim.get_smoke_active() != 0
+	smoke_mesh.visible = smoke_on
+	if smoke_on:
+		smoke_mesh.position = Vector3(-sim.get_smoke_y(), 144.0, -sim.get_smoke_x())
+	blind_overlay.color = Color(1, 1, 1, clampf(float(sim.get_blind_ticks(0)) / 128.0, 0.0, 0.85))
+	var phase: int = sim.get_round_phase()
+	result_label.visible = phase >= 2
+	if phase >= 2:
+		var winner := "T" if sim.get_score_t() > sim.get_score_ct() else "CT"
+		result_label.text = "MATCH END" if phase == 3 else "ROUND OVER"
+		result_label.text += "  %d : %d" % [sim.get_score_t(), sim.get_score_ct()]
+	scoreboard_label.visible = Input.is_key_pressed(KEY_TAB)
+	scoreboard_label.text = "T %d : %d CT" % [sim.get_score_t(), sim.get_score_ct()]
 
 func _update_hud() -> void:
 	last_hits = sim.get_total_damage_events()
 	last_shots = sim.get_total_fire_events()
 	last_dry = sim.get_total_dryfire_events()
-	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   shots %d  hits %d  dry %d" % [
+	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
 		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
-		sim.get_health(1), last_shots, last_hits, last_dry,
+		sim.get_health(1), 0, _phase_text(), sim.get_money(0),
+		sim.get_score_t(), sim.get_score_ct(), sim.get_bomb_planted(), sim.get_bomb_timer(),
+		sim.get_smoke_active(), sim.get_blind_ticks(0),
+		last_shots, last_hits, last_dry,
 	]
+
+func _throw_input(name: String, key: int, kind: int) -> void:
+	var down := Input.is_key_pressed(key)
+	if down and not throw_was[name]:
+		sim.throw_grenade(0, kind, yaw, pitch)
+	throw_was[name] = down
+
+func _phase_text() -> String:
+	match sim.get_round_phase():
+		0:
+			return "FREEZE"
+		1:
+			return "LIVE"
+		2:
+			return "ROUND END"
+		_:
+			return "MATCH END"

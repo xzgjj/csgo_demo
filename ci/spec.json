@@ -38,6 +38,7 @@
     "CI.md"
   ],
   "unbounded_doc_prefixes": ["docs/", "research/"],
+  "duplicates_exclude_prefixes": ["core/tests/"],
   "vendored_prefixes": ["third_party/"],
   "scan_exclude": [
     ".git", "build", "build-host", "out", "log", "tests", "docs", "research", "prototypes",

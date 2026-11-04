@@ -50,6 +50,18 @@ protected:
             &RecoilSim::set_move);
         ClassDB::bind_method(D_METHOD("fire", "player", "yaw", "pitch"), &RecoilSim::fire);
         ClassDB::bind_method(D_METHOD("reload", "player"), &RecoilSim::reload);
+        ClassDB::bind_method(D_METHOD("buy_armor", "player"), &RecoilSim::buy_armor);
+        ClassDB::bind_method(D_METHOD("get_round_phase"), &RecoilSim::get_round_phase);
+        ClassDB::bind_method(D_METHOD("get_round_ticks"), &RecoilSim::get_round_ticks);
+        ClassDB::bind_method(D_METHOD("get_score_t"), &RecoilSim::get_score_t);
+        ClassDB::bind_method(D_METHOD("get_score_ct"), &RecoilSim::get_score_ct);
+        ClassDB::bind_method(D_METHOD("get_money", "player"), &RecoilSim::get_money);
+        ClassDB::bind_method(D_METHOD("throw_grenade", "player", "kind", "yaw", "pitch"),
+                             &RecoilSim::throw_grenade);
+        ClassDB::bind_method(D_METHOD("get_smoke_active"), &RecoilSim::get_smoke_active);
+        ClassDB::bind_method(D_METHOD("get_smoke_x"), &RecoilSim::get_smoke_x);
+        ClassDB::bind_method(D_METHOD("get_smoke_y"), &RecoilSim::get_smoke_y);
+        ClassDB::bind_method(D_METHOD("get_blind_ticks", "player"), &RecoilSim::get_blind_ticks);
         ClassDB::bind_method(D_METHOD("tick"), &RecoilSim::tick);
         ClassDB::bind_method(D_METHOD("get_x", "player"), &RecoilSim::get_x);
         ClassDB::bind_method(D_METHOD("get_y", "player"), &RecoilSim::get_y);
@@ -89,6 +101,8 @@ public:
         local.alive = true;
         local.on_ground = true;
         local.health = 100;
+        local.team = static_cast<uint8_t>(recoil::Team::T);
+        local.money = content_.round.start_money;
         local.position = {0.0f, 0.0f, 0.0f};
         local.weapon.mag = content_.rifle.magazine;
         local.weapon.reserve = content_.rifle.reserve;
@@ -98,9 +112,14 @@ public:
         dummy.on_ground = true;
         dummy.health = 100;
         dummy.armor = 100;
+        dummy.team = static_cast<uint8_t>(recoil::Team::CT);
+        dummy.money = content_.round.start_money;
         dummy.position = {400.0f, 0.0f, 0.0f};
         dummy.weapon.mag = content_.rifle.magazine;
         dummy.weapon.reserve = content_.rifle.reserve;
+
+        state_.round.phase = recoil::RoundPhase::Freeze;
+        state_.round.phase_ticks = content_.round.freeze_ticks;
     }
 
     void set_move(int player, float yaw, float pitch, float forward, float side, bool jump,
@@ -131,6 +150,45 @@ public:
         command.kind = recoil::CommandKind::Reload;
         command.player = static_cast<uint8_t>(player);
         pending_.push_back(command);
+    }
+
+    void buy_armor(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Buy;
+        command.player = static_cast<uint8_t>(player);
+        command.item = recoil::BuyItem::Armor;
+        pending_.push_back(command);
+    }
+
+    void throw_grenade(int player, int kind, float yaw, float pitch) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Throw;
+        command.player = static_cast<uint8_t>(player);
+        command.grenade = static_cast<recoil::GrenadeKind>(kind);
+        command.yaw_degrees = yaw;
+        command.pitch_degrees = pitch;
+        pending_.push_back(command);
+    }
+
+    void plant_bomb(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Plant;
+        command.player = static_cast<uint8_t>(player);
+        pending_.push_back(command);
+    }
+
+    void defuse_bomb(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Defuse;
+        command.player = static_cast<uint8_t>(player);
+        pending_.push_back(command);
+    }
+
+    int get_bomb_planted() const {
+        return state_.bomb.planted ? 1 : 0;
+    }
+    int get_bomb_timer() const {
+        return state_.bomb.timer_ticks;
     }
 
     void tick() {
@@ -169,6 +227,33 @@ public:
     }
     int get_kills(int player) const {
         return state_.players[player].kills;
+    }
+    int get_money(int player) const {
+        return state_.players[player].money;
+    }
+    int get_smoke_active() const {
+        return state_.smoke.active ? 1 : 0;
+    }
+    float get_smoke_x() const {
+        return state_.smoke.position.x;
+    }
+    float get_smoke_y() const {
+        return state_.smoke.position.y;
+    }
+    int get_blind_ticks(int player) const {
+        return state_.players[player].blind_ticks;
+    }
+    int get_round_phase() const {
+        return static_cast<int>(state_.round.phase);
+    }
+    int get_round_ticks() const {
+        return state_.round.phase_ticks;
+    }
+    int get_score_t() const {
+        return state_.round.score_t;
+    }
+    int get_score_ct() const {
+        return state_.round.score_ct;
     }
     int get_tick() const {
         return static_cast<int>(state_.tick);

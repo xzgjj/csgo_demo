@@ -1,0 +1,56 @@
+{
+  "schema": "map-layout/1",
+  "name": "de_ash",
+  "reference": "AssaultCube ac_desert（GPL，仅拓扑/节奏参考；几何、贴图、命名全部原创）",
+  "units": "source_units",
+  "bounds": {"min": [-2048, -2048, 0], "max": [2048, 2048, 256]},
+  "floor_z": 0,
+  "wall_height": 256,
+  "spawns": {
+    "T": {"center": [0, -1700, 0], "size": [256, 256], "facing": [0, 1]},
+    "CT": {"center": [0, 1700, 0], "size": [256, 256], "facing": [0, -1]}
+  },
+  "buy_zones": [
+    {"team": "T", "center": [0, -1600, 0], "size": [512, 512]},
+    {"team": "CT", "center": [0, 1600, 0], "size": [512, 512]}
+  ],
+  "bombsites": [
+    {"id": "A", "center": [-1200, -900, 0], "size": [512, 512]},
+    {"id": "B", "center": [1200, 900, 0], "size": [512, 512]}
+  ],
+  "lanes": [
+    {"id": "A_long", "width": 320, "points": [[0, -1700], [-1200, -1400], [-1200, -900]]},
+    {"id": "A_short", "width": 256, "points": [[0, -1200], [-700, -900], [-1200, -900]]},
+    {"id": "mid", "width": 256, "points": [[0, -1700], [0, 0], [0, 1700]]},
+    {"id": "B_long", "width": 320, "points": [[0, -1700], [1200, -1200], [1200, 900]]},
+    {"id": "B_short", "width": 256, "points": [[0, 1200], [700, 900], [1200, 900]]},
+    {"id": "CT_rotate", "width": 256, "points": [[0, 1700], [-500, 1200], [-1200, 900]]}
+  ],
+  "choke_points": [
+    {"id": "mid_door", "center": [0, 0, 0], "size": [256, 96]},
+    {"id": "A_entry", "center": [-1200, -1150, 0], "size": [320, 96]},
+    {"id": "B_entry", "center": [1200, 600, 0], "size": [320, 96]}
+  ],
+  "props": [
+    {"id": "A_crate_1", "type": "crate_large", "center": [-1300, -950, 0], "size": [128, 128, 128]},
+    {"id": "A_crate_2", "type": "crate_small", "center": [-1150, -820, 0], "size": [64, 64, 64]},
+    {"id": "A_barrel_1", "type": "barrel", "center": [-1380, -1050, 0], "size": [32, 32, 64]},
+    {"id": "B_crate_1", "type": "crate_large", "center": [1300, 950, 0], "size": [128, 128, 128]},
+    {"id": "B_crate_2", "type": "crate_small", "center": [1150, 820, 0], "size": [64, 64, 64]},
+    {"id": "B_barrel_1", "type": "barrel", "center": [1380, 1050, 0], "size": [32, 32, 64]},
+    {"id": "mid_crates", "type": "crate_cluster", "center": [0, 250, 0], "size": [96, 96, 96]},
+    {"id": "mid_door_l", "type": "door_breakable", "center": [-130, 0, 0], "size": [96, 48, 128]},
+    {"id": "mid_door_r", "type": "door_breakable", "center": [130, 0, 0], "size": [96, 48, 128]},
+    {"id": "A_glass", "type": "glass_window", "center": [-1200, -700, 96], "size": [128, 16, 96]},
+    {"id": "B_sandbags", "type": "sandbag_line", "center": [1100, 700, 0], "size": [256, 48, 64]},
+    {"id": "lamp_A", "type": "lamp", "center": [-1200, -900, 200], "size": [16, 16, 16]},
+    {"id": "lamp_B", "type": "lamp", "center": [1200, 900, 200], "size": [16, 16, 16]},
+    {"id": "sign_mid", "type": "sign", "center": [0, -400, 160], "size": [64, 8, 32]}
+  ],
+  "materials": ["concrete", "metal", "wood", "glass", "fabric", "dirt"],
+  "rotation_seconds_target": {"T_to_A": 14, "T_to_B": 15, "CT_to_A": 9, "CT_to_B": 9},
+  "checks": {
+    "layoutcheck": ["spawn_safe", "sites_reachable", "nav_flood_100", "no_floating", "no_intersection"],
+    "screenshots": ["overview_top", "A_site", "B_site", "mid", "T_spawn", "CT_spawn"]
+  }
+}

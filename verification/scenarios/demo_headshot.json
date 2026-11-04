@@ -1,0 +1,13 @@
+{
+  "id": "demo_headshot",
+  "map": "host/arena_graybox",
+  "description": "瞄准靶子头部（pitch 0.6，400u）触发 4 倍伤害并击杀。",
+  "script": [
+    {"action": "fire", "yaw": 0.0, "pitch": 0.6}
+  ],
+  "asserts": [
+    {"player": 1, "field": "health", "equals": 0},
+    {"player": 1, "field": "alive", "equals": false},
+    {"player": 0, "field": "mag", "equals": 29}
+  ]
+}

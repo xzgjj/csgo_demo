@@ -13,6 +13,19 @@ enum class EventKind : uint8_t {
     ReloadStarted,
     ReloadFinished,
     CommandRejected,
+    RoundLive,
+    RoundEnded,
+    RoundReset,
+    BuySucceeded,
+    BuyFailed,
+    GrenadeThrown,
+    GrenadeExploded,
+    FlashBlinded,
+    SmokeStarted,
+    SmokeEnded,
+    BombPlanted,
+    BombDefused,
+    BombExploded,
 };
 
 enum class RejectReason : int32_t {

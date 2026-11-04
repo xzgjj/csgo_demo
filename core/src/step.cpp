@@ -6,15 +6,20 @@
 
 #include "recoil/base/vec3.h"
 #include "recoil/movement/movement.h"
+#include "recoil/sim/bomb.h"
+#include "recoil/sim/grenades.h"
+#include "recoil/sim/round.h"
 
 namespace recoil {
 namespace {
 
 constexpr float kHalfWidth = 16.0f;
 constexpr float kBodyHeight = 72.0f;
+
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
+    float hit_z = 0.0f;
     int player = -1;
 };
 
@@ -119,6 +124,9 @@ RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3&
         const Vec3& pos = state.players[i].position;
         const Vec3 lo{pos.x - kHalfWidth, pos.y - kHalfWidth, pos.z};
         const Vec3 hi{pos.x + kHalfWidth, pos.y + kHalfWidth, pos.z + kBodyHeight};
+        if (SmokeBlocksSegment(state, origin, {pos.x, pos.y, pos.z + kBodyHeight * 0.5f})) {
+            continue;
+        }
         float t = 0.0f;
         if (!RayVsAabb(origin, dir, lo, hi, t)) {
             continue;
@@ -128,15 +136,21 @@ RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3&
         }
         best.hit = true;
         best.t = t;
+        best.hit_z = origin.z + dir.z * t;
         best.player = i;
     }
     return best;
 }
 
 void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, uint8_t victim,
-                   EventList& events) {
+                   float distance, float hit_z, EventList& events) {
     PlayerState& target = state.players[victim];
-    const float raw = static_cast<float>(content.rifle.damage) *
+    const float falloff =
+        std::pow(content.rifle.range_modifier, distance / content.rifle.range_modifier_unit);
+    const float height = hit_z - target.position.z;
+    const float group =
+        height >= 65.0f ? (target.helmet ? 2.0f : 4.0f) : (height < 32.0f ? 0.75f : 1.0f);
+    const float raw = static_cast<float>(content.rifle.damage) * falloff * group *
                       (target.armor > 0 ? content.rifle.armor_ratio : 1.0f);
     const uint16_t damage = static_cast<uint16_t>(std::lround(raw));
     const uint16_t applied = std::min(damage, target.health);
@@ -148,7 +162,13 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     events.Push({EventKind::DamageApplied, shooter, victim, applied});
     if (target.health == 0) {
         target.alive = false;
-        ++state.players[shooter].kills;
+        target.has_bomb = false;
+        target.weapon.reloading = false;
+        target.weapon.reload_ticks_left = 0;
+        if (target.team != state.players[shooter].team) {
+            ++state.players[shooter].kills;
+            AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
+        }
         events.Push({EventKind::PlayerDied, shooter, victim, 0});
     }
 }
@@ -161,6 +181,10 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
     PlayerState& shooter = state.players[command.player];
     if (!shooter.alive) {
         PushReject(events, command.player, RejectReason::Dead);
+        return;
+    }
+    if (state.round.phase == RoundPhase::MatchEnd) {
+        PushReject(events, command.player, RejectReason::None);
         return;
     }
     if (shooter.weapon.reloading) {
@@ -187,7 +211,8 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
     }
-    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), events);
+    ResolveDamage(state, content, command.player, static_cast<uint8_t>(hit.player), hit.t,
+                  hit.hit_z, events);
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {
@@ -235,10 +260,23 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
         case CommandKind::Move:
             ApplyMove(out.state, command, out.events);
             break;
+        case CommandKind::Buy:
+            ApplyBuy(out.state, content, command, out.events);
+            break;
+        case CommandKind::Throw:
+            ThrowGrenade(out.state, content, command, out.events);
+            break;
+        case CommandKind::Plant:
+        case CommandKind::Defuse:
+            ApplyBombCommand(out.state, content, command, out.events);
+            break;
         case CommandKind::Stop:
             break;
         }
     }
+    StepBomb(out.state, content, out.events);
+    StepGrenades(out.state, content, out.events);
+    AdvanceRound(out.state, content, out.events);
     for (uint8_t i = 0; i < out.state.player_count; ++i) {
         StepMovement(out.state.players[i], content.movement, map);
     }
@@ -254,12 +292,36 @@ uint64_t HashState(const WorldState& state) {
     mix(state.tick);
     mix(state.rng);
     mix(state.player_count);
+    mix(static_cast<uint64_t>(state.round.phase) |
+        (static_cast<uint64_t>(state.round.phase_ticks) << 8) |
+        (static_cast<uint64_t>(state.round.number) << 32) |
+        (static_cast<uint64_t>(state.round.winner) << 48));
+    mix(static_cast<uint64_t>(state.round.score_t) |
+        (static_cast<uint64_t>(state.round.score_ct) << 16));
+    mix(static_cast<uint64_t>(state.bomb.planted) |
+        (static_cast<uint64_t>(state.bomb.defused) << 1) |
+        (static_cast<uint64_t>(state.bomb.exploded) << 2) |
+        (static_cast<uint64_t>(state.bomb.timer_ticks) << 8) |
+        (static_cast<uint64_t>(state.bomb.defuse_progress) << 32));
+    mix(static_cast<uint64_t>(state.smoke.active) |
+        (static_cast<uint64_t>(state.smoke.ticks_left) << 8));
+    mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.smoke.position.x)));
+    mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.smoke.position.y)));
+    for (const GrenadeState& grenade : state.grenades) {
+        mix(static_cast<uint64_t>(grenade.active) | (static_cast<uint64_t>(grenade.kind) << 1) |
+            (static_cast<uint64_t>(grenade.fuse_ticks) << 8));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(grenade.position.x)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(grenade.position.y)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(grenade.position.z)));
+    }
     for (uint8_t i = 0; i < state.player_count; ++i) {
         const PlayerState& player = state.players[i];
         mix(static_cast<uint64_t>(player.alive) | (static_cast<uint64_t>(player.helmet) << 1) |
             (static_cast<uint64_t>(player.health) << 8) |
             (static_cast<uint64_t>(player.armor) << 24) |
             (static_cast<uint64_t>(player.kills) << 40));
+        mix(static_cast<uint64_t>(player.team) | (static_cast<uint64_t>(player.money) << 8));
+        mix(static_cast<uint64_t>(player.blind_ticks));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.x)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.y)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.position.z)));

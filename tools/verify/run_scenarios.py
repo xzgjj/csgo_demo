@@ -64,6 +64,17 @@ def compare(actual_path: Path, golden_path: Path, thresholds: dict) -> tuple[boo
     return ok, detail
 
 
+def ensure_host() -> None:
+    """内核静态库比宿主 DLL 新时自动重建，避免场景跑到旧逻辑。"""
+    dll = ROOT / "host/bin/librecoil_host.windows.template_debug.x86_64.dll"
+    core = ROOT / "build/librecoil_core.a"
+    if not core.exists():
+        return
+    if dll.exists() and dll.stat().st_mtime >= core.stat().st_mtime:
+        return
+    subprocess.run(["cmake", "--build", "build-host"], cwd=str(ROOT), check=False)
+
+
 def run_scenario(godot: Path, scenario: Path, out_dir: Path, visual: bool) -> tuple[bool, str]:
     args = [str(godot), "--path", "host", "--script", "res://tests/run_scenario.gd", "--",
             str(scenario.resolve()), str(out_dir.resolve())]
@@ -126,6 +137,7 @@ def main() -> int:
     args = ap.parse_args()
     if not args.headless and not args.visual:
         args.visual = True
+    ensure_host()
     godot = find_godot()
     scenarios = sorted((ROOT / "verification/scenarios").glob("*.json"))
     if args.scenario:

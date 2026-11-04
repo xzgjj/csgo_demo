@@ -171,6 +171,15 @@ def check_assets(spec):
                   "; ".join(issues[:5]) if issues else f"{len(data.get('assets', []))} 项素材合规")
 
 
+def check_map_layout(spec):
+    script = ROOT / "tools/mapgen/check_layout.py"
+    if not script.exists():
+        return result("map_layout", SKIP, "无布局校验器")
+    rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=60)
+    tail = (out.strip().splitlines() or [""])[-1]
+    return result("map_layout", PASS if rc == 0 else FAIL, tail)
+
+
 def check_scenarios(spec):
     base = ROOT / "verification/scenarios"
     if not base.exists():
@@ -280,6 +289,6 @@ def check_tests(spec):
 
 ALL_CHECKS = [
     check_diff_budget, check_author, check_protected_tests, check_policy,
-    check_assets, check_scenarios, check_logs, check_lint, check_tests,
+    check_assets, check_map_layout, check_scenarios, check_logs, check_lint, check_tests,
 ]
 RETRYABLE = {"tests"}

@@ -2,13 +2,24 @@
 
 #include <cstdint>
 
+#include "recoil/sim/state.h"
+
 namespace recoil {
 
 enum class CommandKind : uint8_t {
     Fire,
     Reload,
     Move,
+    Buy,
+    Throw,
+    Plant,
+    Defuse,
     Stop,
+};
+
+enum class BuyItem : uint8_t {
+    Armor = 0,
+    Helmet = 1,
 };
 
 struct Command {
@@ -21,6 +32,8 @@ struct Command {
     float move_side = 0.0f;
     bool jump = false;
     bool duck = false;
+    BuyItem item = BuyItem::Armor;
+    GrenadeKind grenade = GrenadeKind::HE;
 };
 
 } // namespace recoil
