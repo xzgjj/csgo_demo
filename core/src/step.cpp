@@ -163,6 +163,8 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     if (target.health == 0) {
         target.alive = false;
         target.has_bomb = false;
+        target.weapon.reloading = false;
+        target.weapon.reload_ticks_left = 0;
         ++state.players[shooter].kills;
         AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
         events.Push({EventKind::PlayerDied, shooter, victim, 0});

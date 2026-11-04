@@ -373,3 +373,21 @@ TEST_CASE("距离衰减：1000u 处伤害按 range_modifier 下降") {
 
     CHECK(result.state.players[1].health == 100 - 35);
 }
+
+TEST_CASE("死亡会中断换弹状态") {
+    WorldState state = MakeDuel();
+    state.players[0].health = 30;
+    state.players[0].weapon.reloading = true;
+    state.players[0].weapon.reload_ticks_left = 100;
+    state.players[1].position = {0.0f, 0.0f, 0.0f};
+    Command fire;
+    fire.kind = CommandKind::Fire;
+    fire.player = 1;
+    fire.yaw_degrees = 270.0f;
+    const std::array<Command, 1> commands{fire};
+
+    const StepResult result = StepOne(state, DefaultContent(), commands);
+
+    CHECK(result.state.players[0].alive == false);
+    CHECK(result.state.players[0].weapon.reloading == false);
+}
