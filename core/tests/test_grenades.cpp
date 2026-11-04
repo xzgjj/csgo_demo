@@ -178,3 +178,13 @@ TEST_CASE("烟雾到时消散并发出 SmokeEnded") {
     CHECK(result.state.smoke.active == false);
     CHECK(CountEvents(result.events, EventKind::SmokeEnded) == 1);
 }
+
+TEST_CASE("比赛结束后不能投掷手雷") {
+    WorldState state = MakeArena();
+    state.round.phase = RoundPhase::MatchEnd;
+    const std::array<Command, 1> throw_cmd{Throw(GrenadeKind::HE, 90.0f, 0.0f)};
+
+    const auto result = Step(state, DefaultContent(), throw_cmd);
+
+    CHECK(result.state.grenades[0].active == false);
+}

@@ -83,6 +83,11 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
                      static_cast<int32_t>(RejectReason::Dead)});
         return;
     }
+    if (state.round.phase == RoundPhase::MatchEnd) {
+        events.Push({EventKind::CommandRejected, command.player, 0,
+                     static_cast<int32_t>(RejectReason::None)});
+        return;
+    }
     for (GrenadeState& grenade : state.grenades) {
         if (grenade.active) {
             continue;
