@@ -150,3 +150,23 @@ TEST_CASE("拆弹器计时按实际拆包者生效") {
 
     CHECK(result.state.bomb.defused);
 }
+
+TEST_CASE("埋包与拆包成功给对应玩家奖励") {
+    WorldState state = MakeBombWorld();
+    const Content content = DefaultContent();
+    state.players[0].money = 800;
+    const std::array<Command, 1> plant{Cmd(CommandKind::Plant)};
+    const auto planted = Step(state, content, plant);
+    CHECK(planted.state.players[0].money == 800 + 300);
+
+    WorldState defusing = MakeBombWorld();
+    defusing.bomb.planted = true;
+    defusing.bomb.timer_ticks = 1000;
+    defusing.players[1].money = 800;
+    Content fast = DefaultContent();
+    fast.round.defuse_ticks = 1;
+    const std::array<Command, 1> defuse{Cmd(CommandKind::Defuse, 1)};
+    const auto result = Step(defusing, fast, defuse);
+    CHECK(result.state.bomb.defused);
+    CHECK(result.state.players[1].money == 800 + 300 + 3250);
+}

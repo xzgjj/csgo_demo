@@ -22,6 +22,7 @@ void ApplyBombCommand(WorldState& state, const Content& content, const Command& 
         state.bomb.carrier = command.player;
         state.bomb.position = player.position;
         player.has_bomb = false;
+        AwardMoney(player, content.round.plant_reward, content.round);
         events.Push({EventKind::BombPlanted, command.player, 0, state.bomb.timer_ticks});
         return;
     }
@@ -50,6 +51,10 @@ void StepBomb(WorldState& state, const Content& content, EventList& events) {
         if (state.bomb.defuse_progress >= required) {
             state.bomb.defused = true;
             state.bomb.planted = false;
+            const uint8_t defuser = state.bomb.defuser;
+            if (defuser < state.player_count) {
+                AwardMoney(state.players[defuser], content.round.defuse_reward, content.round);
+            }
             EndRound(state, content, static_cast<uint8_t>(Team::CT), events);
             events.Push({EventKind::BombDefused, 0, 0, 0});
             return;
