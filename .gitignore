@@ -41,3 +41,11 @@ node_modules/
 
 # 本地素材暂存（未登记许可前不入库）
 /assets/incoming/
+
+# godot-cpp / GDExtension 构建产物（由 tools/fetch_godot_cpp.ps1 生成）
+/third_party/godot-cpp/
+/build-host/
+/host/.godot/
+/host/captures/
+/host/bin/*.dll
+/host/bin/*.pdb

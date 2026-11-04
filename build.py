@@ -87,6 +87,38 @@ def do_ci():
     return run([PY, "-X", "utf8", "tools/ci/run_local.py"])
 
 
+def do_host():
+    ext_cmake = ROOT / "host/gdextension/CMakeLists.txt"
+    if not ext_cmake.exists():
+        print("[host] host/gdextension/CMakeLists.txt 不存在，跳过")
+        return 0
+    if not (ROOT / "third_party/godot-cpp/build/bin").exists():
+        print("[host] godot-cpp 未构建；先运行 tools/fetch_godot_cpp.ps1")
+        return 1
+    # 内核静态库与扩展
+    rc = run(["cmake", "-S", "host/gdextension", "-B", "build-host", "-G", "Ninja",
+              "-DCMAKE_BUILD_TYPE=Debug"])
+    if rc:
+        return rc
+    rc = run(["cmake", "--build", "build-host"])
+    if rc:
+        return rc
+    # MinGW 运行时（GDExtension DLL 依赖）
+    for dll in ("libstdc++-6.dll", "libgcc_s_seh-1.dll", "libwinpthread-1.dll"):
+        src = Path("C:/msys64/ucrt64/bin") / dll
+        if src.exists():
+            shutil.copy2(src, ROOT / "host/bin" / dll)
+    g = godot_bin()
+    if not g:
+        print("[host] 未找到 Godot；设置 GODOT_BIN 后重试")
+        return 1
+    rc = run([g, "--headless", "--path", "host", "--import"])
+    if rc:
+        return rc
+    return run([g, "--headless", "--path", "host", "--script", "res://tests/smoke.gd"])
+
+
+
 def do_clean():
     targets = [BUILD, ROOT / "out"]
     for t in targets:
@@ -102,7 +134,7 @@ def do_clean():
 
 def main():
     ap = argparse.ArgumentParser()
-    for flag in ("--env", "--core", "--test", "--ci", "--clean", "--all"):
+    for flag in ("--env", "--core", "--host", "--test", "--ci", "--clean", "--all"):
         ap.add_argument(flag, action="store_true")
     args = ap.parse_args()
     if not any(vars(args).values()):
@@ -112,6 +144,7 @@ def main():
     if args.all:
         do_env()
         rc |= do_core()
+        rc |= do_host()
         rc |= do_test()
         rc |= do_ci()
     else:
@@ -119,6 +152,8 @@ def main():
             do_env()
         if args.core:
             rc |= do_core()
+        if args.host:
+            rc |= do_host()
         if args.test:
             rc |= do_test()
         if args.ci:

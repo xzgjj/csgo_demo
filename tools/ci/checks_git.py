@@ -6,6 +6,7 @@ import hashlib
 import os
 import shutil
 import sys
+from pathlib import Path
 
 from checks import (
     FAIL, PASS, SKIP, ROOT, git, load_json, result, run, source_files,
@@ -227,6 +228,16 @@ def check_lint(spec):
                   "; ".join(issues[:5]) if issues else f"用 {','.join(installed)} 检查 {checked} 个文件")
 
 
+def _find_godot():
+    for cand in (
+        r"D:\app_finish\Godot\Godot_v4.7.2-stable_win64_console.exe",
+        r"D:\app_finish\Godot\Godot_v4.7.2-stable_win64.exe",
+    ):
+        if Path(cand).exists():
+            return cand
+    return None
+
+
 def check_tests(spec):
     tests_dir = ROOT / "tests"
     if tests_dir.exists() and any(tests_dir.rglob("test_*.py")):
@@ -238,7 +249,14 @@ def check_tests(spec):
         rc, out = run(["ctest", "--test-dir", "build", "--output-on-failure"], timeout=600)
         tail = (out.strip().splitlines() or [""])[-1]
         return result("tests", PASS if rc == 0 else FAIL, f"ctest: {tail}")
-    return result("tests", SKIP, "暂无测试（tests/ 或 build/ 为空）")
+    smoke = ROOT / "host/tests/smoke.gd"
+    godot = _find_godot()
+    dlls = list((ROOT / "host/bin").glob("*.dll"))
+    if smoke.exists() and godot and dlls:
+        rc, out = run([godot, "--headless", "--path", "host", "--script",
+                       "res://tests/smoke.gd"], timeout=180)
+        return result("tests", PASS if rc == 0 else FAIL, f"godot smoke: exit {rc}")
+    return result("tests", SKIP, "暂无测试（tests/、build/、host smoke 均不可用）")
 
 
 ALL_CHECKS = [
