@@ -1,0 +1,26 @@
+{
+  "id": "demo_armor",
+  "map": "host/arena_graybox",
+  "description": "有甲靶场：AK 命中满甲躯干伤害 28（36×0.775，HP 100→72），护甲按实际伤害/2 扣 14（100→86）；反向射击无甲目标伤害 36（HP 100→64）。数值来源 verification/reference/weapons.json。",
+  "script": [
+    {"action": "fire", "player": 0, "yaw": 0.0, "pitch": 0.0},
+    {"action": "check", "name": "armored_hit", "asserts": [
+      {"player": 1, "field": "health", "equals": 72},
+      {"player": 1, "field": "armor", "equals": 86},
+      {"player": 1, "field": "alive", "equals": true},
+      {"player": 0, "field": "mag", "equals": 29}
+    ]},
+    {"action": "tick", "ticks": 6},
+    {"action": "fire", "player": 1, "yaw": 180.0, "pitch": 0.0},
+    {"action": "check", "name": "unarmored_hit", "asserts": [
+      {"player": 0, "field": "health", "equals": 64},
+      {"player": 0, "field": "armor", "equals": 0}
+    ]}
+  ],
+  "asserts": [
+    {"player": 1, "field": "health", "equals": 72},
+    {"player": 1, "field": "armor", "equals": 86},
+    {"player": 0, "field": "health", "equals": 64},
+    {"player": 0, "field": "alive", "equals": true}
+  ]
+}

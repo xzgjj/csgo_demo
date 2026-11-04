@@ -1,0 +1,31 @@
+{
+  "schema": "recoil.reference/1",
+  "domain": "movement",
+  "baseline": "CS:GO/Source 默认 cvar（64 tick）；公式见 research/csgo-mechanics/movement.md §2–§6",
+  "updated": "2026-11-04",
+  "sources": {
+    "mechanics": "research/csgo-mechanics/movement.md（本地）",
+    "SDK": "https://github.com/ValveSoftware/source-sdk-2013",
+    "wiki": "https://developer.valvesoftware.com/wiki/Player_Entity"
+  },
+  "entries": [
+    {"id": "sv_maxspeed", "value": 320, "unit": "u/s", "project": "movement.max_speed", "tolerance": {"abs": 1}, "gate": false, "grade": "A", "source": "research/csgo-mechanics/movement.md §1", "note": "项目取 250（未区分武器 run_speed），已知偏差"},
+    {"id": "walk_speed", "value": 130, "unit": "u/s", "project": "movement.walk_speed", "tolerance": {"abs": 1}, "gate": true, "grade": "B", "source": "research/csgo-mechanics/movement.md §1"},
+    {"id": "duck_speed", "value": 85, "unit": "u/s", "project": "movement.duck_speed", "tolerance": {"abs": 1}, "gate": true, "grade": "B", "source": "research/csgo-mechanics/movement.md §1"},
+    {"id": "sv_accelerate", "value": 5.5, "unit": "coef", "project": "movement.accelerate", "tolerance": {"abs": 0.01}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §3"},
+    {"id": "sv_airaccelerate", "value": 12, "unit": "coef", "project": "movement.air_accelerate", "tolerance": {"abs": 0.01}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §4"},
+    {"id": "air_speed_cap", "value": 30, "unit": "u/s", "project": "movement.air_speed_cap", "tolerance": {"abs": 0.5}, "gate": true, "grade": "B", "source": "research/csgo-mechanics/movement.md §4"},
+    {"id": "sv_friction", "value": 5.2, "unit": "coef", "project": "movement.friction", "tolerance": {"abs": 0.01}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §2"},
+    {"id": "sv_stopspeed", "value": 80, "unit": "u/s", "project": "movement.stop_speed", "tolerance": {"abs": 0.5}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §2"},
+    {"id": "sv_gravity", "value": 800, "unit": "u/s^2", "project": "movement.gravity", "tolerance": {"abs": 1}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §1/§6"},
+    {"id": "sv_jump_impulse", "value": 301.993, "unit": "u/s", "project": "movement.jump_impulse", "tolerance": {"abs": 0.01}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §6"},
+    {"id": "jump_height", "value": 57.0, "unit": "u", "project": "movement.jump_height", "tolerance": {"abs": 1}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/movement.md §6（301.993²/(2×800)）"},
+    {"id": "tickrate", "value": 64, "unit": "tick/s", "project": "movement.tickrate", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/README.md §2.3"},
+    {"id": "stand_height", "value": 72, "unit": "u", "project": "movement.stand_height", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/README.md §2.1"},
+    {"id": "duck_height", "value": 54, "unit": "u", "project": "movement.duck_height", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/README.md §2.1"},
+    {"id": "eye_height", "value": 64, "unit": "u", "project": "movement.eye_height", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/README.md §2.1"},
+    {"id": "half_width", "value": 16, "unit": "u", "project": "movement.half_width", "tolerance": {"abs": 0}, "gate": true, "grade": "A", "source": "research/csgo-mechanics/README.md §2.1"},
+    {"id": "sv_maxvelocity", "value": 3500, "unit": "u/s", "project": null, "tolerance": {"abs": 1}, "gate": false, "grade": "B", "source": "research/csgo-mechanics/README.md §2.2"},
+    {"id": "fall_damage_safe_speed", "value": 580, "unit": "u/s", "project": null, "tolerance": {"abs": 5}, "gate": false, "grade": "B", "source": "research/csgo-mechanics/movement.md §7", "note": "落地伤害与击退公式仍为待校准（D）"}
+  ]
+}

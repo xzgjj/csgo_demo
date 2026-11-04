@@ -1,0 +1,21 @@
+{
+  "schema": "recoil.reference/1",
+  "domain": "grenades",
+  "baseline": "CS:GO 末期；引信/半径/时长见 research/csgo-mechanics/grenades.md §2–§5",
+  "updated": "2026-11-04",
+  "sources": {
+    "mechanics": "research/csgo-mechanics/grenades.md（本地）",
+    "wiki": "https://developer.valvesoftware.com/wiki/Counter-Strike:_Global_Offensive"
+  },
+  "entries": [
+    {"id": "he_fuse_seconds", "value": 1.5, "unit": "s", "project": "grenades.he_fuse_seconds", "tolerance": {"abs": 0.1}, "gate": true, "grade": "C", "source": "research/csgo-mechanics/grenades.md §2（社区 1.5s，待实测）"},
+    {"id": "he_radius", "value": 350, "unit": "u", "project": "grenades.he_radius", "tolerance": {"abs": 10}, "gate": true, "grade": "B", "source": "research/csgo-mechanics/grenades.md §2"},
+    {"id": "he_max_damage", "value": 98, "unit": "hp", "project": "grenades.he_damage", "tolerance": {"abs": 2}, "gate": false, "grade": "C", "source": "research/csgo-mechanics/grenades.md §2", "note": "项目 57（无甲贴脸），已知偏差"},
+    {"id": "smoke_radius", "value": 144, "unit": "u", "project": "grenades.smoke_radius", "tolerance": {"abs": 5}, "gate": true, "grade": "B", "source": "research/csgo-mechanics/grenades.md §4"},
+    {"id": "smoke_seconds", "value": 18, "unit": "s", "project": "grenades.smoke_seconds", "tolerance": {"abs": 1}, "gate": false, "grade": "B", "source": "research/csgo-mechanics/grenades.md §4", "note": "项目 10s（640 tick），已知偏差"},
+    {"id": "flash_radius", "value": 512, "unit": "u", "project": "grenades.flash_radius", "tolerance": {"rel": 0.2}, "gate": false, "grade": "C", "source": "research/csgo-mechanics/grenades.md §3（社区量级，待校准）"},
+    {"id": "flash_max_blind_seconds", "value": 4.9, "unit": "s", "project": "grenades.flash_max_seconds", "tolerance": {"abs": 0.3}, "gate": false, "grade": "C", "source": "research/csgo-mechanics/grenades.md §3", "note": "项目 2s（128 tick），已知偏差"},
+    {"id": "decoy_lifetime_seconds", "value": 15, "unit": "s", "project": null, "tolerance": {"abs": 1}, "gate": false, "grade": "C", "source": "research/csgo-mechanics/grenades.md §6", "note": "诱饵弹未实现（待校准）"},
+    {"id": "molotov_seconds", "value": 7, "unit": "s", "project": null, "tolerance": {"abs": 1}, "gate": false, "grade": "C", "source": "research/csgo-mechanics/grenades.md §5", "note": "燃烧瓶未实现（D 级：DPS/半径待实测）"}
+  ]
+}
