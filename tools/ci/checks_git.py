@@ -18,25 +18,32 @@ def _head_exists():
     return git("rev-parse", "--verify", "HEAD")[0] == 0
 
 
-def _numstat():
+def _vendored(spec, rel):
+    return any(rel.startswith(prefix) for prefix in spec.get("vendored_prefixes", []))
+
+
+def _numstat(spec):
     files, lines = set(), 0
     rc, out = git("diff", "--numstat", "HEAD")
     for row in out.splitlines():
         parts = row.split("\t")
-        if len(parts) != 3:
+        if len(parts) != 3 or _vendored(spec, parts[2]):
             continue
         files.add(parts[2])
         lines += sum(int(x) for x in parts[:2] if x.isdigit())
     return files, lines
 
 
-def _untracked():
+def _untracked(spec):
     files, lines = set(), 0
     rc, out = git("status", "--porcelain")
     for row in out.splitlines():
         if not row.startswith("?? "):
             continue
         rel = row[3:].strip().strip('"')
+        if _vendored(spec, rel):
+            files.add(rel)
+            continue
         files.add(rel)
         p = ROOT / rel
         if p.is_file():
@@ -48,8 +55,8 @@ def check_diff_budget(spec):
     if not _head_exists():
         return result("diff_budget", SKIP, "尚无提交")
     budgets = spec["budgets"]
-    files, lines = _numstat()
-    extra_files, extra_lines = _untracked()
+    files, lines = _numstat(spec)
+    extra_files, extra_lines = _untracked(spec)
     files |= extra_files
     lines += extra_lines
     approved = bool((os.environ.get("CI_APPROVED_BY") or "").strip())
