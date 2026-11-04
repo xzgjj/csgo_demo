@@ -37,6 +37,9 @@ class RecoilSim : public RefCounted {
     recoil::Content content_{};
     recoil::MapDef map_{};
     recoil::EventList last_events_{};
+    int total_damage_ = 0;
+    int total_fire_ = 0;
+    int total_dry_ = 0;
     std::vector<recoil::Command> pending_{};
 
 protected:
@@ -63,6 +66,11 @@ protected:
         ClassDB::bind_method(D_METHOD("get_last_fire_events"), &RecoilSim::get_last_fire_events);
         ClassDB::bind_method(D_METHOD("get_last_dryfire_events"),
                              &RecoilSim::get_last_dryfire_events);
+        ClassDB::bind_method(D_METHOD("get_total_damage_events"),
+                             &RecoilSim::get_total_damage_events);
+        ClassDB::bind_method(D_METHOD("get_total_fire_events"), &RecoilSim::get_total_fire_events);
+        ClassDB::bind_method(D_METHOD("get_total_dryfire_events"),
+                             &RecoilSim::get_total_dryfire_events);
     }
 
 public:
@@ -73,6 +81,9 @@ public:
         map_ = MakeArena();
         pending_.clear();
         last_events_ = recoil::EventList{};
+        total_damage_ = 0;
+        total_fire_ = 0;
+        total_dry_ = 0;
 
         recoil::PlayerState& local = state_.players[0];
         local.alive = true;
@@ -126,6 +137,9 @@ public:
         recoil::StepResult result = recoil::Step(state_, content_, pending_, &map_);
         state_ = result.state;
         last_events_ = result.events;
+        total_damage_ += _count(recoil::EventKind::DamageApplied);
+        total_fire_ += _count(recoil::EventKind::WeaponFired);
+        total_dry_ += _count(recoil::EventKind::WeaponDryFire);
         pending_.clear();
     }
 
@@ -177,6 +191,15 @@ public:
     }
     int get_last_dryfire_events() const {
         return _count(recoil::EventKind::WeaponDryFire);
+    }
+    int get_total_damage_events() const {
+        return total_damage_;
+    }
+    int get_total_fire_events() const {
+        return total_fire_;
+    }
+    int get_total_dryfire_events() const {
+        return total_dry_;
     }
 };
 

@@ -219,9 +219,9 @@ func _update_view() -> void:
 	target_mesh.visible = sim.is_alive(1)
 
 func _update_hud() -> void:
-	last_hits = sim.get_last_damage_events()
-	last_shots = sim.get_last_fire_events()
-	last_dry = sim.get_last_dryfire_events()
+	last_hits = sim.get_total_damage_events()
+	last_shots = sim.get_total_fire_events()
+	last_dry = sim.get_total_dryfire_events()
 	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   shots %d  hits %d  dry %d" % [
 		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
 		sim.get_health(1), last_shots, last_hits, last_dry,

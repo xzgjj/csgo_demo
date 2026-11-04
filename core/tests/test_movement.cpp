@@ -186,3 +186,14 @@ TEST_CASE("开阔空间可以站起") {
 
     CHECK(result.state.players[0].ducking == false);
 }
+
+TEST_CASE("状态哈希覆盖移动意图与跳跃队列") {
+    const WorldState base = MakeMover();
+    WorldState with_wish = base;
+    with_wish.players[0].wish_forward = 1.0f;
+    WorldState with_jump = base;
+    with_jump.players[0].jump_queued = true;
+
+    CHECK(HashState(base) != HashState(with_wish));
+    CHECK(HashState(base) != HashState(with_jump));
+}

@@ -45,8 +45,19 @@ def _untracked(spec):
         if _vendored(spec, rel):
             files.add(rel)
             continue
-        files.add(rel)
         p = ROOT / rel
+        if p.is_dir():
+            # 展开未跟踪目录，避免预算少算（仅统计项目内文件）。
+            for f in p.rglob("*"):
+                if not f.is_file():
+                    continue
+                sub = f.relative_to(ROOT).as_posix()
+                if any(part in sub for part in ("__pycache__", ".godot", "node_modules")):
+                    continue
+                files.add(sub)
+                lines += f.read_text(encoding="utf-8", errors="replace").count("\n") + 1
+            continue
+        files.add(rel)
         if p.is_file():
             lines += p.read_text(encoding="utf-8", errors="replace").count("\n") + 1
     return files, lines

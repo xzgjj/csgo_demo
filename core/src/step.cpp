@@ -267,7 +267,10 @@ uint64_t HashState(const WorldState& state) {
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.velocity.y)));
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.velocity.z)));
         mix(static_cast<uint64_t>(player.on_ground) | (static_cast<uint64_t>(player.ducking) << 1) |
-            (static_cast<uint64_t>(player.jump_held) << 2));
+            (static_cast<uint64_t>(player.jump_held) << 2) |
+            (static_cast<uint64_t>(player.jump_queued) << 3));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.wish_forward)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.wish_side)));
         mix(static_cast<uint64_t>(player.weapon.mag) |
             (static_cast<uint64_t>(player.weapon.reserve) << 16) |
             (static_cast<uint64_t>(player.weapon.cooldown_ticks) << 32) |

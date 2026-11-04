@@ -16,9 +16,14 @@ func _initialize() -> void:
 	var damage_events: int = sim.get_last_damage_events()
 	var fire_events: int = sim.get_last_fire_events()
 	var target_hp: int = sim.get_health(1)
-	print("SMOKE moved=%.2f hp0=%d mag=%d hp1=%d dmg_events=%d fire_events=%d tick=%d" % [
+	# 空命令 tick 不应清空累计计数（HUD 用）。
+	for i in 5:
+		sim.tick()
+	var total_damage: int = sim.get_total_damage_events()
+	var total_fire: int = sim.get_total_fire_events()
+	print("SMOKE moved=%.2f hp0=%d mag=%d hp1=%d dmg_events=%d fire_events=%d total_damage=%d total_fire=%d tick=%d" % [
 		moved, sim.get_health(0), sim.get_mag(0), target_hp,
-		damage_events, fire_events, sim.get_tick(),
+		damage_events, fire_events, total_damage, total_fire, sim.get_tick(),
 	])
-	var ok: bool = moved > 100.0 and target_hp == 72 and damage_events == 1 and fire_events == 1
+	var ok: bool = moved > 100.0 and target_hp == 72 and damage_events == 1 and fire_events == 1 and total_damage == 1 and total_fire == 1
 	quit(0 if ok else 1)
