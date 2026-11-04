@@ -146,3 +146,20 @@ TEST_CASE("烟雾弹落地生成烟区并按时消散") {
     CHECK(result.state.smoke.active);
     CHECK(CountEvents(result.events, EventKind::SmokeStarted) == 1);
 }
+
+TEST_CASE("HE 伤害受护甲吸收") {
+    WorldState state = MakeArena();
+    state.players[1].armor = 100;
+    state.players[1].position = {0.0f, 60.0f, 0.0f};
+    state.grenades[0].active = true;
+    state.grenades[0].kind = static_cast<uint8_t>(GrenadeKind::HE);
+    state.grenades[0].owner = 0;
+    state.grenades[0].position = {0.0f, 60.0f, 0.0f};
+    state.grenades[0].velocity = {};
+    state.grenades[0].fuse_ticks = 1;
+    const Content content = DefaultContent();
+
+    const StepResult result = Step(state, content, {});
+
+    CHECK(result.state.players[1].health == 100 - 44);
+}

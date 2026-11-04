@@ -28,8 +28,9 @@ void Detonate(WorldState& state, const Content& content, GrenadeState& grenade, 
                 continue;
             }
             const float scale = 1.0f - d / def.he_radius;
-            const uint16_t damage =
-                static_cast<uint16_t>(std::lround(static_cast<float>(def.he_damage) * scale));
+            const float armor = player.armor > 0 ? content.rifle.armor_ratio : 1.0f;
+            const uint16_t damage = static_cast<uint16_t>(
+                std::lround(static_cast<float>(def.he_damage) * scale * armor));
             const uint16_t applied = std::min(damage, player.health);
             player.health = static_cast<uint16_t>(player.health - applied);
             if (player.health == 0) {
