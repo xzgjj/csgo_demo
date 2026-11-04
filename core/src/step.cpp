@@ -148,7 +148,8 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     const float falloff =
         std::pow(content.rifle.range_modifier, distance / content.rifle.range_modifier_unit);
     const float height = hit_z - target.position.z;
-    const float group = height >= 65.0f ? 4.0f : (height < 32.0f ? 0.75f : 1.0f);
+    const float group =
+        height >= 65.0f ? (target.helmet ? 2.0f : 4.0f) : (height < 32.0f ? 0.75f : 1.0f);
     const float raw = static_cast<float>(content.rifle.damage) * falloff * group *
                       (target.armor > 0 ? content.rifle.armor_ratio : 1.0f);
     const uint16_t damage = static_cast<uint16_t>(std::lround(raw));

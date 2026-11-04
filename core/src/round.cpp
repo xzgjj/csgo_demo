@@ -134,13 +134,15 @@ void ApplyBuy(WorldState& state, const Content& content, const Command& command,
         events.Push({EventKind::BuyFailed, command.player, 0, 0});
         return;
     }
-    const uint16_t price = content.round.armor_price;
+    const bool helmet = command.item == BuyItem::Helmet;
+    const uint16_t price = helmet ? content.round.helmet_price : content.round.armor_price;
     if (player.money < price) {
         events.Push({EventKind::BuyFailed, command.player, 0, 1});
         return;
     }
     player.money = static_cast<uint16_t>(player.money - price);
     player.armor = 100;
+    player.helmet = player.helmet || helmet;
     events.Push({EventKind::BuySucceeded, command.player, 0, player.money});
 }
 
