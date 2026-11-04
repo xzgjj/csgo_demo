@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(recoil_core STATIC
+    src/bomb.cpp
     src/content.cpp
     src/grenades.cpp
     src/movement.cpp
@@ -21,6 +22,7 @@ target_compile_options(recoil_core PRIVATE
 
 add_executable(recoil_tests
     tests/doctest_main.cpp
+    tests/test_bomb.cpp
     tests/test_grenades.cpp
     tests/test_movement.cpp
     tests/test_round.cpp

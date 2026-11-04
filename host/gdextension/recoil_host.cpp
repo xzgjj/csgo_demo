@@ -170,6 +170,27 @@ public:
         pending_.push_back(command);
     }
 
+    void plant_bomb(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Plant;
+        command.player = static_cast<uint8_t>(player);
+        pending_.push_back(command);
+    }
+
+    void defuse_bomb(int player) {
+        recoil::Command command;
+        command.kind = recoil::CommandKind::Defuse;
+        command.player = static_cast<uint8_t>(player);
+        pending_.push_back(command);
+    }
+
+    int get_bomb_planted() const {
+        return state_.bomb.planted ? 1 : 0;
+    }
+    int get_bomb_timer() const {
+        return state_.bomb.timer_ticks;
+    }
+
     void tick() {
         recoil::StepResult result = recoil::Step(state_, content_, pending_, &map_);
         state_ = result.state;

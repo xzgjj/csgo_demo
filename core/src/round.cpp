@@ -10,6 +10,7 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
     state.round.phase = RoundPhase::Freeze;
     state.round.phase_ticks = content.round.freeze_ticks;
     state.round.winner = 0;
+    state.bomb = BombState{};
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
         player.alive = true;
@@ -29,10 +30,19 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         const bool is_t = player.team == static_cast<uint8_t>(Team::T);
         player.position = is_t ? Vec3{0.0f, -200.0f, 0.0f} : Vec3{400.0f, 0.0f, 0.0f};
     }
+    state.players[0].has_bomb = state.players[0].team == static_cast<uint8_t>(Team::T);
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        state.players[i].has_defuser = false;
+        if (state.players[i].team == static_cast<uint8_t>(Team::CT)) {
+            state.players[i].has_defuser = true;
+            break;
+        }
+    }
     events.Push({EventKind::RoundReset, 0, 0, state.round.number});
 }
 
-void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events) {
+void EndRoundInternal(WorldState& state, const Content& content, uint8_t winner,
+                      EventList& events) {
     state.round.phase = RoundPhase::RoundEnd;
     state.round.phase_ticks = content.round.end_ticks;
     state.round.winner = winner;
@@ -55,6 +65,10 @@ void EndRound(WorldState& state, const Content& content, uint8_t winner, EventLi
 }
 
 } // namespace
+
+void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events) {
+    EndRoundInternal(state, content, winner, events);
+}
 
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
     const uint32_t total = static_cast<uint32_t>(player.money) + amount;

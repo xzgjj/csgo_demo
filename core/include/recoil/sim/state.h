@@ -46,6 +46,17 @@ struct SmokeZone {
 
 constexpr int kMaxGrenades = 8;
 
+struct BombState {
+    bool planted = false;
+    bool defused = false;
+    bool exploded = false;
+    bool defusing = false;
+    uint16_t timer_ticks = 0;
+    uint16_t defuse_progress = 0;
+    uint8_t carrier = 0xFF;
+    Vec3 position{};
+};
+
 struct RoundState {
     RoundPhase phase = RoundPhase::Freeze;
     uint16_t phase_ticks = 0;
@@ -76,6 +87,8 @@ struct PlayerState {
     uint16_t money = 0;
     uint16_t kills = 0;
     uint16_t blind_ticks = 0;
+    bool has_bomb = false;
+    bool has_defuser = false;
     float wish_forward = 0.0f;
     float wish_side = 0.0f;
     Vec3 position{};
@@ -88,6 +101,7 @@ struct WorldState {
     uint64_t rng = 0x9E3779B97F4A7C15ull;
     uint8_t player_count = 0;
     RoundState round{};
+    BombState bomb{};
     SmokeZone smoke{};
     std::array<GrenadeState, kMaxGrenades> grenades{};
     std::array<PlayerState, kMaxPlayers> players{};

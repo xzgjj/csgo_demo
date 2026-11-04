@@ -6,6 +6,7 @@
 
 #include "recoil/base/vec3.h"
 #include "recoil/movement/movement.h"
+#include "recoil/sim/bomb.h"
 #include "recoil/sim/grenades.h"
 #include "recoil/sim/round.h"
 
@@ -248,10 +249,15 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
         case CommandKind::Throw:
             ThrowGrenade(out.state, content, command, out.events);
             break;
+        case CommandKind::Plant:
+        case CommandKind::Defuse:
+            ApplyBombCommand(out.state, content, command, out.events);
+            break;
         case CommandKind::Stop:
             break;
         }
     }
+    StepBomb(out.state, content, out.events);
     StepGrenades(out.state, content, out.events);
     AdvanceRound(out.state, content, out.events);
     for (uint8_t i = 0; i < out.state.player_count; ++i) {
@@ -275,6 +281,11 @@ uint64_t HashState(const WorldState& state) {
         (static_cast<uint64_t>(state.round.winner) << 48));
     mix(static_cast<uint64_t>(state.round.score_t) |
         (static_cast<uint64_t>(state.round.score_ct) << 16));
+    mix(static_cast<uint64_t>(state.bomb.planted) |
+        (static_cast<uint64_t>(state.bomb.defused) << 1) |
+        (static_cast<uint64_t>(state.bomb.exploded) << 2) |
+        (static_cast<uint64_t>(state.bomb.timer_ticks) << 8) |
+        (static_cast<uint64_t>(state.bomb.defuse_progress) << 32));
     mix(static_cast<uint64_t>(state.smoke.active) |
         (static_cast<uint64_t>(state.smoke.ticks_left) << 8));
     mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(state.smoke.position.x)));

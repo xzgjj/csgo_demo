@@ -23,6 +23,9 @@ enum class EventKind : uint8_t {
     FlashBlinded,
     SmokeStarted,
     SmokeEnded,
+    BombPlanted,
+    BombDefused,
+    BombExploded,
 };
 
 enum class RejectReason : int32_t {

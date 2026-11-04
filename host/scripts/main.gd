@@ -25,6 +25,7 @@ var settings_layer: CanvasLayer
 var playing := false
 var fire_was_down := false
 var buy_was_down := false
+var bomb_was_down := false
 var last_hits := 0
 var last_shots := 0
 var last_dry := 0
@@ -244,6 +245,10 @@ func _physics_process(_delta: float) -> void:
 	if buy_down and not buy_was_down:
 		sim.buy_armor(0)
 	buy_was_down = buy_down
+	var bomb_down := Input.is_key_pressed(KEY_E)
+	if bomb_down and not bomb_was_down:
+		sim.plant_bomb(0)
+	bomb_was_down = bomb_down
 	_throw_input("he", KEY_G, 0)
 	_throw_input("flash", KEY_F, 1)
 	_throw_input("smoke", KEY_V, 2)
@@ -282,7 +287,8 @@ func _update_hud() -> void:
 	hud_label.text = "HP %d  ARMOR %d   AMMO %d/%d   TARGET HP %d   R%d %s  $%d  %d:%d   shots %d  hits %d  dry %d" % [
 		sim.get_health(0), sim.get_armor(0), sim.get_mag(0), sim.get_reserve(0),
 		sim.get_health(1), 0, _phase_text(), sim.get_money(0),
-		sim.get_score_t(), sim.get_score_ct(), sim.get_smoke_active(), sim.get_blind_ticks(0),
+		sim.get_score_t(), sim.get_score_ct(), sim.get_bomb_planted(), sim.get_bomb_timer(),
+		sim.get_smoke_active(), sim.get_blind_ticks(0),
 		last_shots, last_hits, last_dry,
 	]
 

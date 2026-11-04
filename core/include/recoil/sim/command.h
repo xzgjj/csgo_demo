@@ -12,6 +12,8 @@ enum class CommandKind : uint8_t {
     Move,
     Buy,
     Throw,
+    Plant,
+    Defuse,
     Stop,
 };
 
