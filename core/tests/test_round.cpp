@@ -156,3 +156,20 @@ TEST_CASE("进行中时间耗尽由 CT 获胜") {
     CHECK(result.state.round.winner == static_cast<uint8_t>(Team::CT));
     CHECK(result.state.round.score_ct == 1);
 }
+
+TEST_CASE("回合重置清理烟雾/投掷物/致盲") {
+    WorldState state = MakeRound();
+    state.round.phase = RoundPhase::RoundEnd;
+    state.round.phase_ticks = 1;
+    state.smoke.active = true;
+    state.smoke.ticks_left = 100;
+    state.grenades[0].active = true;
+    state.players[0].blind_ticks = 50;
+    const Content content = DefaultContent();
+
+    const auto result = Step(state, content, {});
+
+    CHECK(result.state.smoke.active == false);
+    CHECK(result.state.grenades[0].active == false);
+    CHECK(result.state.players[0].blind_ticks == 0);
+}

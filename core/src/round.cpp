@@ -11,6 +11,10 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
     state.round.phase_ticks = content.round.freeze_ticks;
     state.round.winner = 0;
     state.bomb = BombState{};
+    state.smoke = SmokeZone{};
+    for (GrenadeState& grenade : state.grenades) {
+        grenade = GrenadeState{};
+    }
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
         player.alive = true;
@@ -22,6 +26,7 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         player.jump_queued = false;
         player.jump_held = false;
         player.on_ground = true;
+        player.blind_ticks = 0;
         player.weapon.mag = content.rifle.magazine;
         player.weapon.reserve = content.rifle.reserve;
         player.weapon.cooldown_ticks = 0;
