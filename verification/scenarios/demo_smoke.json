@@ -1,0 +1,17 @@
+{
+  "id": "demo_smoke",
+  "map": "host/arena_graybox",
+  "description": "灰盒 demo 冒烟：前进 40 tick 后向 +X 靶子开火，命中应扣血；同一场景驱动代码断言与截图检查。",
+  "script": [
+    {"action": "move", "ticks": 40, "forward": 1.0, "side": 0.0, "yaw": 0.0, "pitch": 0.0},
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0}
+  ],
+  "asserts": [
+    {"player": 1, "field": "health", "equals": 72},
+    {"player": 0, "field": "mag", "equals": 29},
+    {"player": 0, "field": "alive", "equals": true}
+  ],
+  "screenshots": [
+    {"name": "demo_smoke_gameplay", "width": 1280, "height": 720}
+  ]
+}

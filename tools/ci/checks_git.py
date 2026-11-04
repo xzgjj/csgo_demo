@@ -171,8 +171,16 @@ def check_scenarios(spec):
             issues.append(f"{p.name}: 非法 JSON")
             continue
         issues += [f"{p.name}: 缺少 {k}" for k in ("id", "map", "script", "asserts") if k not in data]
-    return result("scenarios", FAIL if issues else PASS,
-                  "; ".join(issues[:5]) if issues else "场景 schema/引用正常")
+    if issues:
+        return result("scenarios", FAIL, "; ".join(issues[:5]))
+    runner = ROOT / "tools/verify/run_scenarios.py"
+    godot = _find_godot()
+    dlls = list((ROOT / "host/bin").glob("*.dll"))
+    if runner.exists() and godot and dlls:
+        rc, out = run([sys.executable, "-X", "utf8", str(runner), "--headless"], timeout=300)
+        tail = (out.strip().splitlines() or [""])[-1]
+        return result("scenarios", PASS if rc == 0 else FAIL, f"场景执行: {tail}")
+    return result("scenarios", PASS, "场景 schema 正常（宿主未构建，跳过执行）")
 
 
 def check_logs(spec):
