@@ -274,6 +274,8 @@ func _physics_process(_delta: float) -> void:
 	else:
 		sim.tick()
 	shot_feedback.after_tick(camera)
+	if purchase != null:
+		purchase.after_tick()
 	_update_view()
 	_update_hud()
 

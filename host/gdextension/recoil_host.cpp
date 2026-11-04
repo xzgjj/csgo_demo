@@ -116,6 +116,7 @@ protected:
         BIND(get_last_fire_tick, "player");
         BIND(get_view_yaw, "player");
         BIND(get_damage_count_by, "player");
+        BIND(can_buy, "player");
         BIND(is_reloading, "player");
 #undef BIND
     }
@@ -212,7 +213,7 @@ public:
         }
         const recoil::WeaponRow* row =
             recoil::FindWeaponRow(static_cast<recoil::WeaponId>(weapon_id));
-        if (row == nullptr || state_.round.phase != recoil::RoundPhase::Freeze) {
+        if (row == nullptr || !recoil::CanBuy(state_, content_)) {
             return false;
         }
         if (state_.players[static_cast<size_t>(player)].money < row->price) {

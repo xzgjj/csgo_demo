@@ -14,6 +14,8 @@ var menu
 var viewmodel
 ## 截图/预览用：关闭后不再每帧把手模拉回内核武器（weapon_0..2 三把枪展示机位）。
 var auto_sync := true
+## 上一笔购买待内核确认（Buy/buy_weapon 是命令，tick 后才结算）。
+var _pending: Dictionary = {}
 
 
 func setup(sim_ref: RefCounted, account_ref: Variant, menu_ref: Node, viewmodel_ref: Node) -> void:
@@ -27,20 +29,29 @@ func toggle() -> void:
 	if menu == null:
 		return
 	menu.toggle(int(sim.get_money(0)))
+	refresh()
 
 
 func is_open() -> bool:
 	return menu != null and bool(menu.is_open())
 
 
-## 余额每帧同步（内核 Buy/buy_weapon 是命令，下一 tick 才结算）。
+## 每帧同步：余额 + 购买窗口（内核只允许 Freeze 阶段购买，菜单需要同步灰显/提示）。
 func refresh() -> void:
 	_refresh_balance()
+	if menu != null and menu.has_method("set_can_buy"):
+		menu.set_can_buy(_can_buy())
 
 
 ## 菜单点击 → 内核购买；成功返回 true。武器走 buy_weapon（主/副槽由内核决定），装备走 Buy。
 func on_purchase(item_id: String, price: int) -> bool:
-	if sim == null or int(sim.get_money(0)) < price:
+	if sim == null:
+		return false
+	if not _can_buy():
+		_message("购买时间已过（仅冻结期与开局 5 秒内可购买）")
+		return false
+	if int(sim.get_money(0)) < price:
+		_message("余额不足")
 		return false
 	var weapon_id: int = int(BUY_WEAPON_IDS.get(item_id, 0))
 	var ok := false
@@ -50,8 +61,24 @@ func on_purchase(item_id: String, price: int) -> bool:
 			_record_loadout(weapon_id)
 	else:
 		ok = _buy_gear(item_id)
+	if ok:
+		_pending = {"name": _item_name(item_id), "money": int(sim.get_money(0)),
+				"weapon": int(sim.get_weapon_id(0))}
 	_refresh_balance()
 	return ok
+
+
+## 内核 tick 后校验上一笔购买：金钱减少或武器变化=成功；否则给出失败原因（不再静默失败）。
+func after_tick() -> void:
+	if _pending.is_empty():
+		return
+	var name := str(_pending.get("name", "物品"))
+	var money_before := int(_pending.get("money", 0))
+	var weapon_before := int(_pending.get("weapon", 0))
+	var bought := int(sim.get_money(0)) < money_before or int(sim.get_weapon_id(0)) != weapon_before
+	_message("已购买 %s" % name if bought else "购买失败：%s" % name)
+	_pending.clear()
+	refresh()
 
 
 func switch_weapon(index: int) -> void:
@@ -94,6 +121,26 @@ func _buy_gear(item_id: String) -> bool:
 	else:
 		return false
 	return int(sim.get_money(0)) < before
+
+
+## 购买窗口以内核为准（冻结期 + Live 开局宽限）。
+func _can_buy() -> bool:
+	if sim == null:
+		return false
+	if sim.has_method("can_buy"):
+		return bool(sim.can_buy(0))
+	return int(sim.get_round_phase()) == 0
+
+
+func _message(text: String) -> void:
+	if menu != null and menu.has_method("show_message"):
+		menu.show_message(text)
+
+
+func _item_name(item_id: String) -> String:
+	if menu != null and menu.has_method("item_name"):
+		return str(menu.item_name(item_id))
+	return item_id
 
 
 func _refresh_balance() -> void:

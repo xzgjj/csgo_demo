@@ -23,7 +23,10 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events);
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events);
 
-// 购买（当前仅护甲）；只允许冻结期。
+// 购买窗口：冻结期 + Live 开局 buy_grace_ticks（演示可玩性）；其余阶段不可购买。
+bool CanBuy(const WorldState& state, const Content& content);
+
+// 购买（当前仅护甲）；只允许购买窗口内。
 void ApplyBuy(WorldState& state, const Content& content, const Command& command, EventList& events);
 
 // 购买主/副武器（BuyWeapon）：只允许冻结期；手枪进副武器槽，其余进主武器槽。

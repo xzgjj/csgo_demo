@@ -96,6 +96,14 @@
         return damage_by_[player];
     }
 
+    // 购买窗口（冻结期 + Live 开局宽限）：菜单灰显与点击前置校验用。
+    bool can_buy(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return false;
+        }
+        return recoil::CanBuy(state_, content_);
+    }
+
     // 换弹状态（HUD 换弹提示 + 换弹回归用例）。
     bool is_reloading(int player) const {
         if (player < 0 || player >= static_cast<int>(state_.player_count)) {

@@ -38,6 +38,8 @@ const UNAFFORDABLE_COLOR := Color(0.52, 0.54, 0.58)
 const LOADOUT_IDS := {"ak47": "ak", "m4a4": "m4", "awp": "awp"}
 
 var balance := 0
+## 购买窗口：仅内核 Freeze 阶段可买（由 PurchaseFlow 每帧同步）。
+var can_buy := true
 var balance_label: Label
 var hint_label: Label
 var close_button: Button
@@ -46,6 +48,7 @@ var _item_box: VBoxContainer
 var _tab_buttons: Dictionary = {}
 var _item_buttons: Dictionary = {}
 var _current := ""
+var _message := ""
 
 
 func build() -> void:
@@ -80,6 +83,7 @@ func build() -> void:
 
 func open(money: int) -> void:
 	visible = true
+	_message = ""
 	set_balance(money)
 	if _current.is_empty():
 		select_category(CATEGORIES[0])
@@ -103,6 +107,25 @@ func is_open() -> bool:
 func set_balance(money: int) -> void:
 	balance = maxi(money, 0)
 	_refresh_balance()
+
+
+## 购买窗口开关（Freeze=可买；Live/RoundEnd=灰显并给出原因提示）。
+func set_can_buy(value: bool) -> void:
+	if can_buy == value:
+		return
+	can_buy = value
+	_refresh_items_state()
+	_refresh_hint()
+
+
+## 菜单内可见提示（购买成功/被拒原因）。
+func show_message(text: String) -> void:
+	_message = text
+	_refresh_hint()
+
+
+func message_text() -> String:
+	return _message
 
 
 func category_names() -> Array[String]:
@@ -148,6 +171,8 @@ func item_name(item_id: String) -> String:
 
 
 func buyable(item_id: String) -> bool:
+	if not can_buy:
+		return false
 	if is_throwable(item_id):
 		# 手雷不是“购买”而是对局内投掷（G/F/V），菜单里只做信息展示。
 		return false
@@ -200,14 +225,24 @@ func _rebuild_items() -> void:
 
 
 func _on_item_pressed(item_id: String) -> void:
-	buy_item(item_id)
+	if not buy_item(item_id):
+		if not can_buy:
+			show_message("购买时间已过（仅冻结期与开局 5 秒内可购买）")
+		elif not is_throwable(item_id) and price_of(item_id) > balance:
+			show_message("余额不足：%s 需要 $%d" % [item_name(item_id), price_of(item_id)])
 
 
-## 手雷分类提示（其它分类隐藏，避免影响既有 goldens 布局）。
+## 提示优先级：购买窗口关闭 > 手动消息 > 手雷说明。
 func _refresh_hint() -> void:
 	if hint_label == null:
 		return
-	var text := "手雷不在购买菜单买：对局内按 G / F / V 投掷" if _current == "手雷" else ""
+	var text := ""
+	if not can_buy:
+		text = "购买时间已过（仅冻结期与开局 5 秒内可购买）"
+	elif not _message.is_empty():
+		text = _message
+	elif _current == "手雷":
+		text = "手雷不在购买菜单买：对局内按 G / F / V 投掷"
 	hint_label.text = text
 	hint_label.visible = not text.is_empty()
 

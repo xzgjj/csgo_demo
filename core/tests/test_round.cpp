@@ -126,6 +126,26 @@ TEST_CASE("非冻结期购买被拒绝") {
     CHECK(CountEvents(result.events, EventKind::BuyFailed) == 1);
 }
 
+TEST_CASE("购买窗口：冻结期与 Live 开局宽限内可买，宽限外拒绝") {
+    WorldState state = MakeRound();
+    const Content content = DefaultContent();
+    CHECK(recoil::CanBuy(state, content));
+    WorldState live_early = state;
+    live_early.round.phase = RoundPhase::Live;
+    live_early.round.phase_ticks = content.round.live_ticks - 100; // Live 开局 100 tick 内
+    CHECK(recoil::CanBuy(live_early, content));
+    WorldState live_late = state;
+    live_late.round.phase = RoundPhase::Live;
+    live_late.round.phase_ticks = content.round.live_ticks - content.round.buy_grace_ticks - 1;
+    CHECK_FALSE(recoil::CanBuy(live_late, content));
+    const std::array<Command, 1> commands{BuyArmor()};
+    CHECK(CountEvents(Step(live_early, content, commands).events, EventKind::BuySucceeded) == 1);
+    CHECK(CountEvents(Step(live_late, content, commands).events, EventKind::BuyFailed) == 1);
+    WorldState round_end = state;
+    round_end.round.phase = RoundPhase::RoundEnd;
+    CHECK_FALSE(recoil::CanBuy(round_end, content));
+}
+
 TEST_CASE("回合结束后重置并进入下一回合冻结期") {
     WorldState state = MakeRound();
     state.round.phase = RoundPhase::RoundEnd;

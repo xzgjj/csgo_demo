@@ -158,11 +158,11 @@ func _test_grenades_not_purchasable() -> void:
 	await process_frame
 
 
-## ⑤ 非冻结期：内核拒绝 BuyWeapon（不扣钱不换枪），菜单余额仍与内核一致。
+## ⑤ 购买窗口过后（冻结期 + Live 开局 5s 宽限之外）：内核拒绝 BuyWeapon（不扣钱不换枪）。
 func _test_non_freeze_rejected() -> void:
 	await _fresh_demo()
 	main.buy_menu.close()
-	for i in 210:
+	for i in 700:
 		main.sim.tick()
 	_expect(int(main.sim.get_round_phase()) != 0, "应已离开冻结期，phase=%d"
 			% int(main.sim.get_round_phase()))
@@ -173,11 +173,11 @@ func _test_non_freeze_rejected() -> void:
 	var money_before := _money()
 	_purchase_log.clear()
 	var accepted: bool = bool(main.purchase.on_purchase("usp_s", 200))
-	_expect(not accepted, "非冻结期 purchase_flow 应返回 false")
+	_expect(not accepted, "购买窗口过后 purchase_flow 应返回 false")
 	await _tick_frames(3)
 	_expect(_money() == money_before, "非冻结期购买不应扣钱（%d -> %d）"
 			% [money_before, _money()])
-	_expect(int(main.sim.get_weapon_id(0)) == 1, "非冻结期不应换武器")
+	_expect(int(main.sim.get_weapon_id(0)) == 1, "购买窗口过后不应换武器")
 	_expect(int(main.buy_menu.balance) == money_before, "菜单余额应与内核一致")
 	main.buy_menu.close()
 	await process_frame

@@ -204,6 +204,19 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events) 
     }
 }
 
+bool CanBuy(const WorldState& state, const Content& content) {
+    const RoundState& round = state.round;
+    if (round.phase == RoundPhase::Freeze) {
+        return true;
+    }
+    if (round.phase != RoundPhase::Live) {
+        return false;
+    }
+    const int elapsed =
+        static_cast<int>(content.round.live_ticks) - static_cast<int>(round.phase_ticks);
+    return elapsed >= 0 && elapsed < static_cast<int>(content.round.buy_grace_ticks);
+}
+
 void ApplyBuy(WorldState& state, const Content& content, const Command& command,
               EventList& events) {
     if (command.player >= state.player_count) {
@@ -211,7 +224,7 @@ void ApplyBuy(WorldState& state, const Content& content, const Command& command,
         return;
     }
     PlayerState& player = state.players[command.player];
-    if (state.round.phase != RoundPhase::Freeze) {
+    if (!CanBuy(state, content)) {
         events.Push({EventKind::BuyFailed, command.player, 0, 0});
         return;
     }
@@ -249,7 +262,7 @@ void ApplyBuyWeapon(WorldState& state, const Content& content, const Command& co
         return;
     }
     PlayerState& player = state.players[command.player];
-    if (state.round.phase != RoundPhase::Freeze) {
+    if (!CanBuy(state, content)) {
         events.Push({EventKind::BuyFailed, command.player, 0, 0});
         return;
     }

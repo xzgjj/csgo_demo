@@ -37,6 +37,8 @@ struct RoundDef {
     uint16_t win_reward = 3250;
     uint16_t loss_reward = 1400;
     uint16_t kill_reward = 300;
+    // 演示可玩性：Live 阶段开局仍可购买 N tick（CS:GO 竞技只在冻结期；0=严格冻结期）。
+    uint16_t buy_grace_ticks = 320;
     uint16_t armor_price = 650;
     uint16_t helmet_price = 1000;
     uint16_t defuse_kit_price = 400;
