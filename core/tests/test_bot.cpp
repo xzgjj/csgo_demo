@@ -39,7 +39,8 @@ TEST_CASE("Bot 被烟雾遮挡时不开火") {
     state.smoke.radius = 144.0f;
     state.smoke.ticks_left = 100;
     const auto command = BotDecide(state, DefaultContent(), 0);
-    CHECK(command.kind != CommandKind::Fire);
+    CHECK(command.kind == CommandKind::Move);
+    CHECK(command.move_forward > 0.0f);
 }
 
 TEST_CASE("Bot 死亡或没有敌人时停止") {

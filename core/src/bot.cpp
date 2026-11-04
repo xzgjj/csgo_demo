@@ -40,6 +40,10 @@ Command BotDecide(const WorldState& state, const Content& content, uint8_t self)
     const Vec3 eye = state.players[self].position + Vec3{0.0f, 0.0f, 64.0f};
     const Vec3 goal = state.players[static_cast<size_t>(target)].position + Vec3{0.0f, 0.0f, 36.0f};
     if (SmokeBlocksSegment(state, eye, goal)) {
+        const Vec3 d = goal - eye;
+        command.kind = CommandKind::Move;
+        command.yaw_degrees = std::atan2(d.y, d.x) * (180.0f / kPi);
+        command.move_forward = 1.0f;
         return command;
     }
     const Vec3 d = goal - eye;
