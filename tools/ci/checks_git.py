@@ -63,6 +63,9 @@ def _untracked(spec):
     return files, lines
 
 
+BINARY_SUFFIXES = {".png", ".jpg", ".jpeg", ".glb", ".blend", ".exe", ".dll", ".bin"}
+
+
 def check_diff_budget(spec):
     if not _head_exists():
         return result("diff_budget", SKIP, "尚无提交")

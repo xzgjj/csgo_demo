@@ -50,3 +50,5 @@ node_modules/
 /host/bin/*.dll
 /host/bin/*.pdb
 /verification/actual/
+
+untitled.pen
