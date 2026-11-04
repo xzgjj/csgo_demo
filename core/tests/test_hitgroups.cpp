@@ -11,6 +11,7 @@ using recoil::Command;
 using recoil::CommandKind;
 using recoil::Content;
 using recoil::DefaultContent;
+using recoil::RoundPhase;
 using recoil::Step;
 using recoil::StepResult;
 using recoil::Team;
@@ -79,4 +80,15 @@ TEST_CASE("击杀队友不给击杀数与经济奖励") {
     CHECK(result.state.players[1].alive == false);
     CHECK(result.state.players[0].kills == 0);
     CHECK(result.state.players[0].money == 800);
+}
+
+TEST_CASE("比赛结束后不能再开火") {
+    WorldState state = MakeDuel();
+    state.round.phase = RoundPhase::MatchEnd;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{FirePitch(0, 90.0f, 0.0f)};
+
+    const StepResult result = Step(state, content, commands);
+
+    CHECK(result.state.players[0].weapon.mag == 30);
 }

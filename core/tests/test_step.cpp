@@ -18,6 +18,7 @@ using recoil::EventKind;
 using recoil::EventList;
 using recoil::HashState;
 using recoil::PlayerState;
+using recoil::RoundPhase;
 using recoil::Step;
 using recoil::StepResult;
 using recoil::Team;

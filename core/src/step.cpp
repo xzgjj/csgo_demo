@@ -183,6 +183,10 @@ void Fire(WorldState& state, const Content& content, const Command& command, Eve
         PushReject(events, command.player, RejectReason::Dead);
         return;
     }
+    if (state.round.phase == RoundPhase::MatchEnd) {
+        PushReject(events, command.player, RejectReason::None);
+        return;
+    }
     if (shooter.weapon.reloading) {
         PushReject(events, command.player, RejectReason::Reloading);
         return;
