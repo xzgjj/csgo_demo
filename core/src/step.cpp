@@ -162,6 +162,7 @@ void ResolveDamage(WorldState& state, const Content& content, uint8_t shooter, u
     events.Push({EventKind::DamageApplied, shooter, victim, applied});
     if (target.health == 0) {
         target.alive = false;
+        target.has_bomb = false;
         ++state.players[shooter].kills;
         AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
         events.Push({EventKind::PlayerDied, shooter, victim, 0});

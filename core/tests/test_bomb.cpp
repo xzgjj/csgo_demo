@@ -116,3 +116,21 @@ TEST_CASE("中断拆包会重置进度") {
     result = Step(result.state, content, {});
     CHECK(result.state.bomb.defuse_progress == 0);
 }
+
+TEST_CASE("C4 携带者死亡时失去携带状态") {
+    WorldState state = MakeBombWorld();
+    state.players[0].health = 30;
+    state.players[1].position = {0.0f, 0.0f, 0.0f};
+    state.players[1].weapon.mag = 30;
+    state.round.phase = RoundPhase::Live;
+    Command fire;
+    fire.kind = CommandKind::Fire;
+    fire.player = 1;
+    fire.yaw_degrees = 270.0f;
+    const std::array<Command, 1> commands{fire};
+
+    const auto result = Step(state, DefaultContent(), commands);
+
+    CHECK(result.state.players[0].alive == false);
+    CHECK(result.state.players[0].has_bomb == false);
+}
