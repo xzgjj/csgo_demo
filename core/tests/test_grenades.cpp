@@ -162,6 +162,7 @@ TEST_CASE("HE 伤害受护甲吸收") {
     const StepResult result = Step(state, content, {});
 
     CHECK(result.state.players[1].health == 100 - 44);
+    CHECK(result.state.players[1].armor == 78);
 }
 
 TEST_CASE("烟雾到时消散并发出 SmokeEnded") {

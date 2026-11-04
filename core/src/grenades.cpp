@@ -33,6 +33,11 @@ void Detonate(WorldState& state, const Content& content, GrenadeState& grenade, 
                 std::lround(static_cast<float>(def.he_damage) * scale * armor));
             const uint16_t applied = std::min(damage, player.health);
             player.health = static_cast<uint16_t>(player.health - applied);
+            if (player.armor > 0) {
+                const uint16_t loss =
+                    static_cast<uint16_t>(std::min<unsigned>(player.armor, applied / 2u));
+                player.armor = static_cast<uint16_t>(player.armor - loss);
+            }
             if (player.health == 0) {
                 player.alive = false;
             }
