@@ -8,14 +8,12 @@ from __future__ import annotations
 
 import json
 import sys
-from pathlib import Path
 
+import check_sightlines
 import gen_blockout
 import geom
+from paths import BOXES, LAYOUT
 
-ROOT = Path(__file__).resolve().parents[2]
-LAYOUT = ROOT / "content/maps/de_ash.layout.json"
-BOXES = ROOT / "host/scenes/de_ash_boxes.json"
 RUN_SPEED = 250.0
 ROT_TOLERANCE = 0.35
 EPS = 1.0
@@ -329,6 +327,7 @@ def main() -> int:
     computed, issues = check_lanes(layout, boxes, issues)
     computed, issues = check_rotation(layout, computed, issues)
     issues = check_spawns(layout, boxes, issues)
+    issues += check_sightlines.check(layout, boxes)
     issues = check_boxes_sync(layout, issues)
     if issues:
         for issue in issues[:40]:
