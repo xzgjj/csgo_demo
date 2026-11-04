@@ -55,7 +55,9 @@ func refresh(sim: RefCounted, weapon_name: String) -> void:
 	money_label.text = "$%d" % sim.get_money(0)
 	health_label.text = "HP %d" % sim.get_health(0)
 	armor_label.text = "护甲 %d · 头盔 %s" % [sim.get_armor(0), _helmet_text(sim)]
-	weapon_label.text = "%s  %d/%d" % [weapon_name, sim.get_mag(0), sim.get_reserve(0)]
+	var reloading: bool = sim.has_method("is_reloading") and bool(sim.is_reloading(0))
+	weapon_label.text = "%s  %d/%d%s" % [weapon_name, sim.get_mag(0), sim.get_reserve(0),
+			" 换弹中…" if reloading else ""]
 	c4_label.text = _c4_text(sim)
 	stats_label.text = "击杀 %d · 阵亡 %d · 命中事件 %d" % [
 		kill_total, death_total, sim.get_total_damage_events()]

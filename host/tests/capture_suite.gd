@@ -33,6 +33,16 @@ func _flow() -> void:
 	for i in 5:
 		await process_frame
 	await _shot("spawn.png")
+# 模块 7：副武器（手枪）手模可见切换（bug2 回归的截图证据）
+	main.sim.switch_weapon(0, 1)
+	main.sim.tick()
+	main._update_view()
+	main._update_hud()
+	await _shot("weapon_pistol.png")
+	main.sim.switch_weapon(0, 0)
+	main.sim.tick()
+	main._update_view()
+	main._update_hud()
 
 	main.sim.set_move(0, 90.0, 0.0, 1.0, 0.0, false, false)
 	for i in 40:
@@ -48,9 +58,12 @@ func _flow() -> void:
 	main._update_hud()
 	await _shot("fire.png")
 
+# 三把枪模型展示机位（关闭手模自动同步，避免被内核当前武器覆盖）
+	main.purchase.auto_sync = false
 	for weapon_index in range(3):
 		main.viewmodel.select_weapon(["ak", "m4", "awp"][weapon_index])
 		await _shot("weapon_%d.png" % weapon_index)
+	main.purchase.auto_sync = true
 
 	# 模块 8：AWP 4x 开镜（镜筒遮罩 + 倍率文字）+ AK 机瞄（只提示不遮罩）。
 	main.viewmodel.select_weapon("awp")

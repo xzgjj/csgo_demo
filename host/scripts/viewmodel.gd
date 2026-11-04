@@ -8,15 +8,16 @@ extends Node3D
 ## GLB 坐标约定：+X 右 / +Y 上 / -Z 枪口，单位米，原点在机匣/握把附近，
 ## 与 Godot 相机空间一致，因此挂到 _pivot 下不需要额外旋转。
 
-const WEAPON_IDS: Array[String] = ["ak", "m4", "awp"]
-const DISPLAY_NAMES := {"ak": "AK-47", "m4": "M4A1", "awp": "AWP"}
+const WEAPON_IDS: Array[String] = ["ak", "m4", "awp", "usp", "glock"]
+const DISPLAY_NAMES := {"ak": "AK-47", "m4": "M4A1", "awp": "AWP", "usp": "USP-S",
+	"glock": "Glock-18"}
 const MODEL_PATHS := {
 	"ak": "res://models/weapons/ak47.glb",
 	"m4": "res://models/weapons/m4a4.glb",
 	"awp": "res://models/weapons/awp.glb",
 }
 const MODEL_ROOT_NAMES := {"ak": "ak47", "m4": "m4a4", "awp": "awp"}
-const SCOPE_MAGNIFICATION := {"ak": 1.0, "m4": 1.0, "awp": 4.0}
+const SCOPE_MAGNIFICATION := {"ak": 1.0, "m4": 1.0, "awp": 4.0, "usp": 1.0, "glock": 1.0}
 const REST_POSITION := Vector3(0.24, -0.26, -0.58)
 const REST_ROTATION := Vector3(0.0, -2.0, 0.0)
 const VIEWMODEL_SCALE := 0.85
@@ -69,6 +70,22 @@ const PART_LAYOUTS := {
 		[Vector3(0.040, 0.100, 0.050), Vector3(0, -0.085, 0.14), "polymer", Vector3(-10, 0, 0)],
 		[Vector3(0.050, 0.080, 0.110), Vector3(0, -0.085, -0.01), "metal", Vector3.ZERO],
 		[Vector3(0.038, 0.038, 0.050), Vector3(0, 0.012, -0.70), "metal", Vector3.ZERO],
+	],
+	# 手枪（模块 7 副武器槽：USP/Glock）没有 GLB，用盒体组合出可辨识轮廓。
+	"usp": [
+		[Vector3(0.030, 0.045, 0.190), Vector3(0, 0.010, -0.060), "metal", Vector3.ZERO],
+		[Vector3(0.024, 0.018, 0.150), Vector3(0, 0.032, -0.050), "metal", Vector3.ZERO],
+		[Vector3(0.026, 0.026, 0.050), Vector3(0, 0.010, -0.180), "metal", Vector3.ZERO],
+		[Vector3(0.028, 0.105, 0.045), Vector3(0, -0.055, 0.020), "polymer", Vector3(-8, 0, 0)],
+		[Vector3(0.016, 0.020, 0.030), Vector3(0, -0.012, -0.010), "metal", Vector3.ZERO],
+		[Vector3(0.012, 0.012, 0.060), Vector3(0, 0.030, -0.140), "metal", Vector3.ZERO],
+	],
+	"glock": [
+		[Vector3(0.030, 0.042, 0.175), Vector3(0, 0.010, -0.060), "polymer", Vector3.ZERO],
+		[Vector3(0.026, 0.020, 0.140), Vector3(0, 0.030, -0.050), "metal", Vector3.ZERO],
+		[Vector3(0.024, 0.024, 0.045), Vector3(0, 0.008, -0.165), "metal", Vector3.ZERO],
+		[Vector3(0.026, 0.100, 0.042), Vector3(0, -0.052, 0.018), "polymer", Vector3(-10, 0, 0)],
+		[Vector3(0.014, 0.018, 0.028), Vector3(0, -0.010, -0.012), "metal", Vector3.ZERO],
 	],
 }
 
@@ -166,7 +183,7 @@ func _build_model(weapon_id: String) -> Node3D:
 func _load_glb_model(weapon_id: String) -> Node3D:
 	var path := str(MODEL_PATHS.get(weapon_id, ""))
 	if path.is_empty():
-		push_warning("WeaponViewmodel: 未配置 GLB 路径（%s），回退盒体模型" % weapon_id)
+		# 手枪没有 GLB：直接用盒体组合轮廓（不刷 warning，避免启动噪声）。
 		return null
 	var document := GLTFDocument.new()
 	var state := GLTFState.new()

@@ -87,6 +87,23 @@
     }
     float get_view_yaw(int player) const { return state_.players[player].view_yaw; }
 
+    // 命中归因（模块 2 回归）：该玩家作为射手累计造成的 DamageApplied 次数；
+    // 表现层只按它触发"自己的击中特效"，不再用全局伤害计数（否则 bot 交火会误触发玩家 FX）。
+    int get_damage_count_by(int player) const {
+        if (player < 0 || player >= recoil::kMaxPlayers) {
+            return 0;
+        }
+        return damage_by_[player];
+    }
+
+    // 换弹状态（HUD 换弹提示 + 换弹回归用例）。
+    bool is_reloading(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return false;
+        }
+        return state_.players[player].weapon.reloading;
+    }
+
     // 武器价格/名字（购买菜单用；未知 id 返回 0 / "-"）。
     int get_weapon_price(int weapon_id) const {
         return static_cast<int>(recoil::WeaponPrice(static_cast<recoil::WeaponId>(weapon_id)));

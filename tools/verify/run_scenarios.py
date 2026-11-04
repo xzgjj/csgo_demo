@@ -129,12 +129,18 @@ def run_one(godot: Path, scenario: Path, args) -> int:
 
 
 def run_input_smoke(godot: Path) -> bool:
-    """输入契约回归：WASD/跳/换弹/切枪/右键瞄准/F5/F3（headless，代码断言）。"""
-    args = [str(godot), "--headless", "--path", "host", "--script", "res://tests/input_smoke.gd"]
-    proc = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True, encoding="utf-8",
-                          errors="replace", timeout=180)
-    output = (proc.stdout or "") + (proc.stderr or "")
-    ok = proc.returncode == 0 and "INPUT_SMOKE PASS" in output
+    """输入/UI 契约回归：input_smoke（输入/开火反馈归因）+ host_ui_smoke（HUD/倍镜/购买/账号）。"""
+    scripts = ("res://tests/input_smoke.gd", "res://tests/host_ui_smoke.gd")
+    ok = True
+    for script in scripts:
+        args = [str(godot), "--headless", "--path", "host", "--script", script]
+        proc = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", timeout=180)
+        output = (proc.stdout or "") + (proc.stderr or "")
+        passed = proc.returncode == 0 and ("INPUT_SMOKE PASS" in output
+                                           or "HOST_UI_SMOKE PASS" in output)
+        print(f"[input_contract:{script.rsplit('/', 1)[-1]}] {'PASS' if passed else 'FAIL'}")
+        ok = ok and passed
     print(f"[input_contract] {'PASS' if ok else 'FAIL'}")
     return ok
 

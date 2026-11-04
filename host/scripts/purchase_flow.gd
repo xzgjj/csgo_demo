@@ -5,13 +5,15 @@ extends RefCounted
 
 const BUY_WEAPON_IDS := {"ak47": 1, "m4a4": 2, "awp": 3, "usp_s": 4, "glock_18": 5}
 const PRIMARY_WEAPON_IDS: Array[int] = [1, 2, 3]
-## 内核武器 id（1=AK,2=M4,3=AWP）→ 手模 id；手枪暂无独立模型，保持当前手模。
-const WEAPON_MODELS := ["ak", "m4", "awp"]
+## 内核武器 id（1=AK,2=M4,3=AWP,4=USP,5=Glock）→ 手模 id。
+const WEAPON_MODELS := ["ak", "m4", "awp", "usp", "glock"]
 
 var sim: RefCounted
 var account
 var menu
 var viewmodel
+## 截图/预览用：关闭后不再每帧把手模拉回内核武器（weapon_0..2 三把枪展示机位）。
+var auto_sync := true
 
 
 func setup(sim_ref: RefCounted, account_ref: Variant, menu_ref: Node, viewmodel_ref: Node) -> void:
@@ -79,6 +81,8 @@ func _record_loadout(weapon_id: int) -> void:
 		return
 	if weapon_id in PRIMARY_WEAPON_IDS:
 		account.set_primary(WEAPON_MODELS[model_index])
+	else:
+		account.set_secondary(WEAPON_MODELS[model_index])
 
 
 func _buy_gear(item_id: String) -> bool:

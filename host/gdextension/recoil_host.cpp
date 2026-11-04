@@ -31,6 +31,8 @@ class RecoilSim : public RefCounted {
     recoil::EventList last_events_{};
     int total_damage_ = 0;
     int total_fire_ = 0;
+    // 按射手的累计命中次数（命中归因：玩家自己的击中 FX 只认这个计数）。
+    int damage_by_[recoil::kMaxPlayers] = {};
     int total_dry_ = 0;
     int human_player_ = 0;
     recoil::SiteLayout sites_{};
@@ -113,6 +115,8 @@ protected:
         BIND(get_fire_count, "player");
         BIND(get_last_fire_tick, "player");
         BIND(get_view_yaw, "player");
+        BIND(get_damage_count_by, "player");
+        BIND(is_reloading, "player");
 #undef BIND
     }
 
@@ -128,6 +132,10 @@ public:
         last_events_ = recoil::EventList{};
         total_damage_ = 0;
         total_fire_ = 0;
+        for (int& count : damage_by_) {
+            count = 0;
+        }
+        recoil_host::ClearKills();
         total_dry_ = 0;
 
         recoil::PlayerState& local = state_.players[0];
@@ -274,6 +282,13 @@ public:
         last_events_ = result.events;
         total_damage_ += _count(recoil::EventKind::DamageApplied);
         total_fire_ += _count(recoil::EventKind::WeaponFired);
+        for (int i = 0; i < result.events.count; ++i) {
+            const recoil::Event& event = result.events.items[i];
+            if (event.kind == recoil::EventKind::DamageApplied &&
+                event.source < recoil::kMaxPlayers) {
+                ++damage_by_[event.source];
+            }
+        }
         recoil_host::RecordKills(result.events);
         pending_.clear();
     }
@@ -305,6 +320,9 @@ public:
         bot_commands_.clear();
         bot_refresh_ = 0;
         total_damage_ = total_fire_ = total_dry_ = 0;
+        for (int& count : damage_by_) {
+            count = 0;
+        }
         recoil_host::ClearKills();
     }
 

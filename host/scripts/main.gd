@@ -7,6 +7,7 @@ const TICKS_PER_SECOND := 64.0
 const AccountStoreScript = preload("res://scripts/account_store.gd")
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const CombatFxScript = preload("res://scripts/combat_fx.gd")
+const ShotFeedbackScript = preload("res://scripts/shot_feedback.gd")
 const MapLoaderScript = preload("res://scripts/map_loader.gd")
 const BotVisualsScript = preload("res://scripts/bot_visuals.gd")
 const PurchaseFlowScript = preload("res://scripts/purchase_flow.gd")
@@ -41,6 +42,7 @@ var paused := false
 var match_mode := false
 var _settings_return_pause := false
 var _fire_was_down := false
+var _reload_was_down := false
 var _buy_was_down := false
 var _bomb_was_down := false
 var _weapon_key_was := -1
@@ -52,8 +54,10 @@ var _player_mesh: MeshInstance3D
 var _death_label: Label
 var _debug_label: Label
 var _f3_was := false
-var _last_damage := 0
+var shot_feedback
 var _f5_was := false
+
+
 func _ready() -> void:
 	sim = RecoilSim.new()
 	sim.reset()
@@ -92,6 +96,8 @@ func _build_ui() -> void:
 	purchase = PurchaseFlowScript.new()
 	purchase.setup(sim, account, buy_menu, viewmodel)
 	buy_menu.purchase_requested.connect(Callable(purchase, "on_purchase"))
+	shot_feedback = ShotFeedbackScript.new()
+	shot_feedback.setup(sim, viewmodel, fx)
 	match_flow = MatchFlowScript.new()
 	match_flow.setup(self)
 	_death_label = HudOverlays.make_death_label(hud)
@@ -142,7 +148,7 @@ func _enter_game(is_match: bool) -> void:
 	playing = true
 	paused = false
 	match_flow.reset()
-	_last_damage = 0
+	shot_feedback.reset()
 	yaw = 90.0 if is_match else 0.0
 	pitch = 0.0
 	hud.visible = true
@@ -239,15 +245,16 @@ func _physics_process(_delta: float) -> void:
 	var fire_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 	if fire_down and not _fire_was_down:
 		sim.fire(0, yaw, pitch)
-		viewmodel.kick()
-		fx.trigger_shot()
+		shot_feedback.request_fire()
 	_fire_was_down = fire_down
 	var weapon_key := _pressed_weapon_key()
 	if weapon_key != -1 and weapon_key != _weapon_key_was:
 		_switch_weapon(weapon_key)
 	_weapon_key_was = weapon_key
-	if Input.is_action_just_pressed("reload"):
+	var reload_down := Input.is_key_pressed(KEY_R)
+	if reload_down and not _reload_was_down:
 		sim.reload(0)
+	_reload_was_down = reload_down
 	var buy_down := Input.is_key_pressed(KEY_B)
 	if buy_down and not _buy_was_down:
 		_toggle_buy()
@@ -264,10 +271,7 @@ func _physics_process(_delta: float) -> void:
 		sim.tick_auto()
 	else:
 		sim.tick()
-	var damage: int = int(sim.get_total_damage_events())
-	if damage > _last_damage:
-		fx.trigger_hit(CombatFxScript.hit_point(sim, camera))
-		_last_damage = damage
+	shot_feedback.after_tick(camera)
 	_update_view()
 	_update_hud()
 
@@ -315,6 +319,8 @@ func _update_hud() -> void:
 	if viewmodel != null:
 		weapon_name = _weapon_name()
 	hud.refresh(sim, weapon_name)
+	if purchase != null and purchase.auto_sync:
+		purchase.sync_viewmodel()  # 手模跟随内核当前武器（切枪/购买/拾取后下一帧即同步）
 	if purchase != null and purchase.is_open():
 		purchase.refresh()
 	var dead: bool = playing and match_mode and not bool(sim.is_alive(0))
@@ -325,23 +331,15 @@ func _update_hud() -> void:
 	if debug_visible:
 		_debug_label.text = HudOverlays.debug_text(sim, aiming)
 
-## 当前武器倍率：手模与内核 weapon_id 一致时以内核为准（模块 7）；视觉预览时回退表现层武器表。
-const VIEWMODEL_WEAPON_IDS := {"ak": 1, "m4": 2, "awp": 3}
-
-
+## 武器名/倍率以内核为准（模块 7：weapon_id → 名字/倍镜），手模始终跟随内核当前武器。
 func _weapon_name() -> String:
 	if sim != null and sim.has_method("get_weapon_name"):
-		var model_id: int = int(VIEWMODEL_WEAPON_IDS.get(viewmodel.current_id, -1))
-		if model_id == int(sim.get_weapon_id(0)):
-			return str(sim.get_weapon_name(int(sim.get_weapon_id(0))))
+		return str(sim.get_weapon_name(int(sim.get_weapon_id(0))))
 	return viewmodel.display_name()
 
 
 func weapon_magnification() -> float:
-	if sim == null or not sim.has_method("get_weapon_scope"):
-		return viewmodel.scope_magnification()
-	var model_id: int = int(VIEWMODEL_WEAPON_IDS.get(viewmodel.current_id, -1))
-	if model_id == int(sim.get_weapon_id(0)):
+	if sim != null and sim.has_method("get_weapon_scope"):
 		return float(sim.get_weapon_scope(0))
 	return viewmodel.scope_magnification()
 

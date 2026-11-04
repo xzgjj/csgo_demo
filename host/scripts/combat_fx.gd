@@ -5,6 +5,7 @@ extends Node3D
 
 var shot_count := 0
 var hit_count := 0
+var dryfire_count := 0
 var spark: CPUParticles3D
 var _shot_player: AudioStreamPlayer
 var _hit_player: AudioStreamPlayer
@@ -102,6 +103,11 @@ func trigger_shot() -> void:
 	shot_count += 1
 	if _shot_player.stream != null:
 		_shot_player.play()
+
+
+## 空弹/冷却被内核拒绝时只记一次"空扣扳机"，不播枪声、不给后坐（防止"没子弹还能开枪"的假反馈）。
+func trigger_dryfire() -> void:
+	dryfire_count += 1
 
 
 func trigger_hit(world_position: Vector3) -> void:

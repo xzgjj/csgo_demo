@@ -37,6 +37,7 @@ RUNTIME_VIEWS = [
     "weapon_0",
     "weapon_1",
     "weapon_2",
+    "weapon_pistol",
     "scope",
     "iron_sight",
     "radar_on",
@@ -383,3 +384,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+
