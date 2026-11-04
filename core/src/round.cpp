@@ -36,6 +36,10 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         const bool is_t = player.team == static_cast<uint8_t>(Team::T);
         player.position = is_t ? Vec3{0.0f, -200.0f, 0.0f} : Vec3{400.0f, 0.0f, 0.0f};
     }
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        state.players[i].has_bomb = false;
+        state.players[i].has_defuser = false;
+    }
     state.players[0].has_bomb = state.players[0].team == static_cast<uint8_t>(Team::T);
     for (uint8_t i = 0; i < state.player_count; ++i) {
         state.players[i].has_defuser = false;

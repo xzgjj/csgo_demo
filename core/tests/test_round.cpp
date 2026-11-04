@@ -190,3 +190,16 @@ TEST_CASE("回合重置恢复护甲/头盔/C4 初始状态") {
     CHECK(result.state.players[0].helmet == false);
     CHECK(result.state.bomb.planted == false);
 }
+
+TEST_CASE("回合重置不会把 C4 留在错误玩家身上") {
+    WorldState state = MakeRound();
+    state.round.phase = RoundPhase::RoundEnd;
+    state.round.phase_ticks = 1;
+    state.players[1].has_bomb = true;
+    const Content content = DefaultContent();
+
+    const auto result = Step(state, content, {});
+
+    CHECK(result.state.players[0].has_bomb);
+    CHECK(result.state.players[1].has_bomb == false);
+}
