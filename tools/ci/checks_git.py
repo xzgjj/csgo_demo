@@ -171,6 +171,22 @@ def check_assets(spec):
                   "; ".join(issues[:5]) if issues else f"{len(data.get('assets', []))} 项素材合规")
 
 
+def check_calibration(spec):
+    tools = [("calibration", "tools/calibrate/run_calibration.py"),
+             ("reference_tests", "tools/verify/run_reference_tests.py")]
+    issues = []
+    for name, rel in tools:
+        script = ROOT / rel
+        if not script.exists():
+            issues.append(f"缺少 {rel}")
+            continue
+        rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=300)
+        if rc != 0:
+            issues.append(f"{name} FAIL: " + (out.strip().splitlines() or [""])[-1])
+    return result("calibration", FAIL if issues else PASS,
+                  "; ".join(issues) if issues else "校准门与 reference 靶场全过")
+
+
 def check_map_layout(spec):
     script = ROOT / "tools/mapgen/check_layout.py"
     if not script.exists():
@@ -289,6 +305,6 @@ def check_tests(spec):
 
 ALL_CHECKS = [
     check_diff_budget, check_author, check_protected_tests, check_policy,
-    check_assets, check_map_layout, check_scenarios, check_logs, check_lint, check_tests,
+    check_assets, check_calibration, check_map_layout, check_scenarios, check_logs, check_lint, check_tests,
 ]
 RETRYABLE = {"tests"}
