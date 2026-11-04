@@ -1,12 +1,12 @@
 {
   "id": "demo_body",
   "map": "host/arena_graybox",
-  "description": "平射命中靶子躯干：伤害 36，护甲吸收后 28（HP 72）。",
+  "description": "平射命中靶子躯干：AK-47 伤害 36 × 距离衰减 0.98^(400/500) ≈ 35.42，护甲吸收 ×0.775 → 27（HP 100→73）；弹匣 30→29。",
   "script": [
     {"action": "fire", "yaw": 0.0, "pitch": 0.0}
   ],
   "asserts": [
-    {"player": 1, "field": "health", "equals": 72},
+    {"player": 1, "field": "health", "equals": 73},
     {"player": 1, "field": "alive", "equals": true},
     {"player": 0, "field": "mag", "equals": 29}
   ]

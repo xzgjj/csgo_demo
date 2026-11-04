@@ -24,6 +24,9 @@ func _flow() -> void:
 	_save("menu.png")
 
 	main._start_match()
+	# 截图确定性：冻结物理循环（否则 sim 按墙钟推进，计时/bot 位置逐次漂移），
+	# 需要推进对局的地方显式调 sim.tick_auto()。
+	main.set_physics_process(false)
 	main.yaw = 90.0
 	main.pitch = 0.0
 	main.viewmodel.set_process(false)
@@ -46,8 +49,37 @@ func _flow() -> void:
 	await _shot("fire.png")
 
 	for weapon_index in range(3):
-		main._switch_weapon(weapon_index)
+		main.viewmodel.select_weapon(["ak", "m4", "awp"][weapon_index])
 		await _shot("weapon_%d.png" % weapon_index)
+
+	# 模块 8：AWP 4x 开镜（镜筒遮罩 + 倍率文字）+ AK 机瞄（只提示不遮罩）。
+	main.viewmodel.select_weapon("awp")
+	main.playing = false
+	main.aiming = true
+	main.scope.sync(true, 4.0, main.viewmodel.display_name())
+	main.camera.fov = float(main.settings.fov) / 4.0
+	await _shot("scope.png")
+	main.viewmodel.select_weapon("ak")
+	main.scope.sync(true, 1.0, main.viewmodel.display_name())
+	main.camera.fov = float(main.settings.fov) / 1.15
+	await _shot("iron_sight.png")
+	main.aiming = false
+	main.playing = true
+	main.scope.sync(false, 1.0, main.viewmodel.display_name())
+
+	# 模块 4：雷达开/关两帧（M 开关的产品态）。
+	await _shot("radar_on.png")
+	main.radar.set_open(false)
+	await _shot("radar_off.png")
+	main.radar.set_open(true)
+
+	# 模块 9/10：购买菜单（800 起始金 → 手枪可买/步枪灰显）与物品栏页面。
+	main.purchase.toggle()
+	await _shot("buy_menu.png")
+	main.buy_menu.close()
+	main.show_loadout_page()
+	await _shot("loadout.png")
+	main.close_loadout_page()
 
 	print("RUNTIME_META ", JSON.stringify({
 		"world": str(main.world.source),

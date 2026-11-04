@@ -1,0 +1,36 @@
+{
+  "id": "demo_duel",
+  "map": "host/arena_graybox",
+  "description": "确定性对枪（模块 2）：靶子 100 甲，逐枪开火直到死亡；断言 PlayerDied 恰好 1 次、玩家 0 kills=1、靶子死亡、无多余击杀记录（无击杀时 kill_count=0 由第一步断言）。",
+  "script": [
+    {
+      "action": "check",
+      "name": "duel_start",
+      "asserts": [
+        {"player": 0, "field": "kill_count", "equals": 0},
+        {"player": 1, "field": "alive", "equals": true},
+        {"player": 0, "field": "kills", "equals": 0}
+      ]
+    },
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0},
+    {"action": "tick", "ticks": 8},
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0},
+    {"action": "tick", "ticks": 8},
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0},
+    {"action": "tick", "ticks": 8},
+    {"action": "fire", "yaw": 0.0, "pitch": 0.0},
+    {"action": "tick", "ticks": 8},
+    {
+      "action": "check",
+      "name": "duel_after",
+      "asserts": [
+        {"player": 1, "field": "alive", "equals": false},
+        {"player": 0, "field": "kills", "equals": 1},
+        {"player": 0, "field": "kill_count", "equals": 1}
+      ]
+    }
+  ],
+  "asserts": [
+    {"player": 0, "field": "kill_count", "equals": 1}
+  ]
+}

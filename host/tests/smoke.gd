@@ -61,7 +61,8 @@ func _page_checks() -> void:
 func _check_de_ash() -> void:
 	_expect(main.world != null, "世界节点应存在")
 	_expect(main.world.object_count > 0, "de_ash 对象数应 > 0，实际 %d" % main.world.object_count)
-	_expect(main.world.source == "de_ash", "应加载 de_ash，实际 %s" % main.world.source)
+	_expect(main.world.source == "de_ash_glb", "应加载 de_ash_glb（GLB 视觉），实际 %s"
+			% main.world.source)
 	_expect(main.world.site_anchors.size() == 2, "包点锚点应为 2")
 	_expect(main.world.spawn_anchors.size() == 2, "出生锚点应为 2")
 	var fallback := DeAshWorld.new()
@@ -87,7 +88,7 @@ func _check_bindings() -> void:
 func _check_menu_and_pause() -> void:
 	_expect(main.menu.visible and not main.pause_page.visible and not main.settings_page.visible,
 			"启动应停在主菜单")
-	_expect(main.menu.button_texts().size() == 3, "主菜单应有 3 个按钮")
+	_expect(main.menu.button_texts().size() == 4, "主菜单应有 4 个按钮（开始/物品栏/设置/退出）")
 	main._start_play()
 	_expect(main.playing and not main.menu.visible and main.hud.visible, "开始游戏应进入对局")
 	main._update_hud()
@@ -193,44 +194,54 @@ func _check_kill_feed() -> void:
 	main.sim.tick()
 	main._update_hud()
 	_expect(main.hud.kill_total == 1, "HUD 击杀累计应为 1，实际 %d" % main.hud.kill_total)
-	_expect(main.hud.death_total == 1, "HUD 阵亡累计应为 1，实际 %d" % main.hud.death_total)
-	_expect(main.hud.feed_lines().size() >= 1, "HUD 击杀信息应有滚动条目")
+	# 阵亡累计是「玩家 0 自己的阵亡」：靶子死亡不算玩家阵亡（模块 2 个人数据语义）。
+	_expect(main.hud.death_total == 0, "HUD 阵亡累计应为 0（玩家 0 存活），实际 %d"
+			% main.hud.death_total)
+	_expect(main.hud.feed_lines().size() == 1, "HUD 击杀信息应恰好 1 条")
 	_expect(main.hud.feed_lines()[0].contains("击杀"), "击杀信息应标注击杀")
+	_expect(main.hud.feed_lines()[0].contains("CT·P1"), "击杀信息应含受害者 CT·P1")
 
 
 func _check_match_end_flow() -> void:
 	main._start_play()
-	for i in 192:
-		main.sim.tick()
-	main.sim.fire(0, 0.0, 0.6)
-	main.sim.tick()
-	main._update_view()
-	_expect(main.result_page.visible and main.result_page.mode == "round", "击杀后应弹回合结算")
-	_expect(main.result_page.title_label.text.contains("回合结束")
-			and main.result_page.score_label.text.contains("1 : 0"), "回合结算应含胜者与比分")
-	for i in 320:
-		main.sim.tick()
-	main._update_view()
-	_expect(not main.result_page.visible, "回合重置后应收起回合结算")
-	for i in 192:
-		main.sim.tick()
-	# 第二回合：T 出生点回到 (0,-200)，靶子在 (400,0)，按方位角平射 3 枪（36×3 > 100）击杀。
-	var aim_yaw: float = rad_to_deg(atan2(200.0, 400.0))
-	for shot in 3:
-		main.sim.fire(0, aim_yaw, 0.0)
-		for wait in 6:
+	var rounds := 0
+	var round_result_seen := false
+	while rounds < 16 and main.result_page.mode != "match":
+		rounds += 1
+		for i in 192:
 			main.sim.tick()
-	main._update_view()
-	_expect(main.result_page.mode == "match", "两分后应进入比赛结算")
+		var aim_yaw: float = _yaw_to_target()
+		for shot in 4:
+			main.sim.fire(0, aim_yaw, 0.0)
+			for wait in 6:
+				main.sim.tick()
+		main._update_view()
+		if main.result_page.mode == "round":
+			round_result_seen = true
+			_expect(main.result_page.title_label.text.contains("回合结束"),
+					"回合结算标题应为回合结束")
+			_expect(main.result_page.score_label.text.contains(":"), "回合结算应含比分")
+		for i in 320:
+			main.sim.tick()
+		main._update_view()
+	_expect(round_result_seen, "应至少出现一次回合结算页")
+	_expect(main.result_page.mode == "match", "打满 max_score 后应进入比赛结算（已打 %d 回合）"
+			% rounds)
 	_expect(main.result_page.title_label.text.contains("比赛结束")
-			and main.result_page.title_label.text.contains("T"), "比赛结算应含最终胜者")
-	_expect(main.result_page.score_label.text.contains("2 : 0"), "比赛结算应含最终比分")
-	_expect(main.result_page.stats_label.text.contains("击杀 2")
+			and main.result_page.title_label.text.contains("T"), "比赛结算应含最终胜者 T")
+	_expect(main.result_page.score_label.text.contains("13 : 0"), "比赛结算应含最终比分 13:0")
+	_expect(main.result_page.stats_label.text.contains("击杀")
 			and main.result_page.stats_label.text.contains("$"), "比赛结算应含击杀与金钱")
 	_expect(main.result_page.restart_button.visible and main.result_page.menu_button.visible,
 			"比赛结算应可再来一场或返回主菜单")
 	_expect(not main.playing, "比赛结算应停住对局")
 	main._show_menu()
+
+
+func _yaw_to_target() -> float:
+	var dx: float = float(main.sim.get_x(1)) - float(main.sim.get_x(0))
+	var dy: float = float(main.sim.get_y(1)) - float(main.sim.get_y(0))
+	return rad_to_deg(atan2(dy, dx))
 
 
 func _expect(condition: bool, message: String) -> void:

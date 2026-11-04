@@ -25,7 +25,8 @@ static func make_debug_label(parent: Node) -> Label:
 	var label := make_label(parent, "", 15, Color(0.75, 0.95, 0.75))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	label.position = Vector2(-420, 12)
+	# 右上角最上方让给雷达的队友存活条、其下是击杀滚动信息，F3 调试信息下移到 feed 之下。
+	label.position = Vector2(-420, 212)
 	label.custom_minimum_size = Vector2(400, 20)
 	return label
 

@@ -1,6 +1,10 @@
 class_name HostPages
 extends RefCounted
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
+const RadarPanelScript = preload("res://scripts/radar.gd")
+const ScopeControllerScript = preload("res://scripts/scope_controller.gd")
+const BuyMenuScript = preload("res://scripts/buy_menu.gd")
+const PurchaseFlowScript = preload("res://scripts/purchase_flow.gd")
 ## 宿主页面装配：由 main.gd 调用，创建 HUD / 主菜单 / 暂停 / 设置 / 结算 / 比分板与致盲层。
 ## 只做节点与信号连线，不持有规则状态（main 仍是对外入口）。
 
@@ -10,6 +14,17 @@ static func build(main: Node) -> void:
 	main.add_child(hud)
 	hud.build()
 	main.set("hud", hud)
+	var radar := RadarPanelScript.new()
+	hud.add_child(radar)
+	radar.setup(main)
+	main.set("radar", radar)
+	var scope := ScopeControllerScript.new()
+	var scope_layer := CanvasLayer.new()
+	scope_layer.name = "ScopeLayer"
+	scope_layer.layer = 1
+	main.add_child(scope_layer)
+	scope.build(scope_layer)
+	main.set("scope", scope)
 
 	var menu := MainMenuPage.new()
 	main.add_child(menu)
@@ -33,6 +48,11 @@ static func build(main: Node) -> void:
 	main.set("loadout_page", loadout_page)
 	menu.loadout_button.pressed.connect(Callable(main, "show_loadout_page"))
 	loadout_page.back_button.pressed.connect(Callable(main, "close_loadout_page"))
+
+	var buy_menu := BuyMenuScript.new()
+	main.add_child(buy_menu)
+	buy_menu.build()
+	main.set("buy_menu", buy_menu)
 
 	var settings_page := SettingsPage.new()
 	main.add_child(settings_page)

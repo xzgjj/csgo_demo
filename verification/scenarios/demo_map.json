@@ -51,6 +51,10 @@
       ]
     },
     {
+      "action": "assert_spawn_pairs",
+      "name": "spawn_safe_25"
+    },
+    {
       "action": "assert_nav",
       "name": "T_to_A",
       "from": [

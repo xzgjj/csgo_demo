@@ -7,6 +7,9 @@ const TICKS_PER_SECOND := 64.0
 const AccountStoreScript = preload("res://scripts/account_store.gd")
 const LoadoutPageScript = preload("res://scripts/loadout_page.gd")
 const CombatFxScript = preload("res://scripts/combat_fx.gd")
+const MapLoaderScript = preload("res://scripts/map_loader.gd")
+const PurchaseFlowScript = preload("res://scripts/purchase_flow.gd")
+const MatchFlowScript = preload("res://scripts/match_flow.gd")
 var sim: RefCounted
 var world: DeAshWorld
 var settings: SettingsStore
@@ -22,6 +25,11 @@ var camera: Camera3D
 var target_mesh: MeshInstance3D
 var smoke_mesh: MeshInstance3D
 var viewmodel: WeaponViewmodel
+var scope
+var radar
+var buy_menu
+var purchase
+var match_flow
 var fx
 var blind_overlay: ColorRect
 var yaw := 0.0
@@ -31,9 +39,6 @@ var paused := false
 var match_mode := false
 var bot_meshes: Array[Node3D] = []
 var _settings_return_pause := false
-var _last_phase := -1
-var _last_score_t := 0
-var _last_score_ct := 0
 var _fire_was_down := false
 var _buy_was_down := false
 var _bomb_was_down := false
@@ -80,6 +85,11 @@ func _build_world() -> void:
 	_player_mesh.visible = false
 func _build_ui() -> void:
 	HostPages.build(self)
+	purchase = PurchaseFlowScript.new()
+	purchase.setup(sim, account, buy_menu, viewmodel)
+	buy_menu.purchase_requested.connect(Callable(purchase, "on_purchase"))
+	match_flow = MatchFlowScript.new()
+	match_flow.setup(self)
 	_death_label = HudOverlays.make_death_label(hud)
 	_debug_label = HudOverlays.make_debug_label(hud)
 func _make_target_mesh() -> MeshInstance3D:
@@ -114,7 +124,7 @@ func _start_play() -> void:
 ## 可玩模式：de_ash 全尺寸 MapDef + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
 func _start_match() -> void:
 	sim.reset()
-	_configure_sim_map()
+	MapLoaderScript.apply(sim)
 	sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
 	sim.begin_match()
 	_enter_game(true)
@@ -127,9 +137,7 @@ func _enter_game(is_match: bool) -> void:
 	match_mode = is_match
 	playing = true
 	paused = false
-	_last_phase = -1
-	_last_score_t = 0
-	_last_score_ct = 0
+	match_flow.reset()
 	_last_damage = 0
 	yaw = 90.0 if is_match else 0.0
 	pitch = 0.0
@@ -142,33 +150,7 @@ func _enter_game(is_match: bool) -> void:
 	scoreboard.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-## 读取派生盒子（Godot 坐标）→ sim AABB 传入内核：碰撞与画面用同一份数据。
-func _configure_sim_map() -> void:
-	var text := FileAccess.get_file_as_string("res://scenes/de_ash_boxes.json")
-	if text.is_empty():
-		push_warning("缺少 de_ash_boxes.json，保持默认竞技场")
-		return
-	var data: Variant = JSON.parse_string(text)
-	if typeof(data) != TYPE_DICTIONARY:
-		push_warning("de_ash_boxes.json 非法，保持默认竞技场")
-		return
-	var flat := PackedFloat32Array()
-	for item: Dictionary in data.get("boxes", []):
-		if not bool(item.get("collision", true)):
-			continue
-		var c: Array = item["center"]
-		var s: Array = item["size"]
-		var gx := float(c[0])
-		var gy := float(c[1])
-		var gz := float(c[2])
-		var sx := float(s[0])
-		var sy := float(s[1])
-		var sz := float(s[2])
-		flat.append_array(PackedFloat32Array([
-			-gz - sz * 0.5, -gx - sx * 0.5, gy - sy * 0.5,
-			-gz + sz * 0.5, -gx + sx * 0.5, gy + sy * 0.5,
-		]))
-	sim.set_map_boxes(flat)
+## de_ash 全尺寸地图注入已拆到 MapLoader（main 只保留页面流与输入）。
 func _show_pause() -> void:
 	if not playing:
 		return
@@ -244,9 +226,9 @@ func _physics_process(_delta: float) -> void:
 	sim.set_move(0, yaw, pitch, forward, side, Input.is_action_pressed("jump"),
 			Input.is_action_pressed("duck"))
 	aiming = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
-	var magnification: float = viewmodel.scope_magnification()
-	var aim_fov: float = settings.fov / magnification if magnification > 1.0 else settings.fov / 1.15
-	camera.fov = lerpf(camera.fov, aim_fov if aiming else settings.fov, 0.25)
+	var magnification: float = weapon_magnification()
+	scope.sync(aiming, magnification, viewmodel.display_name())
+	camera.fov = scope.fps_step(camera.fov, settings.fov)
 	viewmodel.set_aiming(aiming)
 	_toggle_debug()
 	_toggle_third_person()
@@ -264,7 +246,7 @@ func _physics_process(_delta: float) -> void:
 		sim.reload(0)
 	var buy_down := Input.is_key_pressed(KEY_B)
 	if buy_down and not _buy_was_down:
-		sim.buy_armor(0)
+		_toggle_buy()
 	_buy_was_down = buy_down
 	var bomb_down := Input.is_key_pressed(KEY_E)
 	if bomb_down and not _bomb_was_down:
@@ -308,7 +290,7 @@ func _update_view() -> void:
 	_player_mesh.visible = third_person and match_mode and sim.is_alive(0)
 	if _player_mesh.visible:
 		_player_mesh.position = Vector3(-py, 36.0, -px)
-	var scoped := aiming and viewmodel.current_id == "awp"
+	var scoped: bool = scope.is_scoped()
 	viewmodel.visible = not third_person and not scoped
 	if match_mode:
 		target_mesh.visible = false
@@ -324,73 +306,63 @@ func _update_view() -> void:
 		smoke_mesh.position = Vector3(-sim.get_smoke_y(), 144.0, -sim.get_smoke_x())
 	blind_overlay.color = Color(1.0, 1.0, 1.0,
 			clampf(float(sim.get_blind_ticks(0)) / 128.0, 0.0, 0.85))
-	_update_round_pages()
+	match_flow.update(sim)
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
-
-func _update_round_pages() -> void:
-	var phase: int = sim.get_round_phase()
-	if phase != _last_phase:
-		_handle_phase_change(_last_phase, phase)
-		_last_phase = phase
-	_last_score_t = sim.get_score_t()
-	_last_score_ct = sim.get_score_ct()
-	if result_page.visible and result_page.mode == "round":
-		result_page.update_countdown(float(sim.get_round_ticks()) / TICKS_PER_SECOND)
-
-func _handle_phase_change(old_phase: int, new_phase: int) -> void:
-	if new_phase == 2:
-		result_page.show_round_result(_round_winner(), sim.get_score_t(), sim.get_score_ct(),
-				sim.get_kills(0), sim.get_money(0),
-				float(sim.get_round_ticks()) / TICKS_PER_SECOND)
-	elif new_phase == 3:
-		_enter_match_end()
-	elif new_phase == 0 and old_phase >= 2:
-		result_page.hide_result()
-
-func _round_winner() -> String:
-	if sim.get_score_t() > _last_score_t:
-		return "T"
-	if sim.get_score_ct() > _last_score_ct:
-		return "CT"
-	return "—"
-
-func _enter_match_end() -> void:
-	playing = false
-	paused = false
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	var winner := "T" if sim.get_score_t() > sim.get_score_ct() else "CT"
-	result_page.show_match_result(winner, sim.get_score_t(), sim.get_score_ct(),
-			sim.get_kills(0), sim.get_money(0), sim.get_score_t() + sim.get_score_ct())
 
 func _update_hud() -> void:
 	var weapon_name := "-"
 	if viewmodel != null:
-		weapon_name = viewmodel.display_name()
+		weapon_name = _weapon_name()
 	hud.refresh(sim, weapon_name)
+	if purchase != null and purchase.is_open():
+		purchase.refresh()
 	var dead: bool = playing and match_mode and not bool(sim.is_alive(0))
 	_death_label.visible = dead
 	if hud.crosshair != null:
-		hud.crosshair.visible = not dead and not (aiming and viewmodel.current_id == "awp")
+		hud.crosshair.visible = not dead and not scope.is_scoped()
 	_debug_label.visible = debug_visible
 	if debug_visible:
 		_debug_label.text = HudOverlays.debug_text(sim, aiming)
+
+## 当前武器倍率：手模与内核 weapon_id 一致时以内核为准（模块 7）；视觉预览时回退表现层武器表。
+const VIEWMODEL_WEAPON_IDS := {"ak": 1, "m4": 2, "awp": 3}
+
+
+func _weapon_name() -> String:
+	if sim != null and sim.has_method("get_weapon_name"):
+		var model_id: int = int(VIEWMODEL_WEAPON_IDS.get(viewmodel.current_id, -1))
+		if model_id == int(sim.get_weapon_id(0)):
+			return str(sim.get_weapon_name(int(sim.get_weapon_id(0))))
+	return viewmodel.display_name()
+
+
+func weapon_magnification() -> float:
+	if sim == null or not sim.has_method("get_weapon_scope"):
+		return viewmodel.scope_magnification()
+	var model_id: int = int(VIEWMODEL_WEAPON_IDS.get(viewmodel.current_id, -1))
+	if model_id == int(sim.get_weapon_id(0)):
+		return float(sim.get_weapon_scope(0))
+	return viewmodel.scope_magnification()
+
 
 func _pressed_weapon_key() -> int:
 	if Input.is_key_pressed(KEY_1):
 		return 0
 	if Input.is_key_pressed(KEY_2):
 		return 1
-	if Input.is_key_pressed(KEY_3):
-		return 2
 	return -1
 
 func _switch_weapon(index: int) -> void:
-	if viewmodel == null:
+	if purchase != null:
+		purchase.switch_weapon(index)
+
+func _toggle_buy() -> void:
+	if purchase == null:
 		return
-	var ids := viewmodel.weapon_ids()
-	if index < ids.size():
-		viewmodel.select_weapon(ids[index])
+	purchase.toggle()
+	var mode := Input.MOUSE_MODE_VISIBLE if purchase.is_open() else Input.MOUSE_MODE_CAPTURED
+	Input.mouse_mode = mode
 
 func _throw_input(name: String, key: int, kind: int) -> void:
 	var down := Input.is_key_pressed(key)

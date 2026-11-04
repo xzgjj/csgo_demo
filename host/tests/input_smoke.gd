@@ -26,6 +26,9 @@ func _run() -> void:
 	await _check_reload()
 	await _check_combat_fx()
 	await _check_kill_feed()
+	await _check_spawn_hud()
+	await _check_scope()
+	await _check_buy_menu()
 	await _check_loadout()
 	if failures.is_empty():
 		print("INPUT_SMOKE PASS")
@@ -93,18 +96,21 @@ func _release_mouse(button: MouseButton) -> void:
 
 
 func _check_weapon_switch() -> void:
-	_press_key(KEY_3)
+	# 1/2 = 主/副武器槽（内核 weapon_id 权威，手模跟随内核）。
+	_press_key(KEY_2)
 	await physics_frame
 	await physics_frame
-	_release_key(KEY_3)
-	if main.viewmodel.current_id != "awp":
-		failures.append("3 未切到 AWP：%s" % main.viewmodel.current_id)
+	_release_key(KEY_2)
+	if int(main.sim.get_weapon_id(0)) != 5:
+		failures.append("2 未切到副武器 Glock：weapon_id=%d" % int(main.sim.get_weapon_id(0)))
 	_press_key(KEY_1)
 	await physics_frame
 	await physics_frame
 	_release_key(KEY_1)
+	if int(main.sim.get_weapon_id(0)) != 1:
+		failures.append("1 未切回主武器 AK：weapon_id=%d" % int(main.sim.get_weapon_id(0)))
 	if main.viewmodel.current_id != "ak":
-		failures.append("1 未切回 AK：%s" % main.viewmodel.current_id)
+		failures.append("主武器手模应为 ak：%s" % main.viewmodel.current_id)
 
 
 func _check_aim() -> void:
@@ -185,9 +191,30 @@ func _check_combat_fx() -> void:
 
 
 func _check_kill_feed() -> void:
-	# 直接驱动内核保证命中（每枪等 8 tick 冷却）：HUD 只应收到真实 PlayerDied。
+	# 干净状态：无击杀 → 无任何击杀记录（三动作：准备 _start_play / 执行瞄准 / 断言无记录）
+	main.call("_start_play")
+	await process_frame
+	if not main.hud.feed_lines().is_empty():
+		failures.append("开局 feed 非空（无击杀却有击杀记录）")
+	if int(main.hud.kill_total) != 0 or int(main.hud.death_total) != 0:
+		failures.append("开局击杀/阵亡计数非 0：%d/%d" % [
+			int(main.hud.kill_total), int(main.hud.death_total)])
+	var hit_before_aim: int = int(main.fx.hit_count)
+	_press_mouse(MOUSE_BUTTON_RIGHT)
+	for i in 12:
+		await physics_frame
+	_release_mouse(MOUSE_BUTTON_RIGHT)
+	for i in 2:
+		await physics_frame
+	if int(main.fx.hit_count) != hit_before_aim:
+		failures.append("瞄准产生了命中 FX（hit_count %d -> %d）" % [
+			hit_before_aim, int(main.fx.hit_count)])
+	# 确定性对枪：逐枪开火直到目标死亡；HUD 只应收到真实 PlayerDied（1 杀 1 死、feed 1 条）
 	main.yaw = atan2(float(main.sim.get_y(1)), float(main.sim.get_x(1))) * 180.0 / PI
-	for shot in 3:
+	main.pitch = 0.0
+	for shot in 6:
+		if not bool(main.sim.is_alive(1)):
+			break
 		main.sim.fire(0, main.yaw, 0.0)
 		for tick in 8:
 			main.sim.tick()
@@ -200,12 +227,119 @@ func _check_kill_feed() -> void:
 			int(main.sim.get_kill_count()), int(main.sim.get_health(1))])
 	if bool(main.sim.is_alive(1)):
 		failures.append("目标未死亡（hp=%d）" % int(main.sim.get_health(1)))
-	if lines.is_empty():
-		failures.append("击杀 feed 为空（真实击杀事件未送达 HUD）")
-	elif not lines[-1].contains("击杀"):
-		failures.append("击杀 feed 内容异常：%s" % lines[-1])
-	if int(main.hud.kill_total) < 1:
-		failures.append("个人击杀数未增加（kill_total=%d）" % int(main.hud.kill_total))
+	if lines.size() != 1:
+		failures.append("击杀 feed 应为 1 条，实际 %d 条：%s" % [lines.size(), str(lines)])
+	elif not lines[0].contains("T·P0") or not lines[0].contains("CT·P1"):
+		failures.append("feed 未记录真 shooter/victim：%s" % lines[0])
+	if int(main.hud.kill_total) != 1:
+		failures.append("个人击杀数应为 1（实际 %d）" % int(main.hud.kill_total))
+	if int(main.hud.death_total) != 0:
+		failures.append("玩家 0 不应阵亡（death_total=%d）" % int(main.hud.death_total))
+
+
+## 模块 1：出生点 HUD 队友存活（雷达存活条；灯数/数字与内核 5v5 存活一致）。
+func _check_spawn_hud() -> void:
+	main.call("_start_match")
+	for i in 3:
+		await physics_frame
+	if not bool(main.radar.visible):
+		failures.append("出生点雷达/队友存活条未显示")
+	var lamps: Array[bool] = main.radar.squad_lamps()
+	var alive_expected: int = int(main.sim.get_alive_count(1))
+	if lamps.size() != 5:
+		failures.append("队友存活灯应为 5 盏，实际 %d" % lamps.size())
+	var alive_lamps := 0
+	for lit: bool in lamps:
+		if lit:
+			alive_lamps += 1
+	if alive_lamps != alive_expected:
+		failures.append("存活灯数与 alive_count(1) 不一致：灯 %d / 内核 %d" % [
+			alive_lamps, alive_expected])
+	if int(main.radar.squad_alive_count()) != alive_expected:
+		failures.append("存活数字与 alive_count(1) 不一致：%d / %d" % [
+			int(main.radar.squad_alive_count()), alive_expected])
+	if alive_expected != 5:
+		failures.append("出生点队友应 5 人存活，实际 %d" % alive_expected)
+
+
+## 模块 8：AWP 4x 开镜 overlay + HUD 倍率；AK 机瞄只有提示不遮罩。
+func _check_scope() -> void:
+	main.call("_start_match")
+	await process_frame
+	main.playing = false
+	main.aiming = true
+	main.viewmodel.select_weapon("awp")
+	var base_fov: float = float(main.settings.fov)
+	var magnification: float = float(main.weapon_magnification())
+	main.scope.sync(true, magnification, main.viewmodel.display_name())
+	main.camera.fov = main.scope.target_fov(base_fov)
+	main._update_view()
+	main._update_hud()
+	await process_frame
+	if absf(magnification - 4.0) > 0.01:
+		failures.append("AWP 倍率应为 4.0x，实际 %.2f" % magnification)
+	if not bool(main.scope.overlay.visible):
+		failures.append("AWP 开镜 overlay 未显示")
+	if not bool(main.scope.is_scoped()):
+		failures.append("AWP 开镜未判定为倍镜")
+	if not str(main.scope.overlay.scope_text()).contains("4.0x"):
+		failures.append("HUD 倍率文字不含 4.0x：%s" % str(main.scope.overlay.scope_text()))
+	if bool(main.hud.crosshair.visible):
+		failures.append("开镜时准星应隐藏")
+	if absf(float(main.camera.fov) - base_fov / 4.0) > 0.5:
+		failures.append("AWP 开镜 FOV 应为 base/4：%.1f / base %.1f" % [
+			float(main.camera.fov), base_fov])
+	main.viewmodel.select_weapon("ak")
+	var iron: float = float(main.weapon_magnification())
+	main.scope.sync(true, iron, main.viewmodel.display_name())
+	main._update_view()
+	await process_frame
+	if bool(main.scope.is_scoped()):
+		failures.append("AK 机瞄被误判为倍镜（倍率 %.2f）" % iron)
+	if absf(main.scope.target_fov(base_fov) - base_fov / 1.15) > 0.5:
+		failures.append("AK 机瞄 FOV 应为 base/1.15：%.1f" % main.scope.target_fov(base_fov))
+	if not str(main.scope.overlay.scope_text()).contains("机瞄"):
+		failures.append("HUD 机瞄文字异常：%s" % str(main.scope.overlay.scope_text()))
+	main.aiming = false
+	main.playing = true
+	main.scope.sync(false, iron, main.viewmodel.display_name())
+	main.camera.fov = base_fov
+
+
+## 模块 9：购买菜单分类/价格/余额/灰显 + 购买扣钱/装备进内核（800 起始金 → 只买得起手枪）。
+func _check_buy_menu() -> void:
+	main.call("_start_play")
+	await process_frame
+	main.purchase.toggle()
+	await process_frame
+	if not bool(main.buy_menu.is_open()):
+		failures.append("B 未打开购买菜单")
+	if int(main.buy_menu.balance) != int(main.sim.get_money(0)):
+		failures.append("菜单余额与内核不一致：%d / %d" % [
+			int(main.buy_menu.balance), int(main.sim.get_money(0))])
+	if not bool(main.buy_menu.buyable("glock_18")):
+		failures.append("800 起始金应可买 Glock-18")
+	if bool(main.buy_menu.buyable("ak47")):
+		failures.append("800 起始金不应可买 AK-47（应灰显）")
+	var money_before: int = int(main.sim.get_money(0))
+	if bool(main.buy_menu.buy_item("ak47")):
+		failures.append("买不起的 AK-47 不应发出购买请求")
+	if int(main.sim.get_money(0)) != money_before:
+		failures.append("买不起时余额不应变化")
+	if not bool(main.buy_menu.buy_item("glock_18")):
+		failures.append("买 Glock-18 应发出购买请求")
+	# 内核 Buy 是命令：下一 tick 才结算（真实对局里由 _physics_process 推进）。
+	await physics_frame
+	await physics_frame
+	if int(main.sim.get_money(0)) != money_before - 200:
+		failures.append("买 Glock-18 后余额应为 %d，实际 %d" % [
+			money_before - 200, int(main.sim.get_money(0))])
+	if int(main.buy_menu.balance) != int(main.sim.get_money(0)):
+		failures.append("购买后菜单余额未刷新：%d" % int(main.buy_menu.balance))
+	main.buy_menu.close()
+	await process_frame
+	if bool(main.buy_menu.is_open()):
+		failures.append("购买菜单未关闭")
 
 
 func _check_loadout() -> void:

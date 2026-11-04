@@ -92,6 +92,8 @@ func _run_step(step: Dictionary) -> void:
 			_auto_tick(int(step.get("ticks", 1)))
 		"assert_nav":
 			_assert_nav(step)
+		"assert_spawn_pairs":
+			_assert_spawn_pairs(step)
 		"walk_nav":
 			_walk_nav(step)
 		"restart_match":
@@ -154,8 +156,34 @@ func _assert_nav(step: Dictionary) -> void:
 	if not ok:
 		failures.append("nav %s: expect %s, points=%d" % [name, expect, points])
 
-func _check(checks: Array) -> void:
-	for check: Dictionary in checks:
+## 出生位配对：T 5 个出生位 × CT 5 个出生位 = 25 组，要求视线全部被遮挡（禁止出生对穿）。
+func _assert_spawn_pairs(step: Dictionary) -> void:
+	var name := str(step.get("name", "spawn_pairs"))
+	if not main.sim.has_method("is_visible"):
+		failures.append("spawn_pairs %s: 内核缺少 is_visible 绑定" % name)
+		return
+	var t_players: Array[int] = []
+	var ct_players: Array[int] = []
+	for index in range(int(main.sim.get_player_count())):
+		if int(main.sim.get_team(index)) == 1:
+			t_players.append(index)
+		else:
+			ct_players.append(index)
+	var pairs := 0
+	var visible := 0
+	for ti: int in t_players:
+		for ci: int in ct_players:
+			pairs += 1
+			if int(main.sim.is_visible(ti, ci)) != 0:
+				visible += 1
+				failures.append("spawn_pairs %s: T#%d 能看到 CT#%d（出生对穿）" %
+						[name, ti, ci])
+	if pairs != 25:
+		failures.append("spawn_pairs %s: 配对数应为 25（5×5），实际 %d" % [name, pairs])
+	print("SPAWN_PAIRS ", name, " pairs=", pairs, " blocked=", pairs - visible)
+
+
+func _check(checks: Array) -> void:	for check: Dictionary in checks:
 		var player: int = int(check.get("player", 0))
 		var field: String = check.get("field", "")
 		var actual: Variant = _read_field(player, field)
@@ -215,5 +243,7 @@ func _read_field(player: int, field: String) -> Variant:
 			return main.sim.get_y(player)
 		"z":
 			return main.sim.get_z(player)
+		"kill_count":
+			return main.sim.get_kill_count()
 	push_error("未知字段: " + field)
 	return null

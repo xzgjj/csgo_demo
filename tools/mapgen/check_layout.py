@@ -337,7 +337,9 @@ def main() -> int:
     print(
         f"mapcheck PASS name={layout['name']} buildings={len(layout['buildings'])} "
         f"lanes={len(layout['lanes'])} boxes={len(boxes)} "
-        f"walkable={len(surfaces) - 1} rot={computed.get('CT_rotate_A', 0)}s"
+        f"walkable={len(surfaces) - 1} rot={computed.get('CT_rotate_A', 0)}s "
+        f"spawn_pairs={check_sightlines.spawn_pair_count(layout)}"
+        f"/blocked={check_sightlines.spawn_pairs_blocked(layout, boxes)}"
     )
     return 0
 

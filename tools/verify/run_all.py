@@ -37,6 +37,12 @@ RUNTIME_VIEWS = [
     "weapon_0",
     "weapon_1",
     "weapon_2",
+    "scope",
+    "iron_sight",
+    "radar_on",
+    "radar_off",
+    "buy_menu",
+    "loadout",
     "scoreboard",
     "pause",
     "settings",
@@ -48,6 +54,8 @@ RUNTIME_ACTUAL = ROOT / "verification/actual/runtime"
 DIFF_DIR = ROOT / "verification/actual/diff"
 OUT = ROOT / "log/verify/run_all"
 WEAPON_DISTINCT_MAE = 0.5
+## 镜筒遮罩（scope）天然是大面积纯黑：结构指标（暗部占比）对它无意义，只做像素/golden 比对。
+STRUCTURE_EXEMPT_VIEWS = {"scope"}
 
 
 def run_cmd(cmd, timeout, label):
@@ -98,7 +106,7 @@ def compare_shot(kind, view, actual, golden_dir, thresholds, update):
         print(f"[shot:{kind}:{view}] FAIL 缺少实际截图")
         return entry
     metrics = run_map_goldens.structure_metrics(actual)
-    issues = run_map_goldens.structure_issues(metrics)
+    issues = [] if view in STRUCTURE_EXEMPT_VIEWS else run_map_goldens.structure_issues(metrics)
     entry["metrics"] = metrics
     if update:
         golden_dir.mkdir(parents=True, exist_ok=True)
