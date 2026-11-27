@@ -18,6 +18,7 @@
 #include "recoil/sim/step.h"
 #include "recoil/world/map.h"
 #include "recoil_default_map.h"
+#include "recoil_host_map.h"
 #include "recoil_match_ops.h"
 
 using namespace godot;
@@ -294,18 +295,9 @@ public:
         pending_.clear();
     }
 
-    // de_ash：宿主读派生盒子（Godot 坐标 → sim AABB），每盒 6 个 float。
-    void set_map_boxes(const PackedFloat32Array& boxes) {
-        map_ = recoil::MapDef{};
-        const int count = boxes.size() / 6;
-        for (int i = 0; i < count && map_.wall_count < recoil::kMaxWalls; ++i) {
-            const int base = i * 6;
-            recoil::Wall& wall = map_.walls[map_.wall_count++];
-            wall.min = {static_cast<float>(boxes[base + 0]), static_cast<float>(boxes[base + 1]),
-                        static_cast<float>(boxes[base + 2])};
-            wall.max = {static_cast<float>(boxes[base + 3]), static_cast<float>(boxes[base + 4]),
-                        static_cast<float>(boxes[base + 5])};
-        }
+    // de_ash：宿主读派生盒子（Godot 坐标 → sim AABB），每盒 8 个 float。
+    int set_map_boxes(const PackedFloat32Array& boxes) {
+        return recoil_host::LoadMapBoxes(map_, boxes);
     }
 
     void set_sites(float ax, float ay, float bx, float by) {

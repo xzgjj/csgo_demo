@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
+#include "recoil/sim/hitbox.h"
 #include "recoil/sim/step.h"
 
 namespace {
@@ -110,4 +111,111 @@ TEST_CASE("比赛结束后比分与回合不再变化") {
     CHECK(result.state.round.score_t == 1);
     CHECK(result.state.round.score_ct == 0);
     CHECK(result.state.round.phase == RoundPhase::MatchEnd);
+}
+
+TEST_CASE("命中盒：站立胸部命中、蹲伏同高度射线落空") {
+    WorldState state = MakeDuel();
+    recoil::PlayerState& target = state.players[1];
+    target.position = {0.0f, 300.0f, 0.0f};
+    target.view_yaw = 0.0f;
+
+    const recoil::PlayerHit standing =
+        recoil::TracePlayerHitboxes(target, {0.0f, 0.0f, 60.0f}, {0.0f, 1.0f, 0.0f}, 1000.0f);
+    CHECK(standing.hit);
+    CHECK(standing.group == recoil::HitGroup::Chest);
+
+    target.ducking = true;
+    const recoil::PlayerHit ducking =
+        recoil::TracePlayerHitboxes(target, {0.0f, 0.0f, 60.0f}, {0.0f, 1.0f, 0.0f}, 1000.0f);
+    CHECK_FALSE(ducking.hit);
+}
+
+TEST_CASE("命中盒随视角偏航旋转：侧面进入点随深度变化") {
+    WorldState state = MakeDuel();
+    recoil::PlayerState& target = state.players[1];
+    target.position = {0.0f, 0.0f, 0.0f};
+    target.view_yaw = 0.0f;
+
+    const recoil::PlayerHit front =
+        recoil::TracePlayerHitboxes(target, {-300.0f, 0.0f, 56.0f}, {1.0f, 0.0f, 0.0f}, 1000.0f);
+    CHECK(front.hit);
+    CHECK(front.point.x == doctest::Approx(-16.0f));
+
+    target.view_yaw = 90.0f;
+    const recoil::PlayerHit side =
+        recoil::TracePlayerHitboxes(target, {-300.0f, 0.0f, 56.0f}, {1.0f, 0.0f, 0.0f}, 1000.0f);
+    CHECK(side.hit);
+    CHECK(side.point.x == doctest::Approx(-10.0f));
+}
+
+TEST_CASE("蹲伏时头部高度上限从 72 降到 54") {
+    WorldState state = MakeDuel();
+    recoil::PlayerState& target = state.players[1];
+    target.position = {0.0f, 0.0f, 0.0f};
+    target.view_yaw = 0.0f;
+    target.ducking = true;
+
+    const recoil::PlayerHit head =
+        recoil::TracePlayerHitboxes(target, {-300.0f, 0.0f, 51.0f}, {1.0f, 0.0f, 0.0f}, 1000.0f);
+    CHECK(head.hit);
+    CHECK(head.group == recoil::HitGroup::Head);
+
+    const recoil::PlayerHit above =
+        recoil::TracePlayerHitboxes(target, {-300.0f, 0.0f, 60.0f}, {1.0f, 0.0f, 0.0f}, 1000.0f);
+    CHECK_FALSE(above.hit);
+}
+
+TEST_CASE("材质穿透：玻璃后仍受伤，混凝土完全挡住") {
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{FirePitch(0, 90.0f, 0.0f)};
+
+    WorldState plain = MakeDuel();
+    plain.players[1].position = {0.0f, 300.0f, 0.0f};
+    const StepResult plain_result = Step(plain, content, commands);
+
+    WorldState glass = MakeDuel();
+    glass.players[1].position = {0.0f, 300.0f, 0.0f};
+    recoil::MapDef glass_map;
+    glass_map.wall_count = 1;
+    glass_map.walls[0] = recoil::Wall{{-50.0f, 100.0f, 0.0f}, {50.0f, 110.0f, 72.0f}};
+    glass_map.walls[0].surface = recoil::Surface::Glass;
+    const StepResult glass_result = Step(glass, content, commands, &glass_map);
+
+    WorldState concrete = MakeDuel();
+    concrete.players[1].position = {0.0f, 300.0f, 0.0f};
+    recoil::MapDef concrete_map;
+    concrete_map.wall_count = 1;
+    concrete_map.walls[0] = recoil::Wall{{-50.0f, 100.0f, 0.0f}, {50.0f, 110.0f, 72.0f}};
+    const StepResult concrete_result = Step(concrete, content, commands, &concrete_map);
+
+    CHECK(plain_result.state.players[1].health < 100);
+    CHECK(glass_result.state.players[1].health > plain_result.state.players[1].health);
+    CHECK(concrete_result.state.players[1].health == 100);
+}
+
+TEST_CASE("材质穿透：两层玻璃后伤害继续衰减，第三层挡住") {
+    const Content content = DefaultContent();
+    const std::array<Command, 1> commands{FirePitch(0, 90.0f, 0.0f)};
+
+    WorldState two = MakeDuel();
+    two.players[1].position = {0.0f, 300.0f, 0.0f};
+    recoil::MapDef two_map;
+    two_map.wall_count = 2;
+    two_map.walls[0] = recoil::Wall{{-50.0f, 100.0f, 0.0f}, {50.0f, 110.0f, 72.0f}};
+    two_map.walls[0].surface = recoil::Surface::Glass;
+    two_map.walls[1] = recoil::Wall{{-50.0f, 200.0f, 0.0f}, {50.0f, 210.0f, 72.0f}};
+    two_map.walls[1].surface = recoil::Surface::Glass;
+    const StepResult two_result = Step(two, content, commands, &two_map);
+
+    WorldState three = MakeDuel();
+    three.players[1].position = {0.0f, 300.0f, 0.0f};
+    recoil::MapDef three_map = two_map;
+    three_map.walls[2] = recoil::Wall{{-50.0f, 260.0f, 0.0f}, {50.0f, 270.0f, 72.0f}};
+    three_map.walls[2].surface = recoil::Surface::Glass;
+    three_map.wall_count = 3;
+    const StepResult three_result = Step(three, content, commands, &three_map);
+
+    CHECK(two_result.state.players[1].health > 0);
+    CHECK(two_result.state.players[1].health < 90);
+    CHECK(three_result.state.players[1].health == 100);
 }

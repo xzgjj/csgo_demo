@@ -10,51 +10,20 @@
 #include "recoil/sim/bomb.h"
 #include "recoil/sim/grenades.h"
 #include "recoil/sim/ground.h"
+#include "recoil/sim/hitbox.h"
 #include "recoil/sim/reject.h"
 #include "recoil/sim/round.h"
+#include "recoil/world/trace.h"
 
 namespace recoil {
 namespace {
 
-constexpr float kHalfWidth = 16.0f;
-constexpr float kBodyHeight = 72.0f;
-
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
-    float hit_z = 0.0f;
-    int player = -1;
+    uint8_t player = 0xFF;
+    HitGroup group = HitGroup::None;
 };
-
-bool RayVsAabb(const Vec3& origin, const Vec3& dir, const Vec3& lo, const Vec3& hi, float& t_out) {
-    float t_min = 0.0f;
-    float t_max = 1.0e9f;
-    const float o[3] = {origin.x, origin.y, origin.z};
-    const float d[3] = {dir.x, dir.y, dir.z};
-    const float l[3] = {lo.x, lo.y, lo.z};
-    const float h[3] = {hi.x, hi.y, hi.z};
-    for (int i = 0; i < 3; ++i) {
-        if (std::fabs(d[i]) < 1.0e-6f) {
-            if (o[i] < l[i] || o[i] > h[i]) {
-                return false;
-            }
-            continue;
-        }
-        const float inv = 1.0f / d[i];
-        float t0 = (l[i] - o[i]) * inv;
-        float t1 = (h[i] - o[i]) * inv;
-        if (t0 > t1) {
-            std::swap(t0, t1);
-        }
-        t_min = std::max(t_min, t0);
-        t_max = std::min(t_max, t1);
-        if (t_min > t_max) {
-            return false;
-        }
-    }
-    t_out = t_min;
-    return true;
-}
 
 void FinishReload(PlayerState& player, const WeaponDef& weapon, uint8_t source, EventList& events) {
     const int capacity =
@@ -109,46 +78,102 @@ void StartReload(WorldState& state, const Content& content, const Command& comma
     events.Push({EventKind::ReloadStarted, command.player, 0, player.weapon.reload_ticks_left});
 }
 
+// 射线离开指定 AABB 的距离（入口之后），用于穿透后从墙背面继续追踪。
+float WallExitDistance(const Wall& wall, const Vec3& origin, const Vec3& dir, float entry_t) {
+    constexpr float kEps = 1.0e-6f;
+    float exit_t = 1.0e9f;
+    const float d[3] = {dir.x, dir.y, dir.z};
+    const float o[3] = {origin.x, origin.y, origin.z};
+    const float lo[3] = {wall.min.x, wall.min.y, wall.min.z};
+    const float hi[3] = {wall.max.x, wall.max.y, wall.max.z};
+    for (int i = 0; i < 3; ++i) {
+        if (std::fabs(d[i]) < kEps) {
+            continue;
+        }
+        const float far_t = ((d[i] > 0.0f ? hi[i] : lo[i]) - o[i]) / d[i];
+        if (far_t >= entry_t) {
+            exit_t = std::min(exit_t, far_t);
+        }
+    }
+    return exit_t;
+}
+
+// 材质穿透：玻璃/木最多两层，每层 0.75 衰减；混凝土/金属等直接挡住。
+// 返回伤害倍率；不可穿透返回 -1。
+float PenetrationScale(const MapDef& map, const Vec3& origin, const Vec3& dir, float range,
+                       float target_t) {
+    constexpr int kMaxLayers = 2;
+    constexpr float kLayerDamageScale = 0.75f;
+    float scale = 1.0f;
+    float traveled = 0.0f;
+    for (int layer = 0; layer < kMaxLayers; ++layer) {
+        const Vec3 from = origin + dir * traveled;
+        const float remaining = range - traveled;
+        const TraceHit wall = TraceRay(map, from, origin + dir * range);
+        if (!wall.hit) {
+            return scale;
+        }
+        const float wall_t = traveled + wall.fraction * remaining;
+        if (wall_t > target_t) {
+            return scale;
+        }
+        if (wall.surface != Surface::Glass && wall.surface != Surface::Wood) {
+            return -1.0f;
+        }
+        scale *= kLayerDamageScale;
+        const float exit_t = WallExitDistance(map.walls[wall.brush], origin, dir, wall_t);
+        traveled = (exit_t < 1.0e8f ? exit_t : wall_t) + 0.1f;
+    }
+    const float remaining = range - traveled;
+    const TraceHit wall = TraceRay(map, origin + dir * traveled, origin + dir * range);
+    if (wall.hit && traveled + wall.fraction * remaining <= target_t) {
+        return -1.0f;
+    }
+    return scale;
+}
+
 RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3& origin,
                            const Vec3& dir, float max_range) {
     RayHit best;
     const uint8_t shooter_team = state.players[shooter].team;
     for (uint8_t i = 0; i < state.player_count; ++i) {
+        const PlayerState& target = state.players[i];
         // 竞技默认 friendly fire off：队友不挡弹道、不受伤（也避免 Bot 误伤玩家）。
-        if (i == shooter || !state.players[i].alive || state.players[i].team == shooter_team) {
+        if (i == shooter || !target.alive || target.team == shooter_team) {
             continue;
         }
-        const Vec3& pos = state.players[i].position;
-        const Vec3 lo{pos.x - kHalfWidth, pos.y - kHalfWidth, pos.z};
-        const Vec3 hi{pos.x + kHalfWidth, pos.y + kHalfWidth, pos.z + kBodyHeight};
-        if (SmokeBlocksSegment(state, origin, {pos.x, pos.y, pos.z + kBodyHeight * 0.5f})) {
+        if (SmokeBlocksSegment(state, origin,
+                               {target.position.x, target.position.y,
+                                target.position.z + (target.ducking ? 27.0f : 36.0f)})) {
             continue;
         }
-        float t = 0.0f;
-        if (!RayVsAabb(origin, dir, lo, hi, t)) {
-            continue;
-        }
-        if (t > max_range || (best.hit && t >= best.t)) {
+        const PlayerHit player_hit = TracePlayerHitboxes(target, origin, dir, max_range);
+        if (!player_hit.hit || (best.hit && player_hit.t >= best.t)) {
             continue;
         }
         best.hit = true;
-        best.t = t;
-        best.hit_z = origin.z + dir.z * t;
+        best.t = player_hit.t;
         best.player = i;
+        best.group = player_hit.group;
     }
     return best;
 }
 
 void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& weapon,
-                   uint8_t shooter, uint8_t victim, float distance, float hit_z,
-                   EventList& events) {
+                   uint8_t shooter, uint8_t victim, float distance, HitGroup group,
+                   float penetration_scale, EventList& events) {
     PlayerState& target = state.players[victim];
     const float falloff = std::pow(weapon.range_modifier, distance / weapon.range_modifier_unit);
-    const float height = hit_z - target.position.z;
-    const float group =
-        height >= 65.0f ? (target.helmet ? 2.0f : 4.0f) : (height < 32.0f ? 0.75f : 1.0f);
-    const float raw = static_cast<float>(weapon.damage) * falloff * group *
-                      (target.armor > 0 ? weapon.armor_ratio : 1.0f);
+    float group_multiplier = 1.0f;
+    if (group == HitGroup::Head) {
+        group_multiplier = target.helmet ? 2.0f : 4.0f;
+    } else if (group == HitGroup::Stomach) {
+        group_multiplier = 1.25f;
+    } else if (group == HitGroup::Legs) {
+        group_multiplier = 0.75f;
+    }
+    const float raw = static_cast<float>(weapon.damage) * falloff * group_multiplier *
+                      penetration_scale * (target.armor > 0 ? weapon.armor_ratio : 1.0f);
     const uint16_t damage = static_cast<uint16_t>(std::lround(raw));
     const uint16_t applied = std::min(damage, target.health);
     target.health = static_cast<uint16_t>(target.health - applied);
@@ -169,21 +194,6 @@ void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& w
         events.Push({EventKind::PlayerDied, shooter, victim, 0});
         DropPrimaryOnDeath(state, victim, events);
     }
-}
-
-// 沿射线最近实体面的 t（无命中返回极大值）。
-float NearestWallT(const MapDef& map, const Vec3& origin, const Vec3& dir, float max_range) {
-    float nearest = 1.0e9f;
-    for (int i = 0; i < map.wall_count; ++i) {
-        float t = 0.0f;
-        if (!RayVsAabb(origin, dir, map.walls[i].min, map.walls[i].max, t)) {
-            continue;
-        }
-        if (t >= 0.0f && t <= max_range && t < nearest) {
-            nearest = t;
-        }
-    }
-    return nearest;
 }
 
 void Fire(WorldState& state, const Content& content, const Command& command, const MapDef* map,
@@ -222,16 +232,21 @@ void Fire(WorldState& state, const Content& content, const Command& command, con
     shooter.last_fire_tick = static_cast<uint32_t>(state.tick);
     events.Push({EventKind::WeaponFired, command.player, 0, shooter.weapon.mag});
 
-    const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, content.movement.eye_height};
+    const float eye =
+        shooter.ducking ? content.movement.duck_eye_height : content.movement.eye_height;
+    const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, eye};
     const Vec3 dir = DirectionFromAngles(command.yaw_degrees, command.pitch_degrees);
     const RayHit hit = TraceAgainstPlayers(state, command.player, origin, dir, weapon.range);
-    const float wall_t = (map != nullptr) ? NearestWallT(*map, origin, dir, weapon.range) : 1.0e9f;
-    if (!hit.hit || wall_t < hit.t) {
+    float penetration_scale = 1.0f;
+    if (map != nullptr && hit.hit) {
+        penetration_scale = PenetrationScale(*map, origin, dir, weapon.range, hit.t);
+    }
+    if (!hit.hit || penetration_scale < 0.0f) {
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
     }
-    ResolveDamage(state, content, weapon, command.player, static_cast<uint8_t>(hit.player), hit.t,
-                  hit.hit_z, events);
+    ResolveDamage(state, content, weapon, command.player, hit.player, hit.t, hit.group,
+                  penetration_scale, events);
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {
@@ -299,10 +314,26 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
         }
     }
     StepBomb(out.state, content, out.events);
-    StepGrenades(out.state, content, out.events);
+    StepGrenades(out.state, content, out.events, map);
     AdvanceRound(out.state, content, out.events);
     for (uint8_t i = 0; i < out.state.player_count; ++i) {
-        StepMovement(out.state.players[i], content.movement, map);
+        Aabb blockers[kMaxPlayers];
+        int blocker_count = 0;
+        for (uint8_t j = 0; j < out.state.player_count; ++j) {
+            if (j == i || !out.state.players[j].alive) {
+                continue;
+            }
+            const PlayerState& other = out.state.players[j];
+            const float height =
+                other.ducking ? content.movement.duck_height : content.movement.stand_height;
+            const float half = content.movement.half_width;
+            blockers[blocker_count++] = Aabb{
+                {other.position.x - half, other.position.y - half, other.position.z},
+                {other.position.x + half, other.position.y + half, other.position.z + height},
+            };
+        }
+        StepMovement(out.state.players[i], content.movement, map,
+                     std::span<const Aabb>(blockers, static_cast<size_t>(blocker_count)));
     }
     UpdateReactions(out.state, map);
     return out;

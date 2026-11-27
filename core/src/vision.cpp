@@ -1,51 +1,17 @@
 #include "recoil/ai/vision.h"
 
-#include <cmath>
-
 #include "recoil/sim/grenades.h"
+#include "recoil/world/trace.h"
 
 namespace recoil {
 namespace {
 
-// 线段与轴对齐盒求交：[0,1] 参数域，含端点接触视为遮挡。
-bool SegmentHitsAabb(const Vec3& from, const Vec3& to, const Wall& wall) {
-    const Vec3 delta = to - from;
-    float t_min = 0.0f;
-    float t_max = 1.0f;
-    for (int axis = 0; axis < 3; ++axis) {
-        const float origin = axis == 0 ? from.x : (axis == 1 ? from.y : from.z);
-        const float d = axis == 0 ? delta.x : (axis == 1 ? delta.y : delta.z);
-        const float lo = axis == 0 ? wall.min.x : (axis == 1 ? wall.min.y : wall.min.z);
-        const float hi = axis == 0 ? wall.max.x : (axis == 1 ? wall.max.y : wall.max.z);
-        if (std::fabs(d) < 1.0e-6f) {
-            if (origin < lo || origin > hi) {
-                return false;
-            }
-            continue;
-        }
-        const float inv = 1.0f / d;
-        float t0 = (lo - origin) * inv;
-        float t1 = (hi - origin) * inv;
-        if (t0 > t1) {
-            const float swap = t0;
-            t0 = t1;
-            t1 = swap;
-        }
-        t_min = t0 > t_min ? t0 : t_min;
-        t_max = t1 < t_max ? t1 : t_max;
-        if (t_min > t_max) {
-            return false;
-        }
-    }
-    return t_max > 0.0f && t_min < 1.0f;
-}
-
 Vec3 EyePosition(const PlayerState& player) {
-    return player.position + Vec3{0.0f, 0.0f, kEyeHeight};
+    return player.position + Vec3{0.0f, 0.0f, player.ducking ? kDuckEyeHeight : kEyeHeight};
 }
 
 Vec3 ChestPosition(const PlayerState& player) {
-    return player.position + Vec3{0.0f, 0.0f, kChestHeight};
+    return player.position + Vec3{0.0f, 0.0f, player.ducking ? kDuckChestHeight : kChestHeight};
 }
 
 } // namespace
@@ -54,12 +20,7 @@ bool SegmentBlockedByWalls(const MapDef* map, const Vec3& from, const Vec3& to) 
     if (map == nullptr) {
         return false;
     }
-    for (int i = 0; i < map->wall_count; ++i) {
-        if (SegmentHitsAabb(from, to, map->walls[i])) {
-            return true;
-        }
-    }
-    return false;
+    return TraceRay(*map, from, to).hit;
 }
 
 bool SegmentBlockedBySmoke(const WorldState& state, const Vec3& from, const Vec3& to) {

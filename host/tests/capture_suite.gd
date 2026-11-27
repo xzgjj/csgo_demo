@@ -18,6 +18,11 @@ func _initialize() -> void:
 
 
 func _flow() -> void:
+	# 截图只验证界面结构与布局，账号统计/配装固定为 golden 基线，
+	# 避免 user://account.json 跨次运行累加导致 “比赛 9/16” 这类无关漂移。
+	main.account.nickname = "Recruit"
+	main.account.loadout = {"primary": "awp", "secondary": "glock", "knife": "knife"}
+	main.account.stats = {"kills": 0, "deaths": 0, "matches": 9, "wins": 9}
 	await process_frame
 	await process_frame
 	await RenderingServer.frame_post_draw

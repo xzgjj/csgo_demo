@@ -266,7 +266,8 @@ def main() -> int:
         "longest": {"length": longest[0], "lane": longest[1], "from": longest[2],
                     "to": longest[3]},
         "spawn": metrics["spawn"], "routes": metrics["lanes"],
-        "chokes": metrics["chokes"], "sites": metrics["sites"], "checks": checks,
+        "chokes": metrics["chokes"], "sites": metrics["sites"],
+        "sightlines": sightline_rows, "checks": checks,
     }
     OUT.mkdir(parents=True, exist_ok=True)
     (OUT / "design_metrics.json").write_text(
@@ -275,7 +276,7 @@ def main() -> int:
     lines = _report_lines(report, metrics, longest)
     (OUT / "design_metrics.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     print("\n".join(lines))
-    return 0
+    return 0 if all(checks.values()) else 1
 
 
 if __name__ == "__main__":

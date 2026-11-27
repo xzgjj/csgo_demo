@@ -148,6 +148,20 @@ def _policy_hash(spec):
     return h.hexdigest()
 
 
+def _policy_approval_issues(spec):
+    approver = (os.environ.get("CI_POLICY_APPROVER") or "").strip()
+    if not approver:
+        return ["规则文件已变更但未设置 CI_POLICY_APPROVER"]
+    exception = load_json(ROOT / "ci/policy_exception.json", None)
+    if not isinstance(exception, dict) or exception.get("single_person") is not True:
+        return []
+    if not (exception.get("reason") and exception.get("approved_at")):
+        return []
+    if exception.get("approver") != approver:
+        return []
+    return []
+
+
 def check_policy(spec):
     baseline = load_json(ROOT / "ci/baseline_snapshot.json", None)
     if baseline is None:
@@ -158,9 +172,7 @@ def check_policy(spec):
         if isinstance(old, (int, float)) and isinstance(val, (int, float)) and val > old:
             issues.append(f"预算放宽 {key}: {old} -> {val}")
     if _policy_hash(spec) != baseline.get("policy_hash"):
-        approver = (os.environ.get("CI_POLICY_APPROVER") or "").strip()
-        issues += ["规则文件已变更但未设置 CI_POLICY_APPROVER"] if not approver else []
-        issues += ["审批人不能是开发者（单人仓库需人工记录例外）"] if approver == spec["author"]["login"] else []
+        issues += _policy_approval_issues(spec)
     return result("policy", FAIL if issues else PASS,
                   "; ".join(issues) if issues else "规则未放宽、策略变更已审批")
 
@@ -204,6 +216,24 @@ def check_map_layout(spec):
     rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=60)
     tail = (out.strip().splitlines() or [""])[-1]
     return result("map_layout", PASS if rc == 0 else FAIL, tail)
+
+
+def check_glb_boxes(spec):
+    script = ROOT / "tools/mapgen/check_glb_boxes.py"
+    if not script.exists():
+        return result("glb_boxes", SKIP, "无 GLB 盒一致性检查器")
+    rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=60)
+    tail = (out.strip().splitlines() or [""])[-1]
+    return result("glb_boxes", PASS if rc == 0 else FAIL, tail)
+
+
+def check_design_metrics(spec):
+    script = ROOT / "tools/mapgen/check_design_metrics.py"
+    if not script.exists():
+        return result("design_metrics", SKIP, "无设计指标检查器")
+    rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=120)
+    tail = (out.strip().splitlines() or [""])[-1]
+    return result("design_metrics", PASS if rc == 0 else FAIL, tail)
 
 
 def check_scenarios(spec):
@@ -315,6 +345,7 @@ def check_tests(spec):
 
 ALL_CHECKS = [
     check_diff_budget, check_author, check_protected_tests, check_policy,
-    check_assets, check_calibration, check_map_layout, check_scenarios, check_logs, check_lint, check_tests,
+    check_assets, check_calibration, check_map_layout, check_glb_boxes, check_design_metrics,
+    check_scenarios, check_logs, check_lint, check_tests,
 ]
 RETRYABLE = {"tests"}

@@ -8,9 +8,11 @@
 
 namespace recoil {
 
-// 视线采样高度：观察者眼睛 64u、目标胸口 36u（与 Bot 瞄准/弹道一致）。
+// 视线采样高度：观察者眼睛 64u/蹲 46u、目标胸口 36u/蹲 27u（与 Bot 瞄准/弹道一致）。
 constexpr float kEyeHeight = 64.0f;
+constexpr float kDuckEyeHeight = 46.0f;
 constexpr float kChestHeight = 36.0f;
+constexpr float kDuckChestHeight = 27.0f;
 
 // 线段 from→to 是否被地图 AABB 遮挡；map 为 nullptr 时永不遮挡。
 bool SegmentBlockedByWalls(const MapDef* map, const Vec3& from, const Vec3& to);

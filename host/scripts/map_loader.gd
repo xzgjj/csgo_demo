@@ -21,8 +21,11 @@ static func apply(sim: RefCounted) -> int:
 		if not bool(item.get("collision", true)):
 			continue
 		flat.append_array(_flatten_box(item))
-	sim.set_map_boxes(flat)
-	return flat.size() / 6
+	var expected := flat.size() / 8
+	var written: int = sim.set_map_boxes(flat)
+	if written != expected:
+		push_error("碰撞盒注入不完整：期望 %d，实际 %d（检查尺寸/旋转/材质/容量）" % [expected, written])
+	return written
 
 
 static func _flatten_box(item: Dictionary) -> PackedFloat32Array:
@@ -37,4 +40,22 @@ static func _flatten_box(item: Dictionary) -> PackedFloat32Array:
 	return PackedFloat32Array([
 		-gz - sz * 0.5, -gx - sx * 0.5, gy - sy * 0.5,
 		-gz + sz * 0.5, -gx + sx * 0.5, gy + sy * 0.5,
+		_surface_id(str(item.get("material", "concrete"))),
+		float(item.get("rot_y", 0.0)),
 	])
+
+
+static func _surface_id(material: String) -> int:
+	match material:
+		"metal":
+			return 1
+		"wood":
+			return 2
+		"glass":
+			return 3
+		"dirt":
+			return 4
+		"fabric":
+			return 5
+		_:
+			return 0

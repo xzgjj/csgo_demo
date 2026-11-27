@@ -3,6 +3,7 @@
 
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
+#include "recoil/sim/grenades.h"
 #include "recoil/sim/step.h"
 
 namespace {
@@ -200,6 +201,59 @@ TEST_CASE("比赛结束后不能投掷手雷") {
 
     CHECK(result.state.grenades[0].active == false);
     CHECK(HasReject(result.events, RejectReason::MatchEnded));
+}
+
+TEST_CASE("投掷物撞墙后反弹且不穿墙") {
+    WorldState state = MakeArena();
+    recoil::MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = recoil::Wall{{100.0f, -200.0f, 0.0f}, {132.0f, 200.0f, 72.0f}};
+    const Content content = DefaultContent();
+    const std::array<Command, 1> throw_cmd{Throw(GrenadeKind::HE, 90.0f, 0.0f)};
+
+    StepResult result = Step(state, content, throw_cmd, &map);
+    for (int i = 0; i < 40; ++i) {
+        result = Step(result.state, content, {}, &map);
+    }
+
+    CHECK(result.state.grenades[0].active);
+    CHECK(result.state.grenades[0].position.x <= 96.5f);
+}
+
+TEST_CASE("投掷物落在高台顶面而不是掉到 0 层") {
+    WorldState state = MakeArena();
+    recoil::MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = recoil::Wall{{-500.0f, 200.0f, 0.0f}, {500.0f, 600.0f, 128.0f}};
+    state.grenades[0].active = true;
+    state.grenades[0].kind = static_cast<uint8_t>(GrenadeKind::Smoke);
+    state.grenades[0].owner = 0;
+    state.grenades[0].position = {0.0f, 250.0f, 300.0f};
+    state.grenades[0].velocity = {};
+    state.grenades[0].fuse_ticks = 200;
+    const Content content = DefaultContent();
+
+    StepResult result = Step(state, content, {}, &map);
+    for (int i = 0; i < 80; ++i) {
+        result = Step(result.state, content, {}, &map);
+    }
+
+    CHECK(result.state.grenades[0].active);
+    CHECK(result.state.grenades[0].position.z > 128.0f);
+    CHECK(result.state.grenades[0].position.z < 145.0f);
+}
+
+TEST_CASE("蹲伏投掷时出手高度随眼高下移") {
+    WorldState state = MakeArena();
+    state.players[0].ducking = true;
+    const Content content = DefaultContent();
+    const std::array<Command, 1> throw_cmd{Throw(GrenadeKind::Smoke, 90.0f, 0.0f)};
+
+    recoil::EventList events;
+    recoil::ThrowGrenade(state, content, throw_cmd[0], events);
+
+    REQUIRE(state.grenades[0].active);
+    CHECK(state.grenades[0].position.z == doctest::Approx(46.0f));
 }
 
 TEST_CASE("手雷槽位已满时投掷被拒绝") {

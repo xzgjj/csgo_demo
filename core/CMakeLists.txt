@@ -13,11 +13,13 @@ add_library(recoil_core STATIC
     src/ground.cpp
     src/grenades.cpp
     src/hash.cpp
+    src/hitbox.cpp
     src/movement.cpp
     src/nav.cpp
     src/reaction.cpp
     src/round.cpp
     src/step.cpp
+    src/trace.cpp
     src/vision.cpp
     src/weapon_table.cpp
 )
@@ -39,11 +41,13 @@ add_executable(recoil_tests
     tests/test_grenades.cpp
     tests/test_helmet.cpp
     tests/test_hitgroups.cpp
+    tests/test_map.cpp
     tests/test_movement.cpp
     tests/test_nav.cpp
     tests/test_round.cpp
     tests/test_step.cpp
     tests/test_tactics.cpp
+    tests/test_trace.cpp
     tests/test_vision.cpp
     tests/test_weapons.cpp
     tests/test_weapons_loadout.cpp

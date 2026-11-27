@@ -279,3 +279,70 @@ TEST_CASE("死亡玩家无法移动（实机卡死回归：死亡后输入应被
     CHECK(result.state.players[0].position.x == doctest::Approx(0.0).epsilon(0.0001));
     CHECK(result.state.players[0].position.y == doctest::Approx(0.0).epsilon(0.0001));
 }
+
+TEST_CASE("玩家嵌在墙里时下一 tick 推出且不再重叠") {
+    WorldState state = MakeMover();
+    MapDef map;
+    map.wall_count = 1;
+    map.walls[0] = Wall{{0.0f, -50.0f, 0.0f}, {32.0f, 50.0f, 72.0f}};
+    state.players[0].position = {20.0f, 0.0f, 0.0f};
+    const Content content = DefaultContent();
+
+    const StepResult result = StepOnce(state, content, Command{}, &map);
+
+    CHECK_FALSE(recoil::TraceOverlap(map,
+                                     recoil::Aabb{{-16.0f, -16.0f, 0.01f}, {16.0f, 16.0f, 72.0f}},
+                                     result.state.players[0].position));
+    CHECK(result.state.players[0].position.x >= 48.0f);
+}
+
+TEST_CASE("两名玩家相向移动时互相阻挡且不重叠") {
+    WorldState state = MakeMover();
+    state.player_count = 2;
+    state.players[1] = state.players[0];
+    state.players[1].position = {100.0f, 0.0f, 0.0f};
+    const Content content = DefaultContent();
+    std::array<Command, 2> commands{MoveCommand(1.0f, 0.0f), MoveCommand(1.0f, 180.0f)};
+    commands[1].player = 1;
+
+    StepResult result = Step(state, content, commands, nullptr);
+    for (int i = 0; i < 32; ++i) {
+        result = Step(result.state, content, commands, nullptr);
+    }
+
+    const float dx = result.state.players[1].position.x - result.state.players[0].position.x;
+    CHECK(dx >= 31.9f);
+    CHECK(dx <= 40.0f);
+}
+
+TEST_CASE("蹲伏指令生效并保持在地面") {
+    WorldState state = MakeMover();
+    const Content content = DefaultContent();
+
+    StepResult result = StepOnce(state, content, MoveCommand(0.0f, 0.0f, false, true), nullptr);
+
+    CHECK(result.state.players[0].ducking);
+}
+
+TEST_CASE("猫道边缘到桥面：高台行走不被台阶侧面卡住") {
+    WorldState state = MakeMover();
+    state.players[0].position = {46.0f, 80.0f, 128.0f};
+    state.players[0].on_ground = true;
+    MapDef map;
+    map.wall_count = 4;
+    map.walls[0] = Wall{{-192.0f, -64.0f, 112.0f}, {192.0f, 64.0f, 128.0f}};
+    map.walls[1] = Wall{{-64.0f, 64.0f, 0.0f}, {0.0f, 160.0f, 128.0f}};
+    map.walls[2] = Wall{{0.0f, 64.0f, 0.0f}, {64.0f, 160.0f, 96.0f}};
+    map.walls[3] = Wall{{-96.0f, -32.0f, 0.0f}, {96.0f, 32.0f, 96.0f}};
+    const Content content = DefaultContent();
+    const float yaw = std::atan2(-48.0f, -14.0f) * (180.0f / 3.14159265f);
+    const Command move = MoveCommand(1.0f, yaw);
+
+    StepResult result = StepOnce(state, content, move, &map);
+    for (int i = 0; i < 120; ++i) {
+        result = StepOnce(result.state, content, move, &map);
+    }
+
+    CHECK(result.state.players[0].position.x < 40.0f);
+    CHECK(result.state.players[0].position.y < 40.0f);
+}

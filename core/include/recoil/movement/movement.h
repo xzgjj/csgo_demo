@@ -1,7 +1,10 @@
 #pragma once
 
+#include <span>
+
 #include "recoil/sim/state.h"
 #include "recoil/world/map.h"
+#include "recoil/world/trace.h"
 
 namespace recoil {
 
@@ -21,9 +24,13 @@ struct MovementDef {
     float stand_height = 72.0f;
     float duck_height = 54.0f;
     float eye_height = 64.0f;
+    // 蹲伏眼高：射击原点/视线随蹲伏下移（Source VEC_DUCK_VIEW 46）。
+    float duck_eye_height = 46.0f;
 };
 
 // 纯函数：根据 stored wish/速度/地图推进一个 tick 的移动与碰撞。
-void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map);
+// blockers：其他玩家的 AABB（由 Step 组装，movement 不依赖 WorldState）。
+void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map,
+                  std::span<const Aabb> blockers = {});
 
 } // namespace recoil

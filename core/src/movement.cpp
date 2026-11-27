@@ -14,31 +14,98 @@ constexpr float kMaxSubstepDistance = 8.0f;
 constexpr float kStepHeight = 32.0f;
 constexpr float kSupportEpsilon = 0.6f;
 
-bool Overlaps(const Vec3& lo, const Vec3& hi, const Wall& wall) {
-    return lo.x < wall.max.x && hi.x > wall.min.x && lo.y < wall.max.y && hi.y > wall.min.y &&
-           lo.z < wall.max.z && hi.z > wall.min.z;
+Aabb BodyHull(const MovementDef& def, float height) {
+    // 底部贴 0：贴面由 TraceHull 的“平行/离开”规则排除，避免站在平台上下沉 0.01u。
+    return Aabb{{-def.half_width, -def.half_width, 0.0f}, {def.half_width, def.half_width, height}};
+}
+
+bool OverlapsBox(const Vec3& position, const Aabb& hull, const Aabb& box) {
+    const Vec3 lo{position.x + hull.min.x, position.y + hull.min.y, position.z + hull.min.z};
+    const Vec3 hi{position.x + hull.max.x, position.y + hull.max.y, position.z + hull.max.z};
+    return lo.x < box.max.x - kEpsilon && hi.x > box.min.x + kEpsilon &&
+           lo.y < box.max.y - kEpsilon && hi.y > box.min.y + kEpsilon &&
+           lo.z < box.max.z - kEpsilon && hi.z > box.min.z + kEpsilon;
 }
 
 bool BodyOverlaps(const MapDef& map, const Vec3& position, const MovementDef& def, float height) {
-    const Vec3 lo = {position.x - def.half_width, position.y - def.half_width, position.z};
-    const Vec3 hi = {position.x + def.half_width, position.y + def.half_width, position.z + height};
-    for (int w = 0; w < map.wall_count; ++w) {
-        if (Overlaps(lo, hi, map.walls[w])) {
-            return true;
+    const Aabb hull = BodyHull(def, height);
+    return TraceOverlap(map, hull, position);
+}
+
+// 重叠时沿最小穿透轴推出；最多两轮，避免出生重叠/被挤进箱子后卡死。
+void Depenetrate(PlayerState& player, const MovementDef& def, const MapDef* map,
+                 std::span<const Aabb> blockers) {
+    const float height = player.ducking ? def.duck_height : def.stand_height;
+    const Aabb hull = BodyHull(def, height);
+    for (int iteration = 0; iteration < 2; ++iteration) {
+        bool moved = false;
+        const int wall_count = (map != nullptr) ? map->wall_count : 0;
+        const int total = wall_count + static_cast<int>(blockers.size());
+        for (int index = 0; index < total; ++index) {
+            Aabb box{};
+            if (index < wall_count) {
+                box = {map->walls[index].min, map->walls[index].max};
+            } else {
+                box = blockers[static_cast<size_t>(index - wall_count)];
+            }
+            if (!OverlapsBox(player.position, hull, box)) {
+                continue;
+            }
+            const Vec3 lo{player.position.x + hull.min.x, player.position.y + hull.min.y,
+                          player.position.z + hull.min.z};
+            const Vec3 hi{player.position.x + hull.max.x, player.position.y + hull.max.y,
+                          player.position.z + hull.max.z};
+            const float pushes[6] = {
+                box.max.x - lo.x, hi.x - box.min.x, box.max.y - lo.y,
+                hi.y - box.min.y, box.max.z - lo.z, hi.z - box.min.z,
+            };
+            int best_axis = 0;
+            float best_push = 0.0f;
+            for (int i = 0; i < 6; ++i) {
+                if (pushes[i] <= 0.0f) {
+                    continue;
+                }
+                if (best_push == 0.0f || pushes[i] < best_push) {
+                    best_push = pushes[i];
+                    best_axis = i;
+                }
+            }
+            if (best_push <= 0.0f) {
+                continue;
+            }
+            if (best_axis == 0) {
+                player.position.x += best_push;
+            } else if (best_axis == 1) {
+                player.position.x -= best_push;
+            } else if (best_axis == 2) {
+                player.position.y += best_push;
+            } else if (best_axis == 3) {
+                player.position.y -= best_push;
+            } else if (best_axis == 4) {
+                player.position.z += best_push;
+            } else {
+                player.position.z -= best_push;
+            }
+            moved = true;
+        }
+        if (!moved) {
+            break;
         }
     }
-    return false;
 }
 
 // 可 step-up 时返回最高可迈上的台阶顶面，否则返回当前位置 z。
 float StepUpHeight(const MapDef& map, const PlayerState& player, const MovementDef& def,
                    const Vec3& next, float height) {
-    const Vec3 lo = {next.x - def.half_width, next.y - def.half_width, next.z + 0.01f};
-    const Vec3 hi = {next.x + def.half_width, next.y + def.half_width, next.z + height};
+    const Vec3 lo = {next.x - def.half_width - 0.01f, next.y - def.half_width - 0.01f,
+                     next.z + 0.01f};
+    const Vec3 hi = {next.x + def.half_width + 0.01f, next.y + def.half_width + 0.01f,
+                     next.z + height};
     float best = player.position.z;
     for (int w = 0; w < map.wall_count; ++w) {
         const Wall& wall = map.walls[w];
-        if (!Overlaps(lo, hi, wall)) {
+        if (lo.x >= wall.max.x || hi.x <= wall.min.x || lo.y >= wall.max.y || hi.y <= wall.min.y ||
+            lo.z >= wall.max.z || hi.z <= wall.min.z) {
             continue;
         }
         const float rise = wall.max.z - player.position.z;
@@ -77,12 +144,12 @@ void Accelerate(PlayerState& player, const MovementDef& def, const Vec3& wish_di
     player.velocity.y += wish_dir.y * accelspeed;
 }
 
-void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, int axis,
-              float delta) {
+void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map,
+              std::span<const Aabb> blockers, int axis, float delta) {
     if (delta == 0.0f) {
         return;
     }
-    if (map == nullptr) {
+    if (map == nullptr && blockers.empty()) {
         if (axis == 0) {
             player.position.x += delta;
         } else if (axis == 1) {
@@ -93,11 +160,13 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
         return;
     }
     const float height = player.ducking ? def.duck_height : def.stand_height;
+    const Aabb hull = BodyHull(def, height);
     const int steps =
         std::max(1, static_cast<int>(std::ceil(std::fabs(delta) / kMaxSubstepDistance)));
     const float step = delta / static_cast<float>(steps);
     for (int i = 0; i < steps; ++i) {
-        Vec3 next = player.position;
+        const Vec3 from = player.position;
+        Vec3 next = from;
         if (axis == 0) {
             next.x += step;
         } else if (axis == 1) {
@@ -105,33 +174,45 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
         } else {
             next.z += step;
         }
-        const Vec3 lo = {next.x - def.half_width, next.y - def.half_width, next.z};
-        const Vec3 hi = {next.x + def.half_width, next.y + def.half_width, next.z + height};
         bool blocked = false;
-        float clamp_pos = 0.0f;
-        bool clamped = false;
-        for (int w = 0; w < map->wall_count; ++w) {
-            const Wall& wall = map->walls[w];
-            if (!Overlaps(lo, hi, wall)) {
-                continue;
-            }
-            blocked = true;
-            if (axis == 0) {
-                clamp_pos = step > 0.0f ? wall.min.x - def.half_width : wall.max.x + def.half_width;
-                clamped = true;
-            } else if (axis == 1) {
-                clamp_pos = step > 0.0f ? wall.min.y - def.half_width : wall.max.y + def.half_width;
-                clamped = true;
-            } else if (step > 0.0f) {
-                next.z = wall.min.z - height;
-                player.velocity.z = 0.0f;
-            } else {
-                next.z = wall.max.z;
-                player.velocity.z = 0.0f;
-                player.on_ground = true;
+        if (map != nullptr) {
+            const Vec3 axis_delta = (axis == 0)   ? Vec3{step, 0.0f, 0.0f}
+                                    : (axis == 1) ? Vec3{0.0f, step, 0.0f}
+                                                  : Vec3{0.0f, 0.0f, step};
+            const TraceHit hit = TraceHull(*map, hull, from, axis_delta);
+            if (hit.hit && hit.fraction < 1.0f) {
+                next = hit.point;
+                blocked = true;
+                if (axis == 0) {
+                    player.velocity.x = 0.0f;
+                } else if (axis == 1) {
+                    player.velocity.y = 0.0f;
+                } else {
+                    player.velocity.z = 0.0f;
+                    if (hit.normal.z > 0.5f) {
+                        player.on_ground = true;
+                    }
+                }
             }
         }
-        if (blocked && axis != 2 && player.on_ground) {
+        if (axis != 2) {
+            for (const Aabb& blocker : blockers) {
+                if (!OverlapsBox(next, hull, blocker)) {
+                    continue;
+                }
+                blocked = true;
+                if (axis == 0) {
+                    next.x = step > 0.0f ? blocker.min.x - def.half_width
+                                         : blocker.max.x + def.half_width;
+                    player.velocity.x = 0.0f;
+                } else {
+                    next.y = step > 0.0f ? blocker.min.y - def.half_width
+                                         : blocker.max.y + def.half_width;
+                    player.velocity.y = 0.0f;
+                }
+            }
+        }
+        if (blocked && axis != 2 && player.on_ground && map != nullptr) {
             // 台阶：抬升到 ≤32u 的支撑面后重试同一水平位移。
             const float step_height = StepUpHeight(*map, player, def, next, height);
             if (step_height > player.position.z + 0.01f) {
@@ -141,15 +222,6 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map, in
                     player.position = raised;
                     continue;
                 }
-            }
-        }
-        if (clamped) {
-            if (axis == 0) {
-                next.x = clamp_pos;
-                player.velocity.x = 0.0f;
-            } else {
-                next.y = clamp_pos;
-                player.velocity.y = 0.0f;
             }
         }
         player.position = next;
@@ -164,15 +236,16 @@ void ResolveGround(PlayerState& player, const MovementDef& def, const MapDef* ma
     const float floor_z = (map != nullptr) ? map->floor_z : 0.0f;
     float support = floor_z;
     if (map != nullptr) {
+        const Aabb hull = BodyHull(def, 0.0f);
         for (int w = 0; w < map->wall_count; ++w) {
             const Wall& wall = map->walls[w];
             if (wall.max.z < floor_z || wall.max.z > player.position.z + kSupportEpsilon) {
                 continue;
             }
-            if (wall.min.x < player.position.x + def.half_width &&
-                wall.max.x > player.position.x - def.half_width &&
-                wall.min.y < player.position.y + def.half_width &&
-                wall.max.y > player.position.y - def.half_width) {
+            if (wall.min.x < player.position.x + hull.max.x &&
+                wall.max.x > player.position.x + hull.min.x &&
+                wall.min.y < player.position.y + hull.max.y &&
+                wall.max.y > player.position.y + hull.min.y) {
                 support = std::max(support, wall.max.z);
             }
         }
@@ -195,14 +268,16 @@ bool StandsIntoWorld(const PlayerState& player, const MovementDef& def, const Ma
 
 } // namespace
 
-void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map) {
+void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map,
+                  std::span<const Aabb> blockers) {
     if (!player.alive) {
         return;
     }
-
+    // 先判“能否站起”，再推出：低矮天花板下不能靠竖直推出把玩家压到地下。
     if (!player.ducking && StandsIntoWorld(player, def, map)) {
         player.ducking = true;
     }
+    Depenetrate(player, def, map, blockers);
 
     const float wish_len =
         std::sqrt(player.wish_forward * player.wish_forward + player.wish_side * player.wish_side);
@@ -230,10 +305,11 @@ void StepMovement(PlayerState& player, const MovementDef& def, const MapDef* map
         player.velocity.z -= def.gravity * def.tick_dt;
     }
 
-    MoveAxis(player, def, map, 0, player.velocity.x * def.tick_dt);
-    MoveAxis(player, def, map, 1, player.velocity.y * def.tick_dt);
-    MoveAxis(player, def, map, 2, player.velocity.z * def.tick_dt);
+    MoveAxis(player, def, map, blockers, 0, player.velocity.x * def.tick_dt);
+    MoveAxis(player, def, map, blockers, 1, player.velocity.y * def.tick_dt);
+    MoveAxis(player, def, map, blockers, 2, player.velocity.z * def.tick_dt);
     ResolveGround(player, def, map);
+    Depenetrate(player, def, map, blockers);
 }
 
 } // namespace recoil

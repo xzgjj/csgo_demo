@@ -242,19 +242,30 @@ def check_rotation(layout, computed, issues):
 def _spawn_clear_issues(layout, boxes, issues):
     for team, spawn in layout["spawns"].items():
         cx, cy = spawn["center"][0], spawn["center"][1]
-        probe = {
-            "center": [cx, cy, 36.0],
-            "size": [32, 32, 72],
-            "bottom": 0.0,
-            "top": 72.0,
-        }
-        for box in boxes:
-            if (
-                box["collision"]
-                and box["top"] > EPS
-                and volume_overlap(probe, box) > 0.0
-            ):
-                issues.append(f"出生点卡进实体: {team} by {box['id']}")
+        slots = spawn.get("slots") or [[cx, cy]]
+        if len(slots) < 5:
+            issues.append(f"出生位不足: {team} 只有 {len(slots)} 个（应 >= 5）")
+        for index, slot in enumerate(slots):
+            sx, sy = float(slot[0]), float(slot[1])
+            probe = {
+                "center": [sx, sy, 36.0],
+                "size": [32, 32, 72],
+                "bottom": 0.0,
+                "top": 72.0,
+            }
+            for box in boxes:
+                if (
+                    box["collision"]
+                    and box["top"] > EPS
+                    and volume_overlap(probe, box) > 0.0
+                ):
+                    issues.append(f"出生点卡进实体: {team}[{index}] by {box['id']}")
+        for i in range(len(slots)):
+            for j in range(i + 1, len(slots)):
+                dx = float(slots[i][0]) - float(slots[j][0])
+                dy = float(slots[i][1]) - float(slots[j][1])
+                if (dx * dx + dy * dy) ** 0.5 < 32.0:
+                    issues.append(f"出生位重叠: {team}[{i}] 与 [{j}] 间距 < 32")
     return issues
 
 

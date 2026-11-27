@@ -4,15 +4,72 @@
 #include <cmath>
 
 #include "recoil/base/vec3.h"
+#include "recoil/world/trace.h"
 
 namespace recoil {
 namespace {
 
-constexpr float kEyeHeight = 64.0f;
+constexpr float kGrenadeRadius = 4.0f;
+constexpr float kRestitution = 0.45f;
+constexpr float kTangentialFriction = 0.80f;
+constexpr float kRestSpeed = 40.0f;
 
 float Distance(const Vec3& a, const Vec3& b) {
     const Vec3 d = a - b;
     return std::sqrt(Dot(d, d));
+}
+
+// 球（用 ±r AABB 近似）扫掠：反弹、摩擦、静止；每 tick 最多一次反弹，避免反复振荡。
+void IntegrateGrenade(GrenadeState& grenade, const GrenadeDef& def, const MapDef* map) {
+    const float dt = 1.0f / 64.0f;
+    grenade.velocity.z -= def.gravity * dt;
+    Vec3 motion = grenade.velocity * dt;
+    if (map == nullptr) {
+        grenade.position = grenade.position + motion;
+        if (grenade.position.z <= 0.0f) {
+            grenade.position.z = 0.0f;
+            grenade.velocity = {};
+        }
+        return;
+    }
+    const Aabb hull{{-kGrenadeRadius, -kGrenadeRadius, -kGrenadeRadius},
+                    {kGrenadeRadius, kGrenadeRadius, kGrenadeRadius}};
+    for (int step = 0; step < 4; ++step) {
+        if (Length(motion) < 1.0e-4f) {
+            break;
+        }
+        const TraceHit hit = TraceHull(*map, hull, grenade.position, motion);
+        if (!hit.hit) {
+            grenade.position = grenade.position + motion;
+            break;
+        }
+        if (hit.startsolid) {
+            // 出生/嵌入实体：向上抬 1u，下一 tick 继续求交，避免死循环。
+            grenade.position.z += 1.0f;
+            grenade.velocity = {};
+            break;
+        }
+        grenade.position = hit.point;
+        const float normal_speed = Dot(grenade.velocity, hit.normal);
+        if (normal_speed < 0.0f) {
+            grenade.velocity =
+                grenade.velocity - hit.normal * ((1.0f + kRestitution) * normal_speed);
+        }
+        const Vec3 tangential = grenade.velocity - hit.normal * Dot(grenade.velocity, hit.normal);
+        grenade.velocity =
+            hit.normal * Dot(grenade.velocity, hit.normal) + tangential * kTangentialFriction;
+        if (hit.normal.z > 0.7f && Length(grenade.velocity) < kRestSpeed) {
+            grenade.velocity = {};
+        }
+        break;
+    }
+    const float floor = map->floor_z + kGrenadeRadius;
+    if (grenade.position.z < floor) {
+        grenade.position.z = floor;
+        if (grenade.velocity.z < 0.0f) {
+            grenade.velocity.z = 0.0f;
+        }
+    }
 }
 
 void Detonate(WorldState& state, const Content& content, GrenadeState& grenade, EventList& events) {
@@ -100,7 +157,9 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
         grenade.active = true;
         grenade.kind = static_cast<uint8_t>(command.grenade);
         grenade.owner = command.player;
-        grenade.position = player.position + Vec3{0.0f, 0.0f, kEyeHeight};
+        const float eye =
+            player.ducking ? content.movement.duck_eye_height : content.movement.eye_height;
+        grenade.position = player.position + Vec3{0.0f, 0.0f, eye};
         grenade.velocity = DirectionFromAngles(command.yaw_degrees, command.pitch_degrees) *
                            content.grenades.throw_speed;
         grenade.fuse_ticks = content.grenades.fuse_ticks;
@@ -111,7 +170,7 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
                  static_cast<int32_t>(RejectReason::NoGrenadeSlot)});
 }
 
-void StepGrenades(WorldState& state, const Content& content, EventList& events) {
+void StepGrenades(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
     const GrenadeDef& def = content.grenades;
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
@@ -132,13 +191,7 @@ void StepGrenades(WorldState& state, const Content& content, EventList& events) 
         if (!grenade.active) {
             continue;
         }
-        const float dt = 1.0f / 64.0f;
-        grenade.velocity.z -= def.gravity * dt;
-        grenade.position = grenade.position + grenade.velocity * dt;
-        if (grenade.position.z <= 0.0f) {
-            grenade.position.z = 0.0f;
-            grenade.velocity = {};
-        }
+        IntegrateGrenade(grenade, def, map);
         if (grenade.fuse_ticks > 0) {
             --grenade.fuse_ticks;
         }

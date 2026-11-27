@@ -7,3 +7,4 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 LAYOUT = ROOT / "content/maps/de_ash.layout.json"
 BOXES = ROOT / "host/scenes/de_ash_boxes.json"
+GLB = ROOT / "host/models/map/de_ash.glb"
