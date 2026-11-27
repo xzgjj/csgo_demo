@@ -87,26 +87,34 @@ def _check_support(solid, issues: list[str]) -> None:
             issues.append(f"悬浮 {box['id']} bottom={box['bottom']:.0f}")
 
 
+def _check_spawn_slots(team, spawn, solid, issues: list[str]) -> None:
+    if len(spawn.get("slots", [])) < 5:
+        issues.append(f"出生位不足 {team}")
+    for index, slot in enumerate(spawn.get("slots", [])):
+        probe = {"center": [slot[0], slot[1], 36.0], "size": [32, 32, 72],
+                 "bottom": 0.0, "top": 72.0}
+        for box in solid:
+            if box["top"] > 1.0 and overlap(probe, box) > 0.0:
+                issues.append(f"出生点卡实体 {team}[{index}] by {box['id']}")
+
+
+def _check_site_center(site, solid, issues: list[str]) -> None:
+    cx, cy, site_z = site["center"][0], site["center"][1], site["center"][2]
+    for box in solid:
+        near_center = abs(box["center"][0] - cx) < box["size"][0] / 2 and \
+            abs(box["center"][1] - cy) < box["size"][1] / 2
+        if not near_center or box["top"] <= 0:
+            continue
+        if box["top"] > site_z + 32 or box["top"] <= site_z:
+            continue  # 高过包点或与包点齐平都允许，只有半高遮挡才算占位
+        issues.append(f"包点中心被实体占据 {box['id']}")
+
+
 def _check_spawns_sites(layout, solid, issues: list[str]) -> None:
     for team, spawn in layout["spawns"].items():
-        if len(spawn.get("slots", [])) < 5:
-            issues.append(f"出生位不足 {team}")
-        for index, slot in enumerate(spawn.get("slots", [])):
-            probe = {"center": [slot[0], slot[1], 36.0], "size": [32, 32, 72],
-                     "bottom": 0.0, "top": 72.0}
-            for box in solid:
-                if box["top"] > 1.0 and overlap(probe, box) > 0.0:
-                    issues.append(f"出生点卡实体 {team}[{index}] by {box['id']}")
+        _check_spawn_slots(team, spawn, solid, issues)
     for site in layout["bombsites"]:
-        cx, cy, site_z = site["center"][0], site["center"][1], site["center"][2]
-        for box in solid:
-            near_center = abs(box["center"][0] - cx) < box["size"][0] / 2 and \
-                abs(box["center"][1] - cy) < box["size"][1] / 2
-            if not near_center or box["top"] <= 0:
-                continue
-            if box["top"] > site_z + 32 or box["top"] <= site_z:
-                continue  # 高过包点或与包点齐平都允许，只有半高遮挡才算占位
-            issues.append(f"包点中心被实体占据 {box['id']}")
+        _check_site_center(site, solid, issues)
 
 
 def _lane_blocker(lane, solid, total: float, issues: list[str]) -> None:
