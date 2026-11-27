@@ -12,6 +12,8 @@ extends Control
 ##   var radar := RadarPanel.new(); hud.add_child(radar); radar.setup(self)
 
 const BOXES_PATH := "res://scenes/de_ash_boxes.json"
+## 当前地图清单；默认 de_ash，换图时由 set_boxes_path()/use_map() 覆盖。
+var boxes_path: String = BOXES_PATH
 ## sim 平面 x/y 的默认范围（de_ash 4096 地图 + 外沿）；盒子清单缺失时回退。
 const DEFAULT_WORLD_RECT := Rect2(-2080.0, -2080.0, 4160.0, 4160.0)
 const RADAR_RECT := Rect2(20.0, 132.0, 240.0, 240.0)
@@ -68,6 +70,24 @@ func setup(main_inst: Node) -> void:
 	main_node = main_inst
 	build()
 	_apply_visible()
+
+
+## 换图：指定盒子清单路径（须在 setup 前或之后重建均可，内部会重读轮廓）。
+func set_boxes_path(path: String) -> void:
+	if path.is_empty():
+		return
+	boxes_path = path
+	_load_map()
+
+
+## 换图：按注册表 map_id 取清单；未注册返回 false（保持当前图）。
+func use_map(map_id: String) -> bool:
+	var path := MapLoader.boxes_path_for(map_id)
+	if path.is_empty():
+		push_warning("雷达：地图 %s 未注册" % map_id)
+		return false
+	set_boxes_path(path)
+	return true
 
 func build() -> void:
 	if _built:
@@ -185,7 +205,7 @@ func _load_map() -> void:
 	_wall_colors.clear()
 	_site_positions.clear()
 	_site_names.clear()
-	var text := FileAccess.get_file_as_string(BOXES_PATH)
+	var text := FileAccess.get_file_as_string(boxes_path)
 	if text.is_empty():
 		_add_fallback_outline()
 		return
@@ -386,3 +406,4 @@ func _draw_own_arrow(pos: Vector2) -> void:
 	draw_colored_polygon(PackedVector2Array([tip, tail_left, tail_right]), OWN_COLOR)
 	draw_polyline(PackedVector2Array([tip, tail_left, tail_right, tip]),
 			OWN_OUTLINE_COLOR, 1.5, true)
+
