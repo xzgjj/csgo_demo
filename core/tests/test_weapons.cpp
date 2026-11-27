@@ -157,7 +157,7 @@ TEST_CASE("武器表：AK-47/M4A4/AWP 伤害与弹匣对齐 CS:GO") {
 
 TEST_CASE("武器表：护甲穿透/距离衰减/射速/换弹/倍镜按武器") {
     CHECK(Row(WeaponId::AK47).def.armor_ratio == doctest::Approx(0.775f));
-    CHECK(Row(WeaponId::M4A4).def.armor_ratio == doctest::Approx(0.70f));
+    CHECK(Row(WeaponId::M4A4).def.armor_ratio == doctest::Approx(0.75f));
     CHECK(Row(WeaponId::AWP).def.armor_ratio == doctest::Approx(0.975f));
     CHECK(Row(WeaponId::AK47).def.range_modifier == doctest::Approx(0.98f));
     CHECK(Row(WeaponId::M4A4).def.range_modifier == doctest::Approx(0.97f));
@@ -236,7 +236,7 @@ TEST_CASE("护甲按武器 armor_ratio 减伤：AK 28 / M4 23 / AWP 112") {
     WorldState m4 = Duel();
     GiveArms(m4, 0, WeaponId::M4A4);
     m4.players[1].armor = 100;
-    CHECK(StepOne(m4, body, content).state.players[1].health == 77);
+    CHECK(StepOne(m4, body, content).state.players[1].health == 75);
 
     WorldState awp = Duel(200);
     GiveArms(awp, 0, WeaponId::AWP);

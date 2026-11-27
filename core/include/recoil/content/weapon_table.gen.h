@@ -28,7 +28,7 @@ inline constexpr std::array<WeaponRow, kWeaponTableSize> kWeaponTable = {{
     {WeaponId::AK47, "AK-47",
      WeaponDef{36, 30, 90, 6, 160, 0.775f, 8192.0f, 0.98f, 500.0f, 1.0f}, 2700, false},
     {WeaponId::M4A4, "M4A4",
-     WeaponDef{33, 30, 90, 6, 198, 0.7f, 8192.0f, 0.97f, 500.0f, 1.0f}, 3100, false},
+     WeaponDef{33, 30, 90, 6, 198, 0.75f, 8192.0f, 0.97f, 500.0f, 1.0f}, 3100, false},
     {WeaponId::AWP, "AWP",
      WeaponDef{115, 10, 30, 93, 237, 0.975f, 8192.0f, 0.99f, 500.0f, 4.0f}, 4750, false},
     {WeaponId::USP, "USP-S",

@@ -184,7 +184,7 @@
       "rpm": 666.67,
       "fire_interval_ticks": 6,
       "reload_ticks": 198,
-      "armor_ratio": 0.7,
+      "armor_ratio": 0.75,
       "range": 8192.0,
       "range_modifier": 0.97,
       "range_modifier_unit": 500.0,

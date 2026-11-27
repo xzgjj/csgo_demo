@@ -44,6 +44,10 @@ func _apply_hud() -> void:
 	if radar != null:
 		var zoom := float(store.get_value("gameplay.radar.zoom"))
 		(radar as Control).scale = Vector2(zoom, zoom)
+		radar.set("enabled", bool(store.get_value("gameplay.info.radar")))
+	var info: Variant = main.get_node_or_null("InfoOverlay")
+	if info != null and info.has_method("refresh"):
+		info.refresh()
 
 
 func _on_camera(item_id: String, value: Variant) -> void:

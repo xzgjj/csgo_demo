@@ -84,6 +84,11 @@ static func build(main: Node) -> void:
 	overlay_layer.add_child(blind_overlay)
 	main.set("blind_overlay", blind_overlay)
 
+	var info := InfoOverlay.new()
+	info.name = "InfoOverlay"
+	main.add_child(info)
+	info.setup(main.get("sim"), main.get("settings"))
+
 
 ## 是否有会抢鼠标的页面打开（主菜单/暂停/设置/结算/比分板/购买菜单/物品栏）。
 static func page_open(main: Node) -> bool:

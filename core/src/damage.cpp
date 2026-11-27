@@ -55,4 +55,12 @@ DamageResult ComputeDamage(const DamageInput& input) {
     return result;
 }
 
+float RelativeHitAngle(float attacker_x, float attacker_y, float target_x, float target_y,
+                       float target_view_yaw) {
+    constexpr float kRadToDeg = 57.2957795f;
+    const float raw =
+        std::atan2(attacker_y - target_y, attacker_x - target_x) * kRadToDeg - target_view_yaw;
+    return std::fmod(raw + 540.0f, 360.0f) - 180.0f;
+}
+
 } // namespace recoil

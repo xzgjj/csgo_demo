@@ -193,6 +193,49 @@
         }
         return last_hit_by_[player].flags;
     }
+    // DEP-02：最近一次受击方向（相对视角，-180..180）与累计受击次数。
+    float get_last_hit_direction(int player) const {
+        if (player < 0 || player >= recoil::kMaxPlayers) {
+            return 0.0f;
+        }
+        return hit_direction_[player];
+    }
+
+    int get_damage_taken(int player) const {
+        if (player < 0 || player >= recoil::kMaxPlayers) {
+            return 0;
+        }
+        return damage_taken_[player];
+    }
+
+    // DEP-02 声音层：上一 tick 的可听事件（枪声/换弹/投掷/爆炸）→ 位置与距离。
+    godot::Array sound_events() const {
+        godot::Array out;
+        for (int i = 0; i < last_events_.count; ++i) {
+            const recoil::Event& event = last_events_.items[i];
+            if (event.kind != recoil::EventKind::WeaponFired &&
+                event.kind != recoil::EventKind::ReloadStarted &&
+                event.kind != recoil::EventKind::GrenadeThrown &&
+                event.kind != recoil::EventKind::GrenadeExploded) {
+                continue;
+            }
+            if (event.source >= state_.player_count) {
+                continue;
+            }
+            const recoil::PlayerState& owner = state_.players[event.source];
+            godot::Dictionary row;
+            row["kind"] = static_cast<int>(event.kind);
+            row["x"] = owner.position.x;
+            row["y"] = owner.position.y;
+            const recoil::Vec3 local = state_.players[human_player_].position;
+            const float dx = owner.position.x - local.x;
+            const float dy = owner.position.y - local.y;
+            row["distance"] = std::sqrt(dx * dx + dy * dy);
+            out.push_back(row);
+        }
+        return out;
+    }
+
     float get_last_hit_distance(int player) const {
         if (player < 0 || player >= static_cast<int>(state_.player_count)) {
             return 0.0f;

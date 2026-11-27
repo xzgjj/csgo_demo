@@ -48,6 +48,8 @@ add_executable(recoil_tests
     tests/test_bot.cpp
     tests/test_breakable.cpp
     tests/test_damage.cpp
+    tests/test_depth.cpp
+    tests/test_spray.cpp
     tests/test_drops.cpp
     tests/test_fire_state.cpp
     tests/test_grenades.cpp
