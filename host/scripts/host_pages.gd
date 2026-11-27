@@ -31,7 +31,21 @@ static func build(main: Node) -> void:
 	main.add_child(menu)
 	menu.build()
 	main.set("menu", menu)
-	menu.start_button.pressed.connect(Callable(main, "_start_match"))
+
+	var start_page := StartGamePage.new()
+	start_page.name = "StartGamePage"
+	main.add_child(start_page)
+	start_page.build()
+	start_page.visible = false
+	menu.start_button.pressed.connect(func() -> void:
+		menu.visible = false
+		start_page.open())
+	start_page.start_requested.connect(func(map_id: String, mode_id: String) -> void:
+		main.set("map_id", map_id)
+		if mode_id == "training":
+			main.call("_start_play")
+		else:
+			main.call("_start_match"))
 	menu.settings_button.pressed.connect(Callable(main, "show_settings_page"))
 	menu.quit_button.pressed.connect(Callable(main, "_quit"))
 
@@ -92,8 +106,10 @@ static func build(main: Node) -> void:
 
 ## 是否有会抢鼠标的页面打开（主菜单/暂停/设置/结算/比分板/购买菜单/物品栏）。
 static func page_open(main: Node) -> bool:
+	var start_page: Variant = main.get_node_or_null("StartGamePage")
 	var pages: Array[bool] = [main.menu.visible, main.pause_page.visible,
 			main.settings_page.visible, main.result_page.visible, main.scoreboard.visible,
+			start_page != null and start_page.visible,
 			main.buy_menu != null and main.buy_menu.is_open(),
 			main.loadout_page != null and main.loadout_page.visible]
 	return pages.has(true)
