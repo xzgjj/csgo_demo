@@ -114,8 +114,28 @@ static func registry() -> Dictionary:
 
 
 static func default_map_id() -> String:
-	var id := str(registry().get("default", "de_ash"))
-	return id if not id.is_empty() else "de_ash"
+	var id := str(registry().get("default", "de_dust2"))
+	return id if not id.is_empty() else "de_dust2"
+
+
+## UI 可见地图：hidden=true 的旧图只保留本地，不进入选择列表。
+static func visible_maps() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for item: Dictionary in registry().get("maps", []):
+		if not bool(item.get("hidden", false)):
+			result.append(item)
+	return result
+
+
+## 画面换图：盒子/GLB 两套视觉必须与内核 map_id 同步，避免“加载新图仍显示旧图”。
+static func ensure_world(world: Variant, map_id: String) -> bool:
+	var id := map_id
+	if boxes_path_for(id).is_empty():
+		id = default_map_id()
+	if world.map_id == id and world.object_count > 0:
+		return true
+	push_warning("画面地图 %s → %s，重建世界视觉" % [world.map_id, id])
+	return bool(world.rebuild(boxes_path_for(id), id))
 
 
 ## map_id → boxes 路径；未注册返回空串。
@@ -146,6 +166,17 @@ static func start_match(sim: RefCounted, map_id: String) -> bool:
 	else:
 		sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
 	sim.begin_match()
+	return true
+
+
+## 训练/自由模式：重置后仍注入同一张地图；不 begin_match（保留训练人数）。
+static func start_training(sim: RefCounted, map_id: String) -> bool:
+	sim.reset()
+	var written := apply_map(sim, map_id)
+	if written < 0:
+		push_error("训练地图 %s 注入失败，拒绝开局" % map_id)
+		return false
+	sim.set_buy_enabled(true)
 	return true
 
 

@@ -1,37 +1,44 @@
 class_name MainMenuPage
 extends CanvasLayer
-## 主菜单：品牌标题 + 当前内容摘要 + 开始游戏 / 物品栏 / 设置 / 退出。
-## 开始游戏不再直连开局，而是打开 StartGamePage 做地图与模式选择。
+## 主菜单：单机式左侧指挥栏（作战 / 装备 / 设置 / 退出）+ 右下当前部署。
+## “作战部署”打开 StartGamePage；设置入口沿用 SPEC-05 的 8 页设置页。
 
 var start_button: Button
 var settings_button: Button
 var loadout_button: Button
 var quit_button: Button
 var hint_label: Label
+var status_label: Label
 
 
 func build() -> void:
 	layer = 3
-	var box := UiFactory.build_card(self, "PROJECT RECOIL", 460.0, 560.0)
-	UiFactory.add_label(box, "战术射击灰盒 · C++ 确定性内核 + Godot 表现层", 15)
-	UiFactory.add_label(box, _map_line(), 14).add_theme_color_override(
-			"font_color", UiFactory.NEUTRAL_COLOR)
-	start_button = UiFactory.add_button(box, "开始游戏 · 选择地图与模式")
-	loadout_button = UiFactory.add_button(box, "物品栏 / 装备")
-	settings_button = UiFactory.add_button(box, "设置 · 画面 / 音频 / 按键")
-	quit_button = UiFactory.add_button(box, "退出")
-	hint_label = UiFactory.add_label(
-			box, "WASD 移动 · Shift 静步 · Space 跳 · Ctrl 蹲 · 左键开火 · R 换弹 · 1/2/3 切枪 · F5 视角 · F3 调试 · Esc 暂停 · Tab 比分板 · B 购买 · E 下包", 13)
-	hint_label.add_theme_color_override("font_color", UiFactory.NEUTRAL_COLOR)
+	var root := MenuSkin.root(self)
+	var box := MenuSkin.side_panel(root, 520.0)
+	MenuSkin.kicker(box, "LOCAL TACTICAL SANDBOX  //  00.1")
+	MenuSkin.heading(box, "PROJECT\nRECOIL", 52)
+	MenuSkin.note(box, "单一玩家 · 本地 5v5 · 新地图已锁定")
+	MenuSkin.rule(box)
+	MenuSkin.kicker(box, "指挥中心  /  COMMAND")
+	start_button = MenuSkin.nav_button(box, "01   作战部署   /   DEPLOY", true)
+	loadout_button = MenuSkin.nav_button(box, "02   装备整备   /   LOADOUT")
+	settings_button = MenuSkin.nav_button(box, "03   系统设置   /   OPTIONS")
+	quit_button = MenuSkin.nav_button(box, "04   退出游戏   /   EXIT")
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
+	hint_label = MenuSkin.note(
+			box, "WASD 移动 · B 购买 · E 下包 · Esc 暂停 · Tab 比分板")
+	hint_label.add_theme_font_size_override("font_size", 12)
+	_build_status(root)
 
 
-func _map_line() -> String:
-	var ids: Array[String] = []
-	for item: Dictionary in MapLoader.registry().get("maps", []):
-		ids.append(str(item.get("id", "")))
-	if ids.is_empty():
-		return "地图注册表不可用 · 将回退 de_ash"
-	return "可用地图 %s · 默认 %s" % [" / ".join(ids), MapLoader.default_map_id()]
+func _build_status(root: Control) -> void:
+	var card := MenuSkin.corner_card(root, 360.0, 168.0)
+	MenuSkin.kicker(card, "当前部署  /  OPERATION")
+	MenuSkin.heading(card, MapLoader.default_map_id().to_upper(), 30)
+	status_label = MenuSkin.note(card, "5v5 · 爆破 · 本地运行")
+	MenuSkin.note(card, "地图已锁定；装备与设置进入后生效。")
 
 
 func button_texts() -> Array[String]:

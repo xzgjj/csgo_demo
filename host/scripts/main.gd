@@ -137,12 +137,11 @@ func _show_menu() -> void:
 	scoreboard.visible = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-## 场景/截图执行器用的 2 人灰盒（±800 竞技场）模式，保持既有断言与 golden 不变。
+## 场景/截图执行器的 2 人自由场：不注入地图，保持既有断言与 golden。
 func _start_play() -> void:
 	sim.reset()
 	sim.set_buy_enabled(true)
 	_enter_game(false)
-
 ## 可玩模式：注册表地图 + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
 func _start_match() -> void:
 	sim.reset()
@@ -155,8 +154,9 @@ func _restart() -> void:
 	if match_mode:
 		_start_match()
 	else:
-		_start_play()
+		TrainingFlow.start(self)
 func _enter_game(is_match: bool) -> void:
+	MapLoaderScript.ensure_world(world, map_id)
 	match_mode = is_match
 	playing = true
 	paused = false

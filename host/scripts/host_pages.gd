@@ -43,7 +43,7 @@ static func build(main: Node) -> void:
 	start_page.start_requested.connect(func(map_id: String, mode_id: String) -> void:
 		main.set("map_id", map_id)
 		if mode_id == "training":
-			main.call("_start_play")
+			TrainingFlow.start(main)
 		else:
 			main.call("_start_match"))
 	menu.settings_button.pressed.connect(Callable(main, "show_settings_page"))

@@ -22,6 +22,19 @@ var blockout: BlockoutBuilder
 var _fallback_root: Node3D
 
 
+func rebuild(boxes_path: String = DEFAULT_BOXES_PATH, id: String = "de_dust2") -> bool:
+	for child in get_children():
+		remove_child(child)
+		child.free()
+	spawn_anchors.clear()
+	site_anchors.clear()
+	blockout = null
+	_fallback_root = null
+	object_count = 0
+	source = "none"
+	return build(boxes_path, id)
+
+
 func build(boxes_path: String = DEFAULT_BOXES_PATH, id: String = "de_ash") -> bool:
 	map_id = id
 	MaterialLib.use_texture_set(map_id)

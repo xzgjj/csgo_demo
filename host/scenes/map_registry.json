@@ -1,21 +1,22 @@
 {
  "schema": "map-registry/1",
- "default": "de_ash",
+ "default": "de_dust2",
  "maps": [
-  {
-   "id": "de_ash",
-   "name": "de_ash",
-   "boxes": "res://scenes/de_ash_boxes.json",
-   "glb": "res://models/map/de_ash.glb",
-   "layout": "content/maps/de_ash.layout.json"
-  },
   {
    "id": "de_dust2",
    "name": "de_dust2",
    "boxes": "res://scenes/de_dust2_boxes.json",
    "glb": "res://models/map/de_dust2.glb",
    "layout": "content/maps/de_dust2.layout.json"
+  },
+  {
+   "id": "de_ash",
+   "name": "de_ash",
+   "hidden": true,
+   "boxes": "res://scenes/de_ash_boxes.json",
+   "glb": "res://models/map/de_ash.glb",
+   "layout": "content/maps/de_ash.layout.json"
   }
  ],
- "note": "换图只改这里：新增 id 指向独立 boxes/glb；default 决定开局用哪张。缺文件时回退 default。"
+ "note": "新图 de_dust2 为默认且唯一显示的地图；de_ash 仅本地保留，hidden=true 不在 UI 列出，仍可用 --map=de_ash 显式调试。"
 }

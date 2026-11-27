@@ -1,72 +1,62 @@
 class_name StartGamePage
 extends CanvasLayer
-## 开局页：地图 / 模式选择 → 开始；主菜单“开始游戏”入口。
-## 只收集用户选择并发出 start_requested，不直接改 main 状态（由 HostPages 接线）。
+## 作战部署页：地图锁定 de_dust2，只选模式；左侧指挥栏 + 右下任务简报。
+## 只发 start_requested(map_id, mode_id)，不直接改 main 状态。
 
 signal start_requested(map_id: String, mode_id: String)
 
-const MAP_MODES := {
-	"match": "5v5 匹配",
-	"training": "本地训练（2 人灰盒）",
+const MODES := {
+	"match": ["5v5 匹配", "10 人 · 炸弹模式 · 完整经济"],
+	"training": ["本地训练", "2 人灰盒 · 练枪 / 走位"],
 }
 
-var map_option: OptionButton
-var mode_option: OptionButton
 var play_button: Button
 var back_button: Button
-var summary_label: Label
-var map_desc: Label
-var box: VBoxContainer
+var mode_buttons: Dictionary = {}
+var _map_id := MapLoader.cli_map_id()
+var _mode := "match"
 
 
 func build() -> void:
 	layer = 3
-	var root := UiFactory.build_card(self, "开始游戏", 350.0, 640.0)
-	box = root
-	map_desc = UiFactory.add_label(root, "选择地图与模式；地图列表由注册表提供。", 14)
-	map_desc.add_theme_color_override("font_color", UiFactory.NEUTRAL_COLOR)
-	map_option = _add_choice_row("地图", _map_options(), _on_map_changed)
-	mode_option = _add_choice_row("模式", Array(MAP_MODES.values()), _on_mode_changed)
-	summary_label = UiFactory.add_label(root, "", 15)
-	play_button = UiFactory.add_button(root, "进入对局")
-	back_button = UiFactory.add_button(root, "返回")
+	var root := MenuSkin.root(self)
+	var box := MenuSkin.side_panel(root, 560.0)
+	MenuSkin.kicker(box, "作战部署  /  DEPLOYMENT")
+	MenuSkin.heading(box, _map_id.to_upper(), 44)
+	MenuSkin.note(box, "新地图 · 爆破 · 本地运行 · 地图已锁定")
+	MenuSkin.rule(box)
+	MenuSkin.kicker(box, "模式  /  MODE")
+	for mode_id: String in MODES:
+		var pair: Array = MODES[mode_id]
+		var button := MenuSkin.nav_button(box, "%s   /   %s" % [pair[0], pair[1]],
+				mode_id == _mode)
+		button.custom_minimum_size = Vector2(456, 66)
+		button.add_theme_font_size_override("font_size", 17)
+		button.pressed.connect(_select_mode.bind(mode_id))
+		mode_buttons[mode_id] = button
+	var spacer := Control.new()
+	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	box.add_child(spacer)
+	MenuSkin.note(box, "地图已锁定，本页不提供换图。")
+	play_button = MenuSkin.primary_button(box, "进入对局   →")
+	back_button = MenuSkin.nav_button(box, "返回指挥中心")
 	play_button.pressed.connect(_on_play)
 	back_button.pressed.connect(close)
-	_refresh_summary()
+	_build_brief(root)
 
 
-func _map_options() -> Array:
-	var options: Array = []
-	for item: Dictionary in MapLoader.registry().get("maps", []):
-		options.append(str(item.get("id", "")))
-	if options.is_empty():
-		options.append(MapLoader.default_map_id())
-	return options
-
-
-func _add_choice_row(caption: String, options: Array, on_change: Callable) -> OptionButton:
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 12)
-	var label := Label.new()
-	label.text = caption
-	label.add_theme_font_size_override("font_size", 16)
-	label.custom_minimum_size = Vector2(80, 0)
-	row.add_child(label)
-	var picker := OptionButton.new()
-	picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	for text: Variant in options:
-		picker.add_item(str(text))
-	picker.item_selected.connect(on_change)
-	row.add_child(picker)
-	box.add_child(row)
-	picker.select(0)
-	return picker
+func _build_brief(root: Control) -> void:
+	var card := MenuSkin.corner_card(root, 390.0, 196.0)
+	MenuSkin.kicker(card, "任务简报  /  BRIEFING")
+	MenuSkin.heading(card, _map_id.to_upper(), 28)
+	MenuSkin.note(card, "双包点 · 长 A / 中门 / B 通道")
+	MenuSkin.note(card, "10 人 · 购买 25s · 本地确定性内核")
+	MenuSkin.note(card, "模式只影响人数与节奏，默认对战地图为新图。")
 
 
 func open() -> void:
 	visible = true
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_refresh_summary()
 
 
 func close() -> void:
@@ -74,31 +64,19 @@ func close() -> void:
 
 
 func selected_map() -> String:
-	if map_option == null or map_option.item_count == 0:
-		return MapLoader.default_map_id()
-	return map_option.get_item_text(map_option.selected)
+	return _map_id
 
 
 func selected_mode() -> String:
-	if mode_option == null or mode_option.item_count == 0:
-		return "match"
-	var keys: Array = MAP_MODES.keys()
-	return str(keys[clampi(mode_option.selected, 0, keys.size() - 1)])
+	return _mode
 
 
-func _on_map_changed(_index: int) -> void:
-	_refresh_summary()
-
-
-func _on_mode_changed(_index: int) -> void:
-	_refresh_summary()
-
-
-func _refresh_summary() -> void:
-	if summary_label == null:
+func _select_mode(mode_id: String) -> void:
+	if not mode_buttons.has(mode_id):
 		return
-	summary_label.text = "地图 %s · 模式 %s · 点击“进入对局”开始" % [
-		selected_map(), MAP_MODES.get(selected_mode(), "5v5 匹配")]
+	_mode = mode_id
+	for id: String in mode_buttons:
+		MenuSkin.set_nav_selected(mode_buttons[id], id == _mode)
 
 
 func _on_play() -> void:

@@ -34,6 +34,8 @@ func _initialize() -> void:
 
 func _run(data: Dictionary, out_dir: String, visual: bool) -> void:
 	await process_frame
+	# 场景 golden 仍是 de_ash 基线；生产默认地图在 map_registry 中为 de_dust2。
+	main.map_id = "de_ash"
 	if str(data.get("mode", "demo")) == "match":
 		main._start_match()
 	else:

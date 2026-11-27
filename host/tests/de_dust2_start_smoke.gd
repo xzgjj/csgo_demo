@@ -23,6 +23,15 @@ func _run() -> void:
 			"开局双方应各 5 人")
 	_expect(int(main.sim.get_round_number()) == 1, "开局回合号应为 1")
 	_expect(bool(main.sim.buy_enabled()), "开局后购买应开启")
+	_expect(main.world.map_id == "de_dust2", "画面世界应为 de_dust2，实际 %s" % main.world.map_id)
+	_expect(int(main.world.object_count) == 175, "画面盒数应为 175，实际 %d" % int(
+			main.world.object_count))
+	page.start_requested.emit("de_dust2", "training")
+	for i in 2:
+		await physics_frame
+	_expect(not bool(main.match_mode), "训练模式 match_mode 应为 false")
+	_expect(int(main.sim.get_wall_count()) == 146, "训练模式也应注入 de_dust2 碰撞")
+	_expect(main.world.map_id == "de_dust2", "训练模式画面世界应保持 de_dust2")
 	finish("DE_DUST2_START_SMOKE")
 
 

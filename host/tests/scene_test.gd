@@ -10,6 +10,8 @@ var failures: Array[String] = []
 func _initialize() -> void:
 	main = load("res://main.tscn").instantiate()
 	root.add_child(main)
+	# 旧 smoke/场景以 de_ash 为基线；新图用例自己覆盖 map_id。
+	main.map_id = "de_ash"
 	_run.call_deferred()
 
 
