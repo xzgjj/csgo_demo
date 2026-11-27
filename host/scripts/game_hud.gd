@@ -7,6 +7,7 @@ const TICKS_PER_SECOND := 64.0
 const FEED_MAX_LINES := 5
 const PHASE_NAMES: Array[String] = ["冻结期", "进行中", "回合结束", "比赛结束"]
 const TEXT_COLOR := Color(0.95, 0.97, 1.0)
+const COLOR_DEFAULT := Color(0.55, 1.0, 0.65)
 
 var phase_label: Label
 var timer_label: Label
@@ -17,11 +18,13 @@ var weapon_label: Label
 var c4_label: Label
 var feed_label: Label
 var stats_label: Label
-var crosshair: Label
+var crosshair: Control
+var hitmarker: Control
 var kill_total := 0
 var death_total := 0
 var _feed: Array[String] = []
 var _kill_seen := 0
+var _hit_seen := 0
 
 
 func build() -> void:
@@ -42,8 +45,42 @@ func build() -> void:
 	feed_label.custom_minimum_size = Vector2(380, 120)
 	feed_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	feed_label.add_theme_color_override("font_color", Color(0.95, 0.85, 0.70))
-	crosshair = _make_label(Vector2(632, 344), 26)
-	crosshair.text = "+"
+	# 准星/命中标记用自绘 Control（SPEC-02），位置由锚点铺满视口。
+	crosshair = Crosshair.new()
+	crosshair.name = "Crosshair"
+	add_child(crosshair)
+	hitmarker = Hitmarker.new()
+	hitmarker.name = "Hitmarker"
+	add_child(hitmarker)
+
+
+## 命中标记：headshot / through_wall 来自内核 DamageApplied 的 flags。
+func show_hit(headshot: bool, through_wall: bool) -> void:
+	if hitmarker != null:
+		hitmarker.call("flash", headshot, through_wall)
+
+
+## 准星张合：degrees 为内核实际扩散（含 base 与姿态）。
+func set_crosshair_spread(degrees: float) -> void:
+	if crosshair != null:
+		crosshair.call("set_spread", degrees)
+
+
+## 战斗反馈聚合（SPEC-02/04）：准星扩散 + 命中标记；main 每帧只调这一处。
+func update_combat(sim: RefCounted) -> void:
+	if sim == null:
+		return
+	if sim.has_method("get_effective_inaccuracy"):
+		set_crosshair_spread(float(sim.get_effective_inaccuracy(0)))
+	if not sim.has_method("get_damage_count_by"):
+		return
+	var damage_now: int = int(sim.get_damage_count_by(0))
+	if damage_now > _hit_seen:
+		var hit_flags := 0
+		if sim.has_method("get_last_hit_flags"):
+			hit_flags = int(sim.get_last_hit_flags(0))
+		show_hit((hit_flags & 1) != 0, (hit_flags & 2) != 0)
+	_hit_seen = damage_now
 
 
 func refresh(sim: RefCounted, weapon_name: String) -> void:
@@ -67,12 +104,54 @@ func refresh(sim: RefCounted, weapon_name: String) -> void:
 func reset_feed() -> void:
 	_feed.clear()
 	_kill_seen = 0
+	_hit_seen = 0
 	kill_total = 0
 	death_total = 0
 	if feed_label != null:
 		feed_label.text = ""
 	if stats_label != null:
 		stats_label.text = ""
+
+
+## 设置热应用（SPEC-05 target=hud）：信息层开关、准星、字号、不透明度与整体缩放。
+## 默认值与旧观感一致（准星 gap 5 / thickness 2 / 颜色 #8cffa6），不改变既有 golden。
+func apply_settings(store: SettingsStore) -> void:
+	if store == null or crosshair == null:
+		return
+	crosshair.call("configure", {
+		"gap": float(store.get_value("gameplay.crosshair.gap")),
+		"thickness": float(store.get_value("gameplay.crosshair.thickness")),
+		"color": Color.from_string(str(store.get_value("gameplay.crosshair.color")), COLOR_DEFAULT),
+		"dot": bool(store.get_value("gameplay.crosshair.dot")),
+		"style": str(store.get_value("gameplay.crosshair.style")),
+		"dynamic": bool(store.get_value("gameplay.crosshair.dynamic")),
+	})
+	var show_feed := bool(store.get_value("gameplay.info.killfeed")) \
+			and bool(store.get_value("ui.notify.kill"))
+	feed_label.visible = show_feed
+	var font_size := int(store.get_value("ui.hud.font_size"))
+	feed_label.add_theme_font_size_override("font_size", font_size)
+	stats_label.add_theme_font_size_override("font_size", font_size)
+	var opacity := clampf(float(store.get_value("ui.hud.opacity")) / 100.0, 0.0, 1.0)
+	_apply_opacity(opacity)
+	var hud_scale := float(store.get_value("ui.hud.scale"))
+	scale = Vector2(hud_scale, hud_scale)
+
+
+## CanvasLayer 没有 modulate，逐个子 CanvasItem 调 alpha（准星/命中标记同样跟随）。
+func _apply_opacity(alpha: float) -> void:
+	for child: Node in get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).modulate = Color(1.0, 1.0, 1.0, alpha)
+
+
+func info_layer_enabled(store: SettingsStore) -> Dictionary:
+	return {
+		"killfeed": bool(store.get_value("gameplay.info.killfeed")),
+		"hit_direction": bool(store.get_value("gameplay.info.hit_direction")),
+		"sound_visual": bool(store.get_value("gameplay.info.sound_visual")),
+		"radar": bool(store.get_value("gameplay.info.radar")),
+	}
 
 
 func feed_lines() -> Array[String]:

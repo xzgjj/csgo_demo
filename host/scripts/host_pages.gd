@@ -59,7 +59,6 @@ static func build(main: Node) -> void:
 	main.add_child(settings_page)
 	settings_page.build(main.get("settings"))
 	main.set("settings_page", settings_page)
-	settings_page.changed.connect(Callable(main, "_apply_settings"))
 	settings_page.back_button.pressed.connect(Callable(main, "close_settings_page"))
 
 	var result_page := ResultPage.new()

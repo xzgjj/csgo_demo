@@ -15,6 +15,11 @@
         sites_.site_a = {ax, ay, 0.0f};
         sites_.site_b = {bx, by, 0.0f};
     }
+    void set_spawn_centers(float tx, float ty, float cx, float cy) {
+        state_.spawn_t = {tx, ty, 0.0f};
+        state_.spawn_ct = {cx, cy, 0.0f};
+        state_.spawn_from_map = true;
+    }
     int damage_wall(int index, int damage) {
         return static_cast<int>(recoil::DamageWall(map_, index, damage).result);
     }

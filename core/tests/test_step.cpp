@@ -296,7 +296,7 @@ TEST_CASE("备弹不足时换弹只填充可用部分") {
     CHECK(result.state.players[0].weapon.reserve == 0);
 }
 
-TEST_CASE("护甲损耗按吸收伤害的一半计算") {
+TEST_CASE("护甲损耗按 raw 与穿透率计算（SPEC-04 红线 3）") {
     WorldState state = MakeDuel();
     state.players[1].armor = 100;
     const Content content = DefaultContent();
@@ -305,7 +305,8 @@ TEST_CASE("护甲损耗按吸收伤害的一半计算") {
     const StepResult result = StepOne(state, content, commands);
 
     CHECK(result.state.players[1].health == 72);
-    CHECK(result.state.players[1].armor == 86);
+    // 36×(1-0.775)×0.5=4.05 → 每发扣 4 点甲（旧实现是 applied/2=14）。
+    CHECK(result.state.players[1].armor == 96);
 }
 
 TEST_CASE("Stop 命令不改变状态") {

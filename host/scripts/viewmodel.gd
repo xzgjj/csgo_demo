@@ -21,6 +21,11 @@ const SCOPE_MAGNIFICATION := {"ak": 1.0, "m4": 1.0, "awp": 4.0, "usp": 1.0, "glo
 const REST_POSITION := Vector3(0.24, -0.26, -0.58)
 const REST_ROTATION := Vector3(0.0, -2.0, 0.0)
 const VIEWMODEL_SCALE := 0.85
+## SPEC-02 BAL-06 枪机参数（可配置、可断言）：位移 +z 0.03、俯仰 -1.2°、200 ms 衰减。
+## 单位与相机空间一致（米/度）；改这里即改手感，不改内核。
+const KICK_TRANSLATION := Vector3(0.0, 0.004, 0.030)
+const KICK_ROTATION_DEG := Vector3(-1.2, 0.8, 0.0)
+const KICK_DECAY_PER_SECOND := 5.0
 
 ## 每把枪的盒体表（GLB 加载失败时的回退路径）：
 ## [尺寸, 相对偏移(枪口朝 -Z), 材质键, 旋转角度]。偏移 0 为机匣中心。
@@ -93,6 +98,7 @@ var current_id := "ak"
 var _pivot: Node3D
 var _models: Dictionary = {}
 var _kick := 0.0
+var kick_count := 0
 var _metal: StandardMaterial3D
 var _wood: StandardMaterial3D
 var _polymer: StandardMaterial3D
@@ -147,6 +153,13 @@ func set_aiming(value: bool) -> void:
 	aiming = value
 
 
+## 相机抬枪偏移（度）：与内核 pattern 同源（SPEC-02 红线 5，误差 ≤0.05°）。
+static func recoil_angles(sim: RefCounted) -> Vector2:
+	if sim == null or not sim.has_method("get_recoil_pitch"):
+		return Vector2.ZERO
+	return Vector2(float(sim.get_recoil_pitch(0)), float(sim.get_recoil_yaw(0)))
+
+
 func freeze_pose() -> void:
 	_kick = 0.0
 	if _pivot != null:
@@ -157,16 +170,17 @@ func freeze_pose() -> void:
 ## 开火后坐力：单次冲量，_process 内指数回落。
 func kick(strength: float = 1.0) -> void:
 	_kick = minf(1.0, _kick + 0.6 * strength)
+	kick_count += 1
 
 
 func _process(delta: float) -> void:
 	if _pivot == null:
 		return
-	_kick = maxf(0.0, _kick - delta * 7.0)
+	_kick = maxf(0.0, _kick - delta * KICK_DECAY_PER_SECOND)
 	var amount := _kick * _kick
 	var base := REST_POSITION + (AIM_OFFSET if aiming else Vector3.ZERO)
-	_pivot.position = base + Vector3(0.0, 0.010 * amount, 0.075 * amount)
-	_pivot.rotation_degrees = REST_ROTATION + Vector3(7.0 * amount, 1.8 * amount, 0.0)
+	_pivot.position = base + KICK_TRANSLATION * amount
+	_pivot.rotation_degrees = REST_ROTATION + KICK_ROTATION_DEG * amount
 
 
 ## 优先 GLB（Blender 程序化生成），失败回退盒体组合。

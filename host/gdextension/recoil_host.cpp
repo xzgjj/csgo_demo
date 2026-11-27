@@ -12,6 +12,7 @@
 #include "recoil/ai/vision.h"
 #include "recoil/content/content.h"
 #include "recoil/content/weapon_table.h"
+#include "recoil/sim/ballistics.h"
 #include "recoil/sim/command.h"
 #include "recoil/sim/ground.h"
 #include "recoil/sim/round.h"
@@ -36,6 +37,15 @@ class RecoilSim : public RefCounted {
     int total_fire_ = 0;
     // 按射手的累计命中次数（命中归因：玩家自己的击中 FX 只认这个计数）。
     int damage_by_[recoil::kMaxPlayers] = {};
+    // SPEC-02/04 表现层：最近一次命中明细（按射手），供 hitmarker/伤害面板读取。
+    struct HitRecord {
+        uint8_t group = 0;
+        uint8_t flags = 0;
+        uint8_t weapon = 0;
+        float distance = 0.0f;
+        float damage = 0.0f;
+    };
+    HitRecord last_hit_by_[recoil::kMaxPlayers] = {};
     int total_dry_ = 0;
     int human_player_ = 0;
     recoil::SiteLayout sites_{};
@@ -45,93 +55,14 @@ class RecoilSim : public RefCounted {
 
 protected:
     static void _bind_methods() {
-#define BIND(name, ...)                                                                            \
-    ClassDB::bind_method(D_METHOD(#name __VA_OPT__(, ) __VA_ARGS__), &RecoilSim::name)
-        BIND(reset);
-        BIND(set_move, "player", "yaw", "pitch", "forward", "side", "jump", "duck");
-        BIND(fire, "player", "yaw", "pitch");
-        BIND(reload, "player");
-        BIND(buy_armor, "player");
-        BIND(plant_bomb, "player");
-        BIND(defuse_bomb, "player");
-        BIND(get_bomb_planted);
-        BIND(get_bomb_timer);
-        BIND(get_helmet, "player");
-        BIND(get_team, "player");
-        BIND(get_player_count);
-        BIND(get_kill_count);
-        BIND(get_kill_shooter, "index");
-        BIND(get_kill_victim, "index");
-        BIND(get_round_phase);
-        BIND(get_round_ticks);
-        BIND(get_score_t);
-        BIND(get_score_ct);
-        BIND(get_money, "player");
-        BIND(throw_grenade, "player", "kind", "yaw", "pitch");
-        BIND(get_smoke_active);
-        BIND(get_smoke_x);
-        BIND(get_smoke_y);
-        BIND(get_blind_ticks, "player");
-        BIND(tick);
-        BIND(get_x, "player");
-        BIND(get_y, "player");
-        BIND(get_z, "player");
-        BIND(get_health, "player");
-        BIND(get_armor, "player");
-        BIND(get_mag, "player");
-        BIND(get_reserve, "player");
-        BIND(is_alive, "player");
-        BIND(get_kills, "player");
-        BIND(get_tick);
-        BIND(get_last_damage_events);
-        BIND(get_last_fire_events);
-        BIND(get_total_damage_events);
-        BIND(get_total_fire_events);
-        BIND(set_map_boxes, "boxes");
-        BIND(set_map_wall_hp, "hp");
-        BIND(set_map_frame, "min_x", "min_y", "max_x", "max_y", "t_x", "t_y", "t_z", "ct_x", "ct_y",
-             "ct_z");
-        BIND(get_map_rejected);
-        BIND(get_map_first_error);
-        BIND(set_sites, "ax", "ay", "bx", "by");
-        BIND(damage_wall, "index", "damage");
-        BIND(get_wall_hp, "index");
-        BIND(begin_match);
-        BIND(tick_auto);
-        BIND(get_wall_count);
-        BIND(get_round_number);
-        BIND(get_alive_count, "team");
-        BIND(get_has_bomb, "player");
-        BIND(nav_path_points, "fx", "fy", "fz", "tx", "ty", "tz");
-        BIND(nav_points, "fx", "fy", "fz", "tx", "ty", "tz");
-        BIND(set_player_position, "player", "x", "y", "z");
-        BIND(is_visible, "viewer", "target");
-        BIND(buy_weapon, "player", "weapon_id");
-        BIND(switch_weapon, "player", "slot");
-        BIND(get_weapon_id, "player");
-        BIND(get_weapon_scope, "player");
-        BIND(get_weapon_mag_capacity, "player");
-        BIND(get_weapon_price, "weapon_id");
-        BIND(get_weapon_name, "weapon_id");
-        BIND(pickup_weapon, "player");
-        BIND(buy_helmet, "player");
-        BIND(get_ground_weapon_count);
-        BIND(get_ground_weapon_id, "index");
-        BIND(get_ground_weapon_x, "index");
-        BIND(get_ground_weapon_y, "index");
-        BIND(get_ground_weapon_z, "index");
-        BIND(get_ground_weapon_mag, "index");
-        BIND(get_nearest_ground_weapon, "player");
-        BIND(get_fire_count, "player");
-        BIND(get_last_fire_tick, "player");
-        BIND(get_view_yaw, "player");
-        BIND(get_damage_count_by, "player");
-        BIND(can_buy, "player");
-        BIND(is_reloading, "player");
-#undef BIND
+#include "recoil_host_bindings.h"
     }
 
 public:
+    void set_ballistics_enabled(bool enabled) {
+        content_.ballistics_enabled = enabled;
+    }
+
     void reset() {
         state_ = recoil::WorldState{};
         state_.player_count = 2;
@@ -298,13 +229,18 @@ public:
             if (event.kind == recoil::EventKind::DamageApplied &&
                 event.source < recoil::kMaxPlayers) {
                 ++damage_by_[event.source];
+                HitRecord& hit = last_hit_by_[event.source];
+                hit.group = event.group;
+                hit.flags = event.flags;
+                hit.weapon = event.aux;
+                hit.distance = event.f0;
+                hit.damage = event.f2;
             }
         }
         recoil_host::RecordKills(result.events);
         pending_.clear();
     }
 
-    // 地图注入/查询组在 recoil_host_map_api.h（类体内 include，守住 400 行）。
     void begin_match() {
         state_ = recoil::WorldState{};
         content_ = recoil::DefaultContent();

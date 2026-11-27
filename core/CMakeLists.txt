@@ -6,15 +6,20 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(recoil_core STATIC
+    src/ai_constraints.cpp
     src/ai_tactics.cpp
+    src/ballistics.cpp
     src/bomb.cpp
     src/bot.cpp
     src/breakable.cpp
     src/content.cpp
+    src/damage.cpp
     src/ground.cpp
     src/grenades.cpp
     src/hash.cpp
     src/hitbox.cpp
+    src/match.cpp
+    src/match_actions.cpp
     src/movement.cpp
     src/nav.cpp
     src/reaction.cpp
@@ -34,18 +39,25 @@ target_compile_options(recoil_core PRIVATE
 add_executable(recoil_tests
     tests/doctest_main.cpp
     tests/test_5v5.cpp
+    tests/test_ai_constraints.cpp
     tests/test_ballistics.cpp
     tests/test_bomb.cpp
     tests/test_bot.cpp
     tests/test_breakable.cpp
+    tests/test_damage.cpp
     tests/test_drops.cpp
     tests/test_fire_state.cpp
     tests/test_grenades.cpp
     tests/test_helmet.cpp
     tests/test_hitgroups.cpp
     tests/test_map.cpp
+    tests/test_match.cpp
+    tests/test_match_phase.cpp
     tests/test_movement.cpp
     tests/test_nav.cpp
+    tests/test_recoil.cpp
+    tests/test_recoil_hash.cpp
+    tests/test_recovery.cpp
     tests/test_round.cpp
     tests/test_step.cpp
     tests/test_tactics.cpp

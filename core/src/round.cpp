@@ -5,6 +5,7 @@
 
 #include "recoil/ai/reaction.h"
 #include "recoil/content/weapon_table.h"
+#include "recoil/sim/match.h"
 #include "recoil/sim/reject.h"
 
 namespace recoil {
@@ -30,20 +31,36 @@ Vec3 TeamSpawn(const Vec3& center, int slot) {
     return {center.x + kSpawnOffsets[index][0], center.y + kSpawnOffsets[index][1], center.z};
 }
 
-// 地图注入的出生中心优先；未注入时回退 de_ash 常量（旧用例/旧图行为不变）。
-Vec3 TSpawnCenter(const MapDef* map) {
-    return map != nullptr && map->custom_spawns ? map->spawn_t : kDeAshTSpawn;
+// 地图/状态注入的出生中心优先；未注入时回退 de_ash 常量（旧用例/旧图行为不变）。
+Vec3 TSpawnCenter(const MapDef* map, const WorldState& state) {
+    if (map != nullptr && map->custom_spawns) {
+        return map->spawn_t;
+    }
+    return state.spawn_from_map ? state.spawn_t : kDeAshTSpawn;
 }
 
-Vec3 CTSpawnCenter(const MapDef* map) {
-    return map != nullptr && map->custom_spawns ? map->spawn_ct : kDeAshCTSpawn;
+Vec3 CTSpawnCenter(const MapDef* map, const WorldState& state) {
+    if (map != nullptr && map->custom_spawns) {
+        return map->spawn_ct;
+    }
+    return state.spawn_from_map ? state.spawn_ct : kDeAshCTSpawn;
 }
+} // namespace
 
-void ResetRound(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
-    ++state.round.number;
-    state.round.phase = RoundPhase::Freeze;
-    state.round.phase_ticks = content.round.freeze_ticks;
-    state.round.winner = 0;
+void StartRound(WorldState& state, const Content& content, EventList& events, bool advance_number,
+                const MapDef* map) {
+    RoundState& round = state.round;
+    if (advance_number) {
+        ++round.number;
+    }
+    const MatchRules& rules = state.match;
+    round.phase = RoundPhase::Freeze;
+    round.phase_ticks = rules.enabled ? rules.freeze_ticks : content.round.freeze_ticks;
+    round.buy_ticks_left = rules.enabled ? rules.buy_ticks : content.round.buy_grace_ticks;
+    round.buy_closed = false;
+    round.round_ticks_left = rules.enabled ? rules.round_ticks : content.round.live_ticks;
+    round.winner = 0;
+    round.end_reason = static_cast<uint8_t>(RoundEndReason::None);
     state.bomb = BombState{};
     state.smoke = SmokeZone{};
     for (GrenadeState& grenade : state.grenades) {
@@ -52,14 +69,22 @@ void ResetRound(WorldState& state, const Content& content, EventList& events, co
     for (GroundWeapon& drop : state.ground_weapons) {
         drop = GroundWeapon{};
     }
-    const bool full_team = state.player_count == static_cast<uint8_t>(kTeamSize * 2);
+    const uint8_t team_size = rules.enabled ? rules.team_size : static_cast<uint8_t>(kTeamSize);
+    const bool full_team =
+        state.player_count == static_cast<uint8_t>(team_size * 2) && team_size > 1;
     int t_slot = 0;
     int ct_slot = 0;
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
+        // 赛制模式按 side[team_id] 派生阵营；旧模式尊重调用方显式设置的 team。
+        uint8_t side = player.team;
+        if (rules.enabled) {
+            side = round.side[player.team_id < 2 ? player.team_id : 0];
+            player.team = side;
+        }
         player.alive = true;
         player.health = 100;
-        const bool default_armor = full_team; // 5v5 匹配局出生默认甲盔
+        const bool default_armor = full_team; // 匹配局出生默认甲盔
         player.armor = default_armor ? content.round.spawn_armor : 0;
         player.helmet = default_armor && content.round.spawn_helmet;
         player.velocity = {};
@@ -72,15 +97,15 @@ void ResetRound(WorldState& state, const Content& content, EventList& events, co
         player.reaction_target = kNoReactionTarget;
         player.reaction_ticks = 0;
         GiveDefaultLoadout(player, player.team);
-        const bool is_t = player.team == static_cast<uint8_t>(Team::T);
+        const bool is_t = side == static_cast<uint8_t>(Team::T);
         if (!full_team) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
             continue;
         }
-        player.position = is_t ? TeamSpawn(TSpawnCenter(map), t_slot++)
-                               : TeamSpawn(CTSpawnCenter(map), ct_slot++);
+        player.position = is_t ? TeamSpawn(TSpawnCenter(map, state), t_slot++)
+                               : TeamSpawn(CTSpawnCenter(map, state), ct_slot++);
     }
-    // C4 给第一名 T，拆弹器给第一名 CT（不重置经济，money 按玩家各自保留）。
+    // C4 给 T 侧第一名玩家，拆弹器给 CT 侧第一名（不重置经济）。
     uint8_t carrier = 0xFF;
     uint8_t defuser = 0xFF;
     for (uint8_t i = 0; i < state.player_count; ++i) {
@@ -100,8 +125,10 @@ void ResetRound(WorldState& state, const Content& content, EventList& events, co
     if (defuser != 0xFF) {
         state.players[defuser].has_defuser = true;
     }
-    events.Push({EventKind::RoundReset, 0, 0, state.round.number});
+    events.Push({EventKind::RoundReset, 0, 0, round.number});
 }
+
+namespace {
 
 void EndRoundInternal(WorldState& state, const Content& content, uint8_t winner,
                       EventList& events) {
@@ -136,15 +163,27 @@ void AssignTeams(WorldState& state) {
     const uint8_t t_count = static_cast<uint8_t>(half > 0 ? half : 1);
     for (uint8_t i = 0; i < state.player_count; ++i) {
         state.players[i].team = static_cast<uint8_t>(i < t_count ? Team::T : Team::CT);
+        state.players[i].team_id = static_cast<uint8_t>(i < t_count ? 0 : 1);
     }
 }
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events) {
+    if (state.match.enabled) {
+        MatchEndRound(state, content, winner, RoundEndReason::Elimination, events);
+        return;
+    }
     EndRoundInternal(state, content, winner, events);
 }
 
 void BeginMatch(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
+    // 地图注入的出生点必须跨开局重置保留（host 在 apply_map 后、begin_match 前设置）。
+    const Vec3 spawn_t = state.spawn_t;
+    const Vec3 spawn_ct = state.spawn_ct;
+    const bool spawn_from_map = state.spawn_from_map;
     state = WorldState{};
+    state.spawn_t = spawn_t;
+    state.spawn_ct = spawn_ct;
+    state.spawn_from_map = spawn_from_map;
     state.player_count = static_cast<uint8_t>(kTeamSize * 2);
     AssignTeams(state);
     for (uint8_t i = 0; i < state.player_count; ++i) {
@@ -157,7 +196,9 @@ void BeginMatch(WorldState& state, const Content& content, EventList& events, co
     state.round.number = 0;
     state.round.score_t = 0;
     state.round.score_ct = 0;
-    ResetRound(state, content, events, map);
+    state.round.score_team = {{0, 0}};
+    state.round.loss_streak = {{1, 1}};
+    StartRound(state, content, events, true, map);
 }
 
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
@@ -166,6 +207,10 @@ void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
 }
 
 void AdvanceRound(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
+    if (state.match.enabled) {
+        TickMatch(state, content, events);
+        return;
+    }
     RoundState& round = state.round;
     if (round.phase == RoundPhase::Freeze) {
         if (round.phase_ticks > 0) {
@@ -208,12 +253,15 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events, 
             --round.phase_ticks;
         }
         if (round.phase_ticks == 0) {
-            ResetRound(state, content, events, map);
+            StartRound(state, content, events, true, map);
         }
     }
 }
 
 bool CanBuy(const WorldState& state, const Content& content) {
+    if (state.match.enabled) {
+        return CanBuyInMatch(state);
+    }
     const RoundState& round = state.round;
     if (round.phase == RoundPhase::Freeze) {
         return true;

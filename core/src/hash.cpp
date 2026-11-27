@@ -83,6 +83,11 @@ uint64_t HashState(const WorldState& state) {
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.view_yaw)));
         mix(static_cast<uint64_t>(player.fire_count) |
             (static_cast<uint64_t>(player.last_fire_tick) << 16));
+        // SPEC-02 弹道状态：连发序号、图案偏移、连发扩散都必须进哈希（BAL-07）。
+        mix(static_cast<uint64_t>(player.shot_index) |
+            (static_cast<uint64_t>(std::bit_cast<uint32_t>(player.recoil_pitch)) << 8));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.recoil_yaw)));
+        mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.inaccuracy)));
         mix(static_cast<uint64_t>(player.has_bomb) |
             (static_cast<uint64_t>(player.has_defuser) << 1));
     }

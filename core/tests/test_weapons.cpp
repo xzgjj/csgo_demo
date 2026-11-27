@@ -107,16 +107,22 @@ Command BuyWeaponCommand(uint8_t player, WeaponId weapon) {
     return command;
 }
 
+// 本文件断言的是伤害/射速/弹匣的精确数值，因此关闭 SPEC-02 的后坐力与扩散
+// （ballistics_enabled=false），把"图案/扩散"留给 test_recoil_*.cpp 专门覆盖。
 StepResult StepOne(const WorldState& state, const std::array<Command, 1>& commands,
                    const Content& content = DefaultContent()) {
-    return Step(state, content, commands);
+    Content exact = content;
+    exact.ballistics_enabled = false;
+    return Step(state, exact, commands);
 }
 
 StepResult StepIdle(const WorldState& state, int ticks, const Content& content = DefaultContent()) {
+    Content exact = content;
+    exact.ballistics_enabled = false;
     WorldState current = state;
     StepResult result;
     for (int i = 0; i < ticks; ++i) {
-        result = Step(current, content, {});
+        result = Step(current, exact, {});
         current = result.state;
     }
     result.state = current;
@@ -191,7 +197,7 @@ TEST_CASE("头部命中 4 倍：AWP 一枪致死，AK 无盔也致死") {
     }
 }
 
-TEST_CASE("戴盔后头部按 2 倍：AK 一枪不死") {
+TEST_CASE("头甲仍 4× 但乘护甲穿透：AK 一枪致死（DMG-02）") {
     WorldState state = Duel(100, 300.0f);
     GiveArms(state, 0, WeaponId::AK47);
     state.players[1].helmet = true;
@@ -199,8 +205,8 @@ TEST_CASE("戴盔后头部按 2 倍：AK 一枪不死") {
 
     const StepResult result = StepOne(state, commands);
 
-    CHECK(result.state.players[1].health == 29);
-    CHECK(result.state.players[1].alive);
+    CHECK(result.state.players[1].health == 0);
+    CHECK_FALSE(result.state.players[1].alive);
 }
 
 TEST_CASE("腿部命中 0.75 倍：AK 73 / M4 76 / AWP 14 剩余") {

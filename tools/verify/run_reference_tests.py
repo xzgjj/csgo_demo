@@ -126,12 +126,16 @@ def check_armor(project: dict[str, float], entries: list[dict], results: list[di
     # 需按 range_modifier 折算后再比较（模块 7 距离衰减）。
     armored_ref = round(_ref_value(entries, "ak47.armored_body_damage")
                         * _falloff(project, distance, "ak47"))
+    # SPEC-04 红线 3：护甲损耗按 raw×(1-armor_ratio)×0.5，不再用 applied/2。
+    armor_ratio = _ref_value(entries, "ak47.armor_ratio")
+    raw_body = armored / armor_ratio
+    armor_loss = round(raw_body * (1.0 - armor_ratio) * 0.5)
     expectations = [
         ("有甲伤害=参考值", armored, armored_ref),
         ("有甲血量", _expect(_check_step(data, "armored_hit"), 1, "health"),
          MAX_HEALTH - armored),
         ("有甲护甲", _expect(_check_step(data, "armored_hit"), 1, "armor"),
-         FULL_ARMOR - armored // ARMOR_LOSS_DIVISOR),
+         FULL_ARMOR - armor_loss),
         ("无甲血量", _expect(_check_step(data, "unarmored_hit"), 0, "health"),
          MAX_HEALTH - unarmored),
         ("无甲护甲不变", _expect(_check_step(data, "unarmored_hit"), 0, "armor"), 0),
