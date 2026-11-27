@@ -1,0 +1,978 @@
+{
+  "schema": "settings-registry/1",
+  "schema_version": 2,
+  "source": "SPEC-05 §5.4.1/§5.4.5；页面结构对标 GTA6 信息架构（只学结构，不抄素材）",
+  "notes": [
+    "项 id 采用 page.group.item 点分命名，同时作为持久化键（section=page，key=完整 id）。",
+    "type ∈ bool/enum/slider/keybind/color/text；apply ∈ immediate/restart/next_round。",
+    "target 是热应用分发表键：window/renderer/env_adjustment/camera/audio/input/hud/gameplay/account。",
+    "默认值只在本文件出现一次；UI 与代码都从注册表读取，禁止各处再写一份。"
+  ],
+  "pages": [
+    {
+      "id": "display",
+      "title": "显示",
+      "icon": "monitor",
+      "groups": [
+        {
+          "id": "window",
+          "title": "窗口",
+          "items": [
+            {
+              "id": "display.window.mode",
+              "label": "显示模式",
+              "type": "enum",
+              "values": [
+                "fullscreen",
+                "windowed",
+                "borderless"
+              ],
+              "default": "borderless",
+              "apply": "immediate",
+              "target": "window"
+            },
+            {
+              "id": "display.window.resolution",
+              "label": "分辨率",
+              "type": "enum",
+              "values": [
+                "1280x720",
+                "1600x900",
+                "1920x1080"
+              ],
+              "default": "1280x720",
+              "apply": "immediate",
+              "target": "window"
+            },
+            {
+              "id": "display.window.vsync",
+              "label": "垂直同步",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "display.window.max_fps",
+              "label": "帧率上限",
+              "type": "slider",
+              "min": 30,
+              "max": 240,
+              "step": 1,
+              "default": 144,
+              "unit": "fps",
+              "apply": "immediate",
+              "target": "renderer"
+            }
+          ]
+        },
+        {
+          "id": "brightness",
+          "title": "亮度与受击",
+          "items": [
+            {
+              "id": "display.brightness.value",
+              "label": "亮度",
+              "type": "slider",
+              "min": 50,
+              "max": 150,
+              "step": 1,
+              "default": 100,
+              "apply": "immediate",
+              "target": "env_adjustment"
+            },
+            {
+              "id": "display.brightness.flash",
+              "label": "闪光亮度",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 100,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "display.brightness.hit_effect",
+              "label": "受击特效强度",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 60,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "effects",
+      "title": "画面效果",
+      "icon": "sparkles",
+      "groups": [
+        {
+          "id": "quality",
+          "title": "画质",
+          "items": [
+            {
+              "id": "effects.quality.preset",
+              "label": "画质档",
+              "type": "enum",
+              "values": [
+                "low",
+                "medium",
+                "high",
+                "ultra"
+              ],
+              "default": "high",
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.quality.shadows",
+              "label": "阴影质量",
+              "type": "enum",
+              "values": [
+                "off",
+                "low",
+                "medium",
+                "high"
+              ],
+              "default": "medium",
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.quality.texture_filter",
+              "label": "材质过滤",
+              "type": "enum",
+              "values": [
+                "nearest",
+                "bilinear",
+                "4x",
+                "8x"
+              ],
+              "default": "4x",
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.quality.motion_blur",
+              "label": "动态模糊",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 0,
+              "apply": "immediate",
+              "target": "renderer"
+            }
+          ]
+        },
+        {
+          "id": "post",
+          "title": "后处理",
+          "items": [
+            {
+              "id": "effects.post.bloom",
+              "label": "泛光",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 30,
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.post.fog",
+              "label": "雾浓度",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 50,
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.post.decals",
+              "label": "弹孔贴花",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "renderer"
+            },
+            {
+              "id": "effects.post.ssao",
+              "label": "环境光遮蔽",
+              "type": "bool",
+              "default": false,
+              "apply": "restart",
+              "target": "renderer"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "audio",
+      "title": "音频",
+      "icon": "speaker",
+      "groups": [
+        {
+          "id": "volume",
+          "title": "音量",
+          "items": [
+            {
+              "id": "audio.master.volume",
+              "label": "主音量",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 80,
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.sfx.volume",
+              "label": "音效",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 80,
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.music.volume",
+              "label": "音乐",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 60,
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.voice.volume",
+              "label": "语音",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 70,
+              "apply": "immediate",
+              "target": "audio"
+            }
+          ]
+        },
+        {
+          "id": "output",
+          "title": "输出",
+          "items": [
+            {
+              "id": "audio.master.mute",
+              "label": "静音",
+              "type": "bool",
+              "default": false,
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.master.output",
+              "label": "输出设备模式",
+              "type": "enum",
+              "values": [
+                "stereo",
+                "surround",
+                "headphones"
+              ],
+              "default": "headphones",
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.ui.menu_sounds",
+              "label": "界面音效",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "audio"
+            },
+            {
+              "id": "audio.voice.subtitles",
+              "label": "语音字幕",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "gameplay",
+      "title": "游戏性",
+      "icon": "target",
+      "groups": [
+        {
+          "id": "crosshair",
+          "title": "准星",
+          "items": [
+            {
+              "id": "gameplay.crosshair.style",
+              "label": "准星样式",
+              "type": "enum",
+              "values": [
+                "classic",
+                "dot",
+                "cross",
+                "tshape"
+              ],
+              "default": "classic",
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.crosshair.color",
+              "label": "准星颜色",
+              "type": "color",
+              "default": "#8cffa6",
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.crosshair.thickness",
+              "label": "准星粗细",
+              "type": "slider",
+              "min": 1,
+              "max": 6,
+              "step": 1,
+              "default": 2,
+              "unit": "px",
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.crosshair.gap",
+              "label": "准星间隙",
+              "type": "slider",
+              "min": 0,
+              "max": 20,
+              "step": 1,
+              "default": 5,
+              "unit": "px",
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.crosshair.dot",
+              "label": "中心点",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.crosshair.dynamic",
+              "label": "动态扩散",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        },
+        {
+          "id": "radar",
+          "title": "雷达",
+          "items": [
+            {
+              "id": "gameplay.radar.zoom",
+              "label": "雷达缩放",
+              "type": "slider",
+              "min": 0.5,
+              "max": 2.0,
+              "step": 0.05,
+              "default": 1.0,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.radar.rotate",
+              "label": "雷达随视角旋转",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.radar.show_enemies",
+              "label": "雷达显示已知敌人",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        },
+        {
+          "id": "info",
+          "title": "信息层",
+          "items": [
+            {
+              "id": "gameplay.info.killfeed",
+              "label": "击杀信息",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.info.hit_direction",
+              "label": "受击方向",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.info.sound_visual",
+              "label": "声音可视化",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "gameplay.info.radar",
+              "label": "雷达信息层",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        },
+        {
+          "id": "auto",
+          "title": "自动化",
+          "items": [
+            {
+              "id": "gameplay.auto.pickup",
+              "label": "自动拾取",
+              "type": "bool",
+              "default": true,
+              "apply": "next_round",
+              "target": "gameplay"
+            },
+            {
+              "id": "gameplay.auto.reload",
+              "label": "自动换弹",
+              "type": "bool",
+              "default": true,
+              "apply": "next_round",
+              "target": "gameplay"
+            },
+            {
+              "id": "gameplay.auto.open_buy",
+              "label": "回合开始自动打开购买",
+              "type": "bool",
+              "default": false,
+              "apply": "next_round",
+              "target": "gameplay"
+            },
+            {
+              "id": "gameplay.buy.rebuy_key",
+              "label": "重购快捷键",
+              "type": "keybind",
+              "default": "T",
+              "apply": "immediate",
+              "target": "input"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "controls",
+      "title": "控制",
+      "icon": "keyboard",
+      "groups": [
+        {
+          "id": "mouse",
+          "title": "鼠标",
+          "items": [
+            {
+              "id": "controls.mouse.sensitivity",
+              "label": "灵敏度",
+              "type": "slider",
+              "min": 0.02,
+              "max": 0.2,
+              "step": 0.005,
+              "default": 0.08,
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.mouse.zoom_sensitivity",
+              "label": "开镜灵敏度",
+              "type": "slider",
+              "min": 0.02,
+              "max": 0.2,
+              "step": 0.005,
+              "default": 0.06,
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.mouse.invert_y",
+              "label": "反转纵向",
+              "type": "bool",
+              "default": false,
+              "apply": "immediate",
+              "target": "input"
+            }
+          ]
+        },
+        {
+          "id": "bindings",
+          "title": "键位",
+          "items": [
+            {
+              "id": "controls.bind.forward",
+              "label": "前进",
+              "type": "keybind",
+              "default": "W",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.back",
+              "label": "后退",
+              "type": "keybind",
+              "default": "S",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.left",
+              "label": "左移",
+              "type": "keybind",
+              "default": "A",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.right",
+              "label": "右移",
+              "type": "keybind",
+              "default": "D",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.jump",
+              "label": "跳跃",
+              "type": "keybind",
+              "default": "SPACE",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.duck",
+              "label": "蹲伏",
+              "type": "keybind",
+              "default": "CTRL",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.fire",
+              "label": "开火",
+              "type": "keybind",
+              "default": "MOUSE_LEFT",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.reload",
+              "label": "换弹",
+              "type": "keybind",
+              "default": "R",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.buy",
+              "label": "购买",
+              "type": "keybind",
+              "default": "B",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.pickup",
+              "label": "拾取/下包",
+              "type": "keybind",
+              "default": "E",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.throw_he",
+              "label": "高爆手雷",
+              "type": "keybind",
+              "default": "G",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.throw_flash",
+              "label": "闪光弹",
+              "type": "keybind",
+              "default": "F",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.throw_smoke",
+              "label": "烟雾弹",
+              "type": "keybind",
+              "default": "V",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.scoreboard",
+              "label": "比分板",
+              "type": "keybind",
+              "default": "TAB",
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.bind.refund",
+              "label": "退款",
+              "type": "keybind",
+              "default": "U",
+              "apply": "immediate",
+              "target": "input"
+            }
+          ]
+        },
+        {
+          "id": "gamepad",
+          "title": "手柄",
+          "items": [
+            {
+              "id": "controls.gamepad.deadzone",
+              "label": "摇杆死区",
+              "type": "slider",
+              "min": 0,
+              "max": 0.5,
+              "step": 0.01,
+              "default": 0.15,
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.gamepad.vibration",
+              "label": "震动",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.gamepad.trigger_travel",
+              "label": "扳机行程",
+              "type": "slider",
+              "min": 0,
+              "max": 1,
+              "step": 0.05,
+              "default": 0.5,
+              "apply": "immediate",
+              "target": "input"
+            },
+            {
+              "id": "controls.gamepad.layout",
+              "label": "手柄布局",
+              "type": "enum",
+              "values": [
+                "default",
+                "southpaw"
+              ],
+              "default": "default",
+              "apply": "immediate",
+              "target": "input"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "title": "视角",
+      "icon": "camera",
+      "groups": [
+        {
+          "id": "view",
+          "title": "视野",
+          "items": [
+            {
+              "id": "camera.fov",
+              "label": "视野 FOV",
+              "type": "slider",
+              "min": 70,
+              "max": 110,
+              "step": 1,
+              "default": 90,
+              "apply": "immediate",
+              "target": "camera"
+            },
+            {
+              "id": "camera.shake",
+              "label": "视角摇晃",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 70,
+              "apply": "immediate",
+              "target": "camera"
+            },
+            {
+              "id": "camera.recoil_scale",
+              "label": "后坐力相机比例",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 100,
+              "apply": "immediate",
+              "target": "camera"
+            }
+          ]
+        },
+        {
+          "id": "model",
+          "title": "手模",
+          "items": [
+            {
+              "id": "camera.viewmodel.offset",
+              "label": "手模偏移",
+              "type": "slider",
+              "min": 0,
+              "max": 100,
+              "step": 1,
+              "default": 50,
+              "apply": "immediate",
+              "target": "camera"
+            },
+            {
+              "id": "camera.viewmodel.bob",
+              "label": "手模摆动",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "camera"
+            },
+            {
+              "id": "camera.zoom.hold",
+              "label": "开镜保持",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "camera"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "界面",
+      "icon": "window",
+      "groups": [
+        {
+          "id": "hud",
+          "title": "HUD",
+          "items": [
+            {
+              "id": "ui.hud.scale",
+              "label": "HUD 缩放",
+              "type": "slider",
+              "min": 0.8,
+              "max": 1.4,
+              "step": 0.05,
+              "default": 1.0,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "ui.hud.font_size",
+              "label": "HUD 字号",
+              "type": "slider",
+              "min": 12,
+              "max": 24,
+              "step": 1,
+              "default": 16,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "ui.hud.opacity",
+              "label": "HUD 不透明度",
+              "type": "slider",
+              "min": 50,
+              "max": 100,
+              "step": 1,
+              "default": 100,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        },
+        {
+          "id": "accessibility",
+          "title": "辅助",
+          "items": [
+            {
+              "id": "ui.subtitles.enabled",
+              "label": "字幕",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "ui.subtitles.size",
+              "label": "字幕字号",
+              "type": "slider",
+              "min": 12,
+              "max": 28,
+              "step": 1,
+              "default": 18,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "ui.color.mode",
+              "label": "色盲模式",
+              "type": "enum",
+              "values": [
+                "off",
+                "protanopia",
+                "deuteranopia",
+                "tritanopia"
+              ],
+              "default": "off",
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        },
+        {
+          "id": "notify",
+          "title": "通知",
+          "items": [
+            {
+              "id": "ui.notify.kill",
+              "label": "击杀提示",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            },
+            {
+              "id": "ui.notify.round_end",
+              "label": "回合结算提示",
+              "type": "bool",
+              "default": true,
+              "apply": "immediate",
+              "target": "hud"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "account",
+      "title": "账户",
+      "icon": "person",
+      "groups": [
+        {
+          "id": "profile",
+          "title": "档案",
+          "items": [
+            {
+              "id": "account.profile.nickname",
+              "label": "昵称",
+              "type": "text",
+              "default": "",
+              "max_length": 16,
+              "apply": "immediate",
+              "target": "account"
+            },
+            {
+              "id": "account.profile.language",
+              "label": "界面语言",
+              "type": "enum",
+              "values": [
+                "zh",
+                "en"
+              ],
+              "default": "zh",
+              "apply": "restart",
+              "target": "account"
+            }
+          ]
+        },
+        {
+          "id": "privacy",
+          "title": "隐私",
+          "items": [
+            {
+              "id": "account.privacy.share_stats",
+              "label": "分享战绩",
+              "type": "bool",
+              "default": false,
+              "apply": "immediate",
+              "target": "account"
+            },
+            {
+              "id": "account.privacy.telemetry",
+              "label": "匿名统计",
+              "type": "bool",
+              "default": false,
+              "apply": "immediate",
+              "target": "account"
+            }
+          ]
+        },
+        {
+          "id": "license",
+          "title": "许可与致谢",
+          "items": [
+            {
+              "id": "account.credits.show",
+              "label": "显示开场致谢",
+              "type": "bool",
+              "default": true,
+              "apply": "restart",
+              "target": "account"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

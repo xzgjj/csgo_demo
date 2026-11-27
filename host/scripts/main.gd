@@ -34,6 +34,7 @@ var match_flow
 var bot_visuals: Node3D
 var fx
 var blind_overlay: ColorRect
+var settings_bridge: SettingsBridge
 var yaw := 0.0
 var pitch := 0.0
 var playing := false
@@ -66,7 +67,8 @@ func _ready() -> void:
 	account.load_account()
 	_build_world()
 	_build_ui()
-	_apply_settings()
+	settings_bridge = SettingsBridge.new()
+	settings_bridge.attach(self, settings)
 	_show_menu()
 func _build_world() -> void:
 	world = DeAshWorld.new()
@@ -186,7 +188,7 @@ func show_settings_page() -> void:
 func close_settings_page() -> void:
 	settings_page.save_settings()
 	settings_page.visible = false
-	_apply_settings()
+	settings_bridge.apply_all()
 	pause_page.visible = _settings_return_pause
 	menu.visible = not _settings_return_pause
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -198,21 +200,17 @@ func toggle_scoreboard() -> void:
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
 
-func _apply_settings() -> void:
-	if camera != null:
-		camera.fov = settings.fov
-	settings.apply_audio()
-
 func _quit() -> void:
 	get_tree().quit()
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		var invert := -1.0 if bool(settings.get_value("controls.mouse.invert_y")) else 1.0
 		yaw -= event.relative.x * settings.sensitivity
-		pitch = clampf(pitch - event.relative.y * settings.sensitivity, -89.0, 89.0)
+		pitch = clampf(pitch - event.relative.y * settings.sensitivity * invert, -89.0, 89.0)
 	if event.is_action_pressed("pause"):
 		_handle_pause_action()
-	if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_TAB:
+	if event.is_action_pressed("scoreboard") and not event.is_echo():
 		toggle_scoreboard()
 
 func _handle_pause_action() -> void:
@@ -225,7 +223,8 @@ func _handle_pause_action() -> void:
 	elif paused:
 		_resume()
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	settings.tick(delta)
 	if not playing:
 		return
 	var ui_open := _ui_page_open()
@@ -245,7 +244,8 @@ func _physics_process(_delta: float) -> void:
 	viewmodel.set_aiming(aiming)
 	_toggle_debug()
 	_toggle_third_person()
-	var fire_down := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) and not ui_open
+	var fire_down := (Input.is_action_pressed("fire")
+			or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) and not ui_open
 	if fire_down and not _fire_was_down:
 		sim.fire(0, yaw, pitch)
 		shot_feedback.request_fire()
@@ -254,22 +254,22 @@ func _physics_process(_delta: float) -> void:
 	if weapon_key != -1 and weapon_key != _weapon_key_was:
 		_switch_weapon(weapon_key)
 	_weapon_key_was = weapon_key
-	var reload_down := Input.is_key_pressed(KEY_R)
+	var reload_down := Input.is_action_pressed("reload")
 	if reload_down and not _reload_was_down:
 		sim.reload(0)
 	_reload_was_down = reload_down
-	var buy_down := Input.is_key_pressed(KEY_B)
+	var buy_down := Input.is_action_pressed("buy")
 	if buy_down and not _buy_was_down:
 		_toggle_buy()
 	_buy_was_down = buy_down
-	var pickup_down := Input.is_key_pressed(KEY_E)
+	var pickup_down := Input.is_action_pressed("pickup")
 	if pickup_down and not _bomb_was_down:
 		if not _try_pickup():
 			sim.plant_bomb(0)
 	_bomb_was_down = pickup_down
-	_throw_input("he", KEY_G, 0)
-	_throw_input("flash", KEY_F, 1)
-	_throw_input("smoke", KEY_V, 2)
+	_throw_input("he", "throw_he", 0)
+	_throw_input("flash", "throw_flash", 1)
+	_throw_input("smoke", "throw_smoke", 2)
 	if match_mode:
 		sim.tick_auto()
 	else:
@@ -392,8 +392,8 @@ func _toggle_buy() -> void:
 	purchase.toggle()
 	_sync_mouse_mode()
 
-func _throw_input(name: String, key: int, kind: int) -> void:
-	var down := Input.is_key_pressed(key)
+func _throw_input(name: String, action: String, kind: int) -> void:
+	var down := Input.is_action_pressed(action)
 	if down and not _throw_was[name]:
 		sim.throw_grenade(0, kind, yaw, pitch)
 	_throw_was[name] = down

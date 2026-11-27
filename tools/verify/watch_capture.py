@@ -28,7 +28,28 @@ ROOT = Path(__file__).resolve().parents[2]
 WATCH_DIRS = ("core/include", "core/src", "core/tests", "host/scripts", "host/gdextension", "content/defs")
 WATCH_SUFFIXES = {".cpp", ".h", ".gd", ".json", ".py", ".tscn"}
 OUT_DIR = ROOT / "log/verify/watch"
+SETTINGS_OUT = ROOT / "log/verify/settings/pages"
+GODOT = Path(r"D:\app_finish\Godot\Godot_v4.7.2-stable_win64_console.exe")
 POLL_SECONDS = 2.0
+SETTINGS_PAGES = ("display", "effects", "audio", "gameplay", "controls", "camera", "ui", "account")
+
+
+def find_godot() -> Path:
+    if GODOT.exists():
+        return GODOT
+    import run_scenarios  # 复用项目既有探测顺序（PATH / 环境变量 / 常见安装位）
+
+    return Path(run_scenarios.find_godot())
+
+
+def capture_settings() -> tuple[int, str]:
+    """每次变更后重开一次 Godot 采集 8 页设置截图（独立子进程，不触碰用户已开的编辑器）。"""
+    SETTINGS_OUT.mkdir(parents=True, exist_ok=True)
+    code, tail = run(
+        [str(find_godot()), "--path", "host", "--script", "res://tests/capture_settings.gd", "--", str(SETTINGS_OUT)],
+        timeout=240,
+    )
+    return code, tail
 
 
 def snapshot() -> dict[str, tuple[int, int]]:
@@ -85,6 +106,31 @@ def write_report(rounds: int, files: list[str], steps: list[tuple[str, int, str]
     return path
 
 
+def write_settings_manifest() -> tuple[int, str]:
+    """为 8 页截图记录哈希与时间，供“截图是否新鲜”核对；缺页即失败。"""
+    import json
+
+    SETTINGS_OUT.mkdir(parents=True, exist_ok=True)
+    records = []
+    missing = []
+    for page in SETTINGS_PAGES:
+        path = SETTINGS_OUT / f"settings_{page}.png"
+        if not path.exists() or path.stat().st_size == 0:
+            missing.append(page)
+            continue
+        records.append({
+            "page": page,
+            "file": path.name,
+            "bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()[:16],
+            "mtime": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+        })
+    manifest = {"schema": "settings-capture/1", "pages": records, "missing": missing}
+    path = SETTINGS_OUT / "manifest.json"
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return (0, f"pages={len(records)}") if not missing else (1, f"缺页 {missing}")
+
+
 def one_round(update_golden: bool, rounds: int, files: list[str] | None = None) -> bool:
     steps: list[tuple[str, int, str]] = []
     for name, command in (
@@ -102,6 +148,11 @@ def one_round(update_golden: bool, rounds: int, files: list[str] | None = None) 
             shots.append("--update")
         code, tail = run(shots, timeout=900)
         steps.append(("shots", code, tail))
+        if code == 0:
+            code, tail = capture_settings()
+            steps.append(("settings_shots", code, tail))
+            if code == 0:
+                steps.append(("settings_manifest", *write_settings_manifest()))
     ok = all(step_code == 0 for _, step_code, _ in steps)
     write_report(rounds, files or [], steps, ok)
     return ok

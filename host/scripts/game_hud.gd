@@ -7,6 +7,7 @@ const TICKS_PER_SECOND := 64.0
 const FEED_MAX_LINES := 5
 const PHASE_NAMES: Array[String] = ["冻结期", "进行中", "回合结束", "比赛结束"]
 const TEXT_COLOR := Color(0.95, 0.97, 1.0)
+const COLOR_DEFAULT := Color(0.55, 1.0, 0.65)
 
 var phase_label: Label
 var timer_label: Label
@@ -110,6 +111,47 @@ func reset_feed() -> void:
 		feed_label.text = ""
 	if stats_label != null:
 		stats_label.text = ""
+
+
+## 设置热应用（SPEC-05 target=hud）：信息层开关、准星、字号、不透明度与整体缩放。
+## 默认值与旧观感一致（准星 gap 5 / thickness 2 / 颜色 #8cffa6），不改变既有 golden。
+func apply_settings(store: SettingsStore) -> void:
+	if store == null or crosshair == null:
+		return
+	crosshair.call("configure", {
+		"gap": float(store.get_value("gameplay.crosshair.gap")),
+		"thickness": float(store.get_value("gameplay.crosshair.thickness")),
+		"color": Color.from_string(str(store.get_value("gameplay.crosshair.color")), COLOR_DEFAULT),
+		"dot": bool(store.get_value("gameplay.crosshair.dot")),
+		"style": str(store.get_value("gameplay.crosshair.style")),
+		"dynamic": bool(store.get_value("gameplay.crosshair.dynamic")),
+	})
+	var show_feed := bool(store.get_value("gameplay.info.killfeed")) \
+			and bool(store.get_value("ui.notify.kill"))
+	feed_label.visible = show_feed
+	var font_size := int(store.get_value("ui.hud.font_size"))
+	feed_label.add_theme_font_size_override("font_size", font_size)
+	stats_label.add_theme_font_size_override("font_size", font_size)
+	var opacity := clampf(float(store.get_value("ui.hud.opacity")) / 100.0, 0.0, 1.0)
+	_apply_opacity(opacity)
+	var hud_scale := float(store.get_value("ui.hud.scale"))
+	scale = Vector2(hud_scale, hud_scale)
+
+
+## CanvasLayer 没有 modulate，逐个子 CanvasItem 调 alpha（准星/命中标记同样跟随）。
+func _apply_opacity(alpha: float) -> void:
+	for child: Node in get_children():
+		if child is CanvasItem:
+			(child as CanvasItem).modulate = Color(1.0, 1.0, 1.0, alpha)
+
+
+func info_layer_enabled(store: SettingsStore) -> Dictionary:
+	return {
+		"killfeed": bool(store.get_value("gameplay.info.killfeed")),
+		"hit_direction": bool(store.get_value("gameplay.info.hit_direction")),
+		"sound_visual": bool(store.get_value("gameplay.info.sound_visual")),
+		"radar": bool(store.get_value("gameplay.info.radar")),
+	}
 
 
 func feed_lines() -> Array[String]:

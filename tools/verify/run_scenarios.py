@@ -129,16 +129,24 @@ def run_one(godot: Path, scenario: Path, args) -> int:
 
 
 def run_input_smoke(godot: Path) -> bool:
-    """输入/UI 契约回归：input_smoke（输入/开火反馈归因）+ host_ui_smoke（HUD/倍镜/购买/账号）。"""
-    scripts = ("res://tests/input_smoke.gd", "res://tests/host_ui_smoke.gd")
+    """输入/UI/设置契约回归：每个脚本对应唯一 PASS 标记，逐项判定（避免只看最后一个）。"""
+    contracts = (
+        ("res://tests/input_smoke.gd", "INPUT_SMOKE PASS"),
+        ("res://tests/host_ui_smoke.gd", "HOST_UI_SMOKE PASS"),
+        ("res://tests/settings_registry_test.gd", "SETTINGS_REGISTRY PASS"),
+        ("res://tests/settings_clamp_test.gd", "SETTINGS_CLAMP PASS"),
+        ("res://tests/settings_migrate_test.gd", "SETTINGS_MIGRATE PASS"),
+        ("res://tests/settings_persist_smoke.gd", "SETTINGS_PERSIST PASS"),
+        ("res://tests/settings_apply_test.gd", "SETTINGS_APPLY PASS"),
+        ("res://tests/settings_nav_smoke.gd", "SETTINGS_NAV PASS"),
+    )
     ok = True
-    for script in scripts:
+    for script, marker in contracts:
         args = [str(godot), "--headless", "--path", "host", "--script", script]
         proc = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True,
                               encoding="utf-8", errors="replace", timeout=180)
         output = (proc.stdout or "") + (proc.stderr or "")
-        passed = proc.returncode == 0 and ("INPUT_SMOKE PASS" in output
-                                           or "HOST_UI_SMOKE PASS" in output)
+        passed = proc.returncode == 0 and marker in output
         print(f"[input_contract:{script.rsplit('/', 1)[-1]}] {'PASS' if passed else 'FAIL'}")
         ok = ok and passed
     print(f"[input_contract] {'PASS' if ok else 'FAIL'}")
