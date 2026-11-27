@@ -7,6 +7,7 @@
 #include "recoil/base/vec3.h"
 #include "recoil/content/weapon_table.h"
 #include "recoil/movement/movement.h"
+#include "recoil/sim/ballistics.h"
 #include "recoil/sim/bomb.h"
 #include "recoil/sim/grenades.h"
 #include "recoil/sim/ground.h"
@@ -39,6 +40,8 @@ void FinishReload(PlayerState& player, const WeaponDef& weapon, uint8_t source, 
 void ApplyTimers(WorldState& state, const Content& content, EventList& events) {
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
+        // 弹道恢复与连发复位：与冷却/换弹同处一个 tick 阶段，保证确定性顺序。
+        TickBallistics(player, BallisticsFor(ActiveWeaponId(player)), state.tick);
         if (player.weapon.cooldown_ticks > 0) {
             --player.weapon.cooldown_ticks;
         }
@@ -230,12 +233,28 @@ void Fire(WorldState& state, const Content& content, const Command& command, con
     shooter.view_yaw = command.yaw_degrees;
     ++shooter.fire_count;
     shooter.last_fire_tick = static_cast<uint32_t>(state.tick);
-    events.Push({EventKind::WeaponFired, command.player, 0, shooter.weapon.mag});
+    // SPEC-02：图案 + 锥内随机 -> 实际射线角度；同一偏移同时驱动相机（表现层只读 state）。
+    const WeaponId weapon_id = ActiveWeaponId(shooter);
+    AimOffset aim;
+    if (content.ballistics_enabled) {
+        aim = ApplyShot(shooter, BallisticsFor(weapon_id), state.rng);
+    } else {
+        // 回滚分支：不发散、不累积（保留既有"直线弹道"行为，供精确公式用例与旧数据）。
+        aim.shot_index = shooter.shot_index;
+    }
+    Event fired{EventKind::WeaponFired, command.player, 0, shooter.weapon.mag};
+    fired.aux = static_cast<uint8_t>(weapon_id);
+    fired.shot_index = aim.shot_index;
+    fired.f0 = aim.pitch;
+    fired.f1 = aim.yaw;
+    fired.f2 = aim.inaccuracy;
+    events.Push(fired);
 
     const float eye =
         shooter.ducking ? content.movement.duck_eye_height : content.movement.eye_height;
     const Vec3 origin = shooter.position + Vec3{0.0f, 0.0f, eye};
-    const Vec3 dir = DirectionFromAngles(command.yaw_degrees, command.pitch_degrees);
+    const Vec3 dir =
+        DirectionFromAngles(command.yaw_degrees + aim.yaw, command.pitch_degrees + aim.pitch);
     const RayHit hit = TraceAgainstPlayers(state, command.player, origin, dir, weapon.range);
     float penetration_scale = 1.0f;
     if (map != nullptr && hit.hit) {

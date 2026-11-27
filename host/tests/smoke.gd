@@ -204,6 +204,8 @@ func _check_kill_feed() -> void:
 
 func _check_match_end_flow() -> void:
 	main._start_play()
+	# 脚本化点射不复位准星：测试只验证赛制推进，用直线弹道避免图案抬升导致漏杀。
+	main.sim.set_ballistics_enabled(false)
 	var rounds := 0
 	var round_result_seen := false
 	while rounds < 16 and main.result_page.mode != "match":

@@ -66,6 +66,9 @@ struct Content {
     MovementDef movement{};
     RoundDef round{};
     GrenadeDef grenades{};
+    // SPEC-02 回滚/单测开关：false 时不应用后坐力图案与随机扩散（旧直线弹道）。
+    // 运行时默认 true（数据驱动 weapons.json 的 recoil/inaccuracy 段）。
+    bool ballistics_enabled = true;
 };
 
 Content DefaultContent();

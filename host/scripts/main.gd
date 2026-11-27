@@ -85,6 +85,7 @@ func _build_world() -> void:
 	viewmodel.attach(camera)
 	fx = CombatFxScript.new()
 	add_child(fx)
+	fx.call("attach", camera)
 	bot_visuals = BotVisualsScript.new()
 	bot_visuals.name = "BotVisuals"
 	add_child(bot_visuals)
@@ -306,17 +307,16 @@ func _toggle_third_person() -> void:
 	_f5_was = down
 
 func _update_view() -> void:
-	var px: float = sim.get_x(0)
-	var py: float = sim.get_y(0)
-	var pz: float = sim.get_z(0)
-	var eye := Vector3(-py, pz + EYE_HEIGHT, -px)
-	camera.rotation_degrees = Vector3(pitch, yaw, 0)
+	# 相机抬枪与射线同源（SPEC-02 红线 5）；eye 高度含蹲伏。
+	var eye := Vector3(-sim.get_y(0), sim.get_z(0) + EYE_HEIGHT, -sim.get_x(0))
+	var recoil := WeaponViewmodel.recoil_angles(sim)
+	camera.rotation_degrees = Vector3(pitch + recoil.x, yaw + recoil.y, 0)
 	camera.position = eye
 	if third_person:
 		camera.position = eye - camera.basis.z * 170.0 + Vector3(0.0, 55.0, 0.0)
 	_player_mesh.visible = third_person and match_mode and sim.is_alive(0)
 	if _player_mesh.visible:
-		_player_mesh.position = Vector3(-py, 36.0, -px)
+		_player_mesh.position = Vector3(-sim.get_y(0), 36.0, -sim.get_x(0))
 	var scoped: bool = scope.is_scoped()
 	viewmodel.visible = not third_person and not scoped
 	# 所有玩家（含 2 人灰盒模式的靶子）统一用 BotVisuals 类人+持枪表现，旧胶囊靶隐藏。
@@ -337,6 +337,7 @@ func _update_hud() -> void:
 	if viewmodel != null:
 		weapon_name = _weapon_name()
 	hud.refresh(sim, weapon_name)
+	hud.update_combat(sim)
 	if purchase != null and purchase.auto_sync:
 		purchase.sync_viewmodel()  # 手模跟随内核当前武器（切枪/购买/拾取后下一帧即同步）
 	if purchase != null and purchase.is_open():

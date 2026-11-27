@@ -107,16 +107,22 @@ Command BuyWeaponCommand(uint8_t player, WeaponId weapon) {
     return command;
 }
 
+// 本文件断言的是伤害/射速/弹匣的精确数值，因此关闭 SPEC-02 的后坐力与扩散
+// （ballistics_enabled=false），把"图案/扩散"留给 test_recoil_*.cpp 专门覆盖。
 StepResult StepOne(const WorldState& state, const std::array<Command, 1>& commands,
                    const Content& content = DefaultContent()) {
-    return Step(state, content, commands);
+    Content exact = content;
+    exact.ballistics_enabled = false;
+    return Step(state, exact, commands);
 }
 
 StepResult StepIdle(const WorldState& state, int ticks, const Content& content = DefaultContent()) {
+    Content exact = content;
+    exact.ballistics_enabled = false;
     WorldState current = state;
     StepResult result;
     for (int i = 0; i < ticks; ++i) {
-        result = Step(current, content, {});
+        result = Step(current, exact, {});
         current = result.state;
     }
     result.state = current;

@@ -14,6 +14,7 @@ func _run() -> void:
 	_check_weapons()
 	_check_heading()
 	_check_muzzle_flash_and_recoil()
+	await _check_player_weapon_feedback()
 	finish("WEAPONFX_SMOKE")
 
 
@@ -66,3 +67,58 @@ func _check_muzzle_flash_and_recoil() -> void:
 	expect(not bool(main.bot_visuals.flash_visible(index)), "0.2s 后枪口闪光应熄灭")
 	expect(float(main.bot_visuals.recoil_amount(index)) <= 0.01,
 			"0.2s 后后坐力应回位，实际 %.3f" % float(main.bot_visuals.recoil_amount(index)))
+
+
+## SPEC-02 BAL-06 玩家侧：准星张合 / 相机抬枪 / 枪机参数 / 枪口焰 / 命中标记。
+func _check_player_weapon_feedback() -> void:
+	main.call("_start_play")
+	main.set_physics_process(false)
+	await process_frame
+	# 玩家 0 对准 +Y 方向 300u 的目标；两发足以让 pattern[1] 抬枪。
+	main.sim.set_player_position(0, 0.0, 0.0, 0.0)
+	main.sim.set_player_position(1, 0.0, 300.0, 0.0)
+	var kick_before: int = int(main.viewmodel.kick_count)
+	var shot_before: int = int(main.fx.shot_count)
+	var camera_before: float = main.camera.rotation_degrees.x
+
+	# 走真实输入路径：request_fire 记录基线，after_tick 用增量判定"真的开火"。
+	main.shot_feedback.request_fire()
+	main.sim.fire(0, 90.0, 0.0)
+	main.sim.tick()
+	main.shot_feedback.after_tick(main.camera)
+	main._update_view()
+	main._update_hud()
+	expect(int(main.viewmodel.kick_count) == kick_before + 1,
+			"开火应触发 viewmodel kick（%d → %d）" % [kick_before, int(main.viewmodel.kick_count)])
+	expect(int(main.fx.shot_count) == shot_before + 1, "开火应触发枪口焰/枪声计数")
+	expect(bool(main.fx.muzzle_flash.visible), "开火当帧枪口焰应可见")
+	expect(main.fx.shell.visible, "开火当帧抛壳应可见")
+	expect(absf(float(WeaponViewmodel.KICK_TRANSLATION.z) - 0.03) < 0.0001,
+			"枪机位移 z 应为 0.03")
+	expect(absf(absf(float(WeaponViewmodel.KICK_ROTATION_DEG.x)) - 1.2) < 0.0001,
+			"枪机俯仰应为 1.2°")
+
+	for step in 6:
+		main.sim.tick()
+	main.shot_feedback.request_fire()
+	main.sim.fire(0, 90.0, 0.0)
+	main.sim.tick()
+	main.shot_feedback.after_tick(main.camera)
+	main._update_view()
+	main._update_hud()
+	var recoil_pitch: float = float(main.sim.get_recoil_pitch(0))
+	expect(recoil_pitch >= 0.99, "第 2 发后图案抬枪应 ≥1°（实际 %.2f）" % recoil_pitch)
+	expect(main.camera.rotation_degrees.x > camera_before + 0.5,
+			"相机应同步抬枪（%.2f° → %.2f°）" % [camera_before, main.camera.rotation_degrees.x])
+	var inaccuracy: float = float(main.sim.get_effective_inaccuracy(0))
+	expect(inaccuracy > 0.35, "第 2 发扩散应大于首发（实际 %.2f）" % inaccuracy)
+	expect(float(main.hud.crosshair.gap) > float(Crosshair.BASE_GAP),
+			"准星应随扩散张开（gap %.1f）" % float(main.hud.crosshair.gap))
+	expect(int(main.sim.get_shot_index(0)) == 2, "连发序号应为 2（实际 %d）"
+			% int(main.sim.get_shot_index(0)))
+
+	# 命中标记：由 main 依据 DamageApplied flags 触发（爆头红/穿墙描边）。
+	main.hud.show_hit(false, false)
+	expect(bool(main.hud.hitmarker.active()), "命中后 hitmarker 应激活")
+	main.hud.show_hit(true, true)
+	expect(bool(main.hud.hitmarker.active()), "爆头+穿墙 hitmarker 应激活")

@@ -7,6 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 add_library(recoil_core STATIC
     src/ai_tactics.cpp
+    src/ballistics.cpp
     src/bomb.cpp
     src/bot.cpp
     src/content.cpp
@@ -44,6 +45,9 @@ add_executable(recoil_tests
     tests/test_map.cpp
     tests/test_movement.cpp
     tests/test_nav.cpp
+    tests/test_recoil.cpp
+    tests/test_recoil_hash.cpp
+    tests/test_recovery.cpp
     tests/test_round.cpp
     tests/test_step.cpp
     tests/test_tactics.cpp

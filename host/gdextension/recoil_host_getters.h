@@ -112,6 +112,64 @@
         return state_.players[player].weapon.reloading;
     }
 
+    // SPEC-02 弹道只读：连发序号、当前额外扩散（度）、当前图案偏移（度）。
+    int get_shot_index(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0;
+        }
+        return state_.players[player].shot_index;
+    }
+    float get_inaccuracy(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0.0f;
+        }
+        return state_.players[player].inaccuracy;
+    }
+    float get_recoil_pitch(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0.0f;
+        }
+        return state_.players[player].recoil_pitch;
+    }
+    float get_recoil_yaw(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0.0f;
+        }
+        return state_.players[player].recoil_yaw;
+    }
+
+    // 当前实际扩散（含 base 与姿态倍率，度）：HUD 准星张合用这一项。
+    float get_effective_inaccuracy(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0.0f;
+        }
+        const recoil::PlayerState& owner = state_.players[player];
+        const uint8_t weapon_id = owner.active_slot == 0 ? owner.primary_id : owner.secondary_id;
+        const recoil::BallisticsDef& def =
+            recoil::BallisticsFor(static_cast<recoil::WeaponId>(weapon_id));
+        return recoil::EffectiveInaccuracy(owner, def.inaccuracy);
+    }
+
+    // 最近一次命中明细（hitmarker：部位/爆头/穿墙/距离）。
+    int get_last_hit_group(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0;
+        }
+        return last_hit_by_[player].group;
+    }
+    int get_last_hit_flags(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0;
+        }
+        return last_hit_by_[player].flags;
+    }
+    float get_last_hit_distance(int player) const {
+        if (player < 0 || player >= static_cast<int>(state_.player_count)) {
+            return 0.0f;
+        }
+        return last_hit_by_[player].distance;
+    }
+
     // 武器价格/名字（购买菜单用；未知 id 返回 0 / "-"）。
     int get_weapon_price(int weapon_id) const {
         return static_cast<int>(recoil::WeaponPrice(static_cast<recoil::WeaponId>(weapon_id)));

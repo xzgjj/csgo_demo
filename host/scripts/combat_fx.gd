@@ -7,8 +7,13 @@ var shot_count := 0
 var hit_count := 0
 var dryfire_count := 0
 var spark: CPUParticles3D
+var muzzle_flash: MeshInstance3D
+var shell: MeshInstance3D
 var _shot_player: AudioStreamPlayer
 var _hit_player: AudioStreamPlayer
+var _flash_life := 0.0
+var _shell_life := 0.0
+var _shell_velocity := Vector3.ZERO
 
 
 func _ready() -> void:
@@ -99,10 +104,67 @@ static func hit_point(sim: RefCounted, camera: Camera3D) -> Vector3:
 	return best
 
 
+## 把枪口焰/弹壳挂到相机（第一人称，位置随视角）。main 在相机入树后调用。
+func attach(camera: Camera3D) -> void:
+	var flash_mesh := QuadMesh.new()
+	flash_mesh.size = Vector2(0.14, 0.14)
+	var flash_material := StandardMaterial3D.new()
+	flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	flash_material.albedo_color = Color(1.0, 0.72, 0.25, 0.95)
+	flash_material.emission_enabled = true
+	flash_material.emission = Color(1.0, 0.55, 0.12)
+	flash_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	flash_mesh.material = flash_material
+	muzzle_flash = MeshInstance3D.new()
+	muzzle_flash.name = "MuzzleFlash"
+	muzzle_flash.mesh = flash_mesh
+	muzzle_flash.position = Vector3(0.0, -0.04, -0.62)
+	muzzle_flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	muzzle_flash.visible = false
+	camera.add_child(muzzle_flash)
+
+	var shell_mesh := BoxMesh.new()
+	shell_mesh.size = Vector3(0.008, 0.008, 0.024)
+	var shell_material := StandardMaterial3D.new()
+	shell_material.albedo_color = Color(0.78, 0.62, 0.22)
+	shell_material.metallic = 0.8
+	shell_mesh.material = shell_material
+	shell = MeshInstance3D.new()
+	shell.name = "Shell"
+	shell.mesh = shell_mesh
+	shell.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	shell.visible = false
+	camera.add_child(shell)
+
+
+func _process(delta: float) -> void:
+	if _flash_life > 0.0:
+		_flash_life = maxf(0.0, _flash_life - delta)
+		if muzzle_flash != null:
+			muzzle_flash.visible = _flash_life > 0.0
+	if _shell_life > 0.0:
+		_shell_life = maxf(0.0, _shell_life - delta)
+		_shell_velocity.y -= 260.0 * delta
+		if shell != null:
+			shell.position += _shell_velocity * delta
+			shell.rotation_degrees += Vector3(180.0, 90.0, 0.0) * delta
+			shell.visible = _shell_life > 0.0
+
+
+## 开火：枪声 + 枪口焰 + 抛壳（BAL-06；只由 shot_feedback 在"真的开火"后调用）。
 func trigger_shot() -> void:
 	shot_count += 1
 	if _shot_player.stream != null:
 		_shot_player.play()
+	if muzzle_flash != null:
+		muzzle_flash.visible = true
+		_flash_life = 0.05
+	if shell != null:
+		shell.position = Vector3(0.12, -0.12, -0.34)
+		_shell_velocity = Vector3(0.55, 0.35, 0.15)
+		_shell_life = 0.4
+		shell.visible = true
 
 
 ## 空弹/冷却被内核拒绝时只记一次"空扣扳机"，不播枪声、不给后坐（防止"没子弹还能开枪"的假反馈）。

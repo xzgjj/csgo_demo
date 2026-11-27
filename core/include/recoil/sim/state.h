@@ -135,6 +135,14 @@ struct PlayerState {
     // 模块 5：本场累计开火数与最后一次开火 tick（0=未开火），进 HashState。
     uint16_t fire_count = 0;
     uint32_t last_fire_tick = 0;
+    // SPEC-02 弹道状态（进 HashState，保持确定性）：
+    // shot_index = 本次连发的第几发（停火 kShotIndexResetTicks 后归零）；
+    // recoil_pitch/yaw = 当前视觉/射线共用的图案偏移（度），停火指数回正；
+    // inaccuracy = 连发累计的额外扩散（度），按两段速率恢复。
+    uint8_t shot_index = 0;
+    float recoil_pitch = 0.0f;
+    float recoil_yaw = 0.0f;
+    float inaccuracy = 0.0f;
 };
 
 struct WorldState {
