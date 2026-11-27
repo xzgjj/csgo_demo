@@ -1,0 +1,14 @@
+{
+ "schema": "map-registry/1",
+ "default": "de_ash",
+ "maps": [
+  {
+   "id": "de_ash",
+   "name": "de_ash",
+   "boxes": "res://scenes/de_ash_boxes.json",
+   "glb": "res://models/map/de_ash.glb",
+   "layout": "content/maps/de_ash.layout.json"
+  }
+ ],
+ "note": "换图只改这里：新增 id 指向独立 boxes/glb；default 决定开局用哪张。缺文件时回退 default。"
+}
