@@ -43,6 +43,8 @@ enum class EventKind : uint8_t {
     MatchEnded,
     MatchDrawn,
     BuyWindowClosed,
+    // SPEC-06：退款成功（source=玩家，target=entry，value=退款后的余额）。
+    RefundDone,
 };
 
 enum class RejectReason : int32_t {

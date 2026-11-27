@@ -1,6 +1,6 @@
 {
 	"boxes_path": "res://scenes/de_dust2_boxes.json",
-	"boxes_sha256": "f3645c51f7d36e4106c064586c965570b1df367052e5e916174cf417cf999333",
+	"boxes_sha256": "74ffad51ab9885c4bda7880691e34ef11eb388de1d7111e0498693fcd56b8b38",
 	"map": "de_dust2",
 	"materials": 9,
 	"tri_count": 2100,

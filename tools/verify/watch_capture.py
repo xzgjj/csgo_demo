@@ -29,6 +29,7 @@ WATCH_DIRS = ("core/include", "core/src", "core/tests", "host/scripts", "host/gd
 WATCH_SUFFIXES = {".cpp", ".h", ".gd", ".json", ".py", ".tscn"}
 OUT_DIR = ROOT / "log/verify/watch"
 SETTINGS_OUT = ROOT / "log/verify/settings/pages"
+BUY_OUT = ROOT / "log/verify/buy/pages"
 GODOT = Path(r"D:\app_finish\Godot\Godot_v4.7.2-stable_win64_console.exe")
 POLL_SECONDS = 2.0
 SETTINGS_PAGES = ("display", "effects", "audio", "gameplay", "controls", "camera", "ui", "account")
@@ -50,6 +51,15 @@ def capture_settings() -> tuple[int, str]:
         timeout=240,
     )
     return code, tail
+
+
+def capture_buy() -> tuple[int, str]:
+    """购买 UI 采集：6 分类列表 + 轮盘 + 退款禁用态（SPEC-06 BUY-06/07 视觉证据）。"""
+    BUY_OUT.mkdir(parents=True, exist_ok=True)
+    return run(
+        [str(find_godot()), "--path", "host", "--script", "res://tests/capture_buy.gd", "--", str(BUY_OUT)],
+        timeout=240,
+    )
 
 
 def snapshot() -> dict[str, tuple[int, int]]:
@@ -106,6 +116,35 @@ def write_report(rounds: int, files: list[str], steps: list[tuple[str, int, str]
     return path
 
 
+def _manifest(out_dir: Path, names: list[str], schema: str) -> tuple[int, str]:
+    import json
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    records = []
+    missing = []
+    for name in names:
+        path = out_dir / f"{name}.png"
+        if not path.exists() or path.stat().st_size == 0:
+            missing.append(name)
+            continue
+        records.append({
+            "page": name,
+            "file": path.name,
+            "bytes": path.stat().st_size,
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest()[:16],
+            "mtime": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+        })
+    manifest = {"schema": schema, "pages": records, "missing": missing}
+    path = out_dir / "manifest.json"
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return (0, f"pages={len(records)}") if not missing else (1, f"缺页 {missing}")
+
+
+def write_buy_manifest() -> tuple[int, str]:
+    names = [f"buy_list_{i}" for i in range(1, 7)] + ["buy_wheel", "buy_refunded"]
+    return _manifest(BUY_OUT, names, "buy-capture/1")
+
+
 def write_settings_manifest() -> tuple[int, str]:
     """为 8 页截图记录哈希与时间，供“截图是否新鲜”核对；缺页即失败。"""
     import json
@@ -153,6 +192,10 @@ def one_round(update_golden: bool, rounds: int, files: list[str] | None = None) 
             steps.append(("settings_shots", code, tail))
             if code == 0:
                 steps.append(("settings_manifest", *write_settings_manifest()))
+                code, tail = capture_buy()
+                steps.append(("buy_shots", code, tail))
+                if code == 0:
+                    steps.append(("buy_manifest", *write_buy_manifest()))
     ok = all(step_code == 0 for _, step_code, _ in steps)
     write_report(rounds, files or [], steps, ok)
     return ok

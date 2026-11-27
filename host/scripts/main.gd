@@ -58,7 +58,6 @@ var _f3_was := false
 var shot_feedback
 var _f5_was := false
 
-
 func _ready() -> void:
 	sim = RecoilSim.new()
 	sim.reset()
@@ -100,6 +99,14 @@ func _build_ui() -> void:
 	purchase = PurchaseFlowScript.new()
 	purchase.setup(sim, account, buy_menu, viewmodel)
 	buy_menu.purchase_requested.connect(Callable(purchase, "on_purchase"))
+	buy_menu.refund_requested.connect(Callable(purchase, "on_refund"))
+	buy_menu.rebuy_requested.connect(Callable(purchase, "on_rebuy"))
+	if sim.has_method("set_buy_enabled"):
+		sim.set_buy_enabled(true)
+	if sim.has_method("buy_catalog_entries"):
+		buy_menu.set_catalog(sim.buy_catalog_entries())
+	if sim.has_method("can_buy_entry"):
+		buy_menu.set_entry_checker(Callable(sim, "can_buy_entry"))
 	shot_feedback = ShotFeedbackScript.new()
 	shot_feedback.setup(sim, viewmodel, fx)
 	match_flow = MatchFlowScript.new()
@@ -133,6 +140,7 @@ func _show_menu() -> void:
 ## 场景/截图执行器用的 2 人灰盒（±800 竞技场）模式，保持既有断言与 golden 不变。
 func _start_play() -> void:
 	sim.reset()
+	sim.set_buy_enabled(true)
 	_enter_game(false)
 
 ## 可玩模式：注册表地图 + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
@@ -141,6 +149,7 @@ func _start_match() -> void:
 	if not MapLoaderScript.start_match(sim, map_id):
 		_show_menu()
 		return
+	sim.set_buy_enabled(true)
 	_enter_game(true)
 func _restart() -> void:
 	if match_mode:
@@ -210,11 +219,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		var invert := -1.0 if bool(settings.get_value("controls.mouse.invert_y")) else 1.0
 		yaw -= event.relative.x * settings.sensitivity
 		pitch = clampf(pitch - event.relative.y * settings.sensitivity * invert, -89.0, 89.0)
+	if BuyShortcuts.handle(event, buy_menu, purchase):
+		return
 	if event.is_action_pressed("pause"):
 		_handle_pause_action()
 	if event.is_action_pressed("scoreboard") and not event.is_echo():
 		toggle_scoreboard()
-
+func _toggle_buy() -> void: BuyShortcuts.toggle(self)
 func _handle_pause_action() -> void:
 	if settings_page.visible:
 		close_settings_page()
@@ -262,7 +273,7 @@ func _physics_process(delta: float) -> void:
 	_reload_was_down = reload_down
 	var buy_down := Input.is_action_pressed("buy")
 	if buy_down and not _buy_was_down:
-		_toggle_buy()
+		BuyShortcuts.toggle(self)
 	_buy_was_down = buy_down
 	var pickup_down := Input.is_action_pressed("pickup")
 	if pickup_down and not _bomb_was_down:
@@ -285,15 +296,12 @@ func _physics_process(delta: float) -> void:
 func _ui_page_open() -> bool:
 	return HostPages.page_open(self)
 
-
 func want_mouse_mode() -> int:
 	return Input.MOUSE_MODE_VISIBLE if _ui_page_open() else Input.MOUSE_MODE_CAPTURED
-
 
 func _sync_mouse_mode() -> void:
 	if Input.mouse_mode != want_mouse_mode():
 		Input.mouse_mode = want_mouse_mode()
-
 
 func _toggle_debug() -> void:
 	var down := Input.is_key_pressed(KEY_F3)
@@ -357,12 +365,10 @@ func _weapon_name() -> String:
 		return str(sim.get_weapon_name(int(sim.get_weapon_id(0))))
 	return viewmodel.display_name()
 
-
 func weapon_magnification() -> float:
 	if sim != null and sim.has_method("get_weapon_scope"):
 		return float(sim.get_weapon_scope(0))
 	return viewmodel.scope_magnification()
-
 
 func _pressed_weapon_key() -> int:
 	if Input.is_key_pressed(KEY_1):
@@ -385,13 +391,6 @@ func _try_pickup() -> bool:
 	if purchase != null:
 		purchase.sync_viewmodel()
 	return true
-
-
-func _toggle_buy() -> void:
-	if purchase == null:
-		return
-	purchase.toggle()
-	_sync_mouse_mode()
 
 func _throw_input(name: String, action: String, kind: int) -> void:
 	var down := Input.is_action_pressed(action)

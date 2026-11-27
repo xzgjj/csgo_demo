@@ -150,6 +150,15 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
                      static_cast<int32_t>(RejectReason::MatchEnded)});
         return;
     }
+    if (content.buy.enabled) {
+        const uint8_t index = static_cast<uint8_t>(command.grenade);
+        if (index >= player.grenade_counts.size() || player.grenade_counts[index] == 0) {
+            events.Push({EventKind::CommandRejected, command.player, 0,
+                         static_cast<int32_t>(RejectReason::NoGrenadeSlot)});
+            return;
+        }
+        player.grenade_counts[index] -= 1;
+    }
     for (GrenadeState& grenade : state.grenades) {
         if (grenade.active) {
             continue;

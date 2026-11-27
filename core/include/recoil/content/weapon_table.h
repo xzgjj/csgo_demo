@@ -26,6 +26,10 @@ inline uint8_t& WeaponSlotId(PlayerState& player, uint8_t slot) {
     return slot == 0 ? player.primary_id : player.secondary_id;
 }
 
+inline uint8_t WeaponSlotId(const PlayerState& player, uint8_t slot) {
+    return slot == 0 ? player.primary_id : player.secondary_id;
+}
+
 // 武器价格（未知道具返回 0）与展示名（未知返回 "-"）。
 uint16_t WeaponPrice(WeaponId id);
 const char* WeaponName(WeaponId id);

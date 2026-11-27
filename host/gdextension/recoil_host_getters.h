@@ -9,6 +9,17 @@
     int get_round_number() const { return state_.round.number; }
     int get_alive_count(int team) const { return recoil_host::AliveCount(state_, team); }
     int get_has_bomb(int player) const { return recoil_host::HasBomb(state_, player); }
+
+    // SPEC-06：队伍经济（该阵营全部玩家余额之和），购买 UI 显示团队经济条。
+    int team_money(int team) const {
+        int total = 0;
+        for (uint8_t i = 0; i < state_.player_count; ++i) {
+            if (static_cast<int>(state_.players[i].team) == team) {
+                total += state_.players[i].money;
+            }
+        }
+        return total;
+    }
     int nav_path_points(float fx, float fy, float fz, float tx, float ty, float tz) const {
         return recoil_host::NavPointCount(map_, fx, fy, fz, tx, ty, tz);
     }
@@ -101,7 +112,26 @@
         if (player < 0 || player >= static_cast<int>(state_.player_count)) {
             return false;
         }
+        if (content_.buy.enabled && !recoil::IsBuyWindowOpen(state_, content_)) {
+            return false;
+        }
         return recoil::CanBuy(state_, content_);
+    }
+
+    // SPEC-06：最近一次 BuyFailed 的 BuyResult 原因码（0=无失败，排错/UI 提示用）。
+    int last_buy_failure() const {
+        return last_buy_failure_;
+    }
+
+    // SPEC-06：目录条目能否购买（0=Ok，其余为 BuyResult 原因码），供 UI 显示精确灰显原因。
+    int can_buy_entry(int player, int entry) const {
+        recoil::BuyResult reason = recoil::BuyResult::Ok;
+        if (player < 0 || entry < 0 ||
+            !recoil::CanBuyEntry(state_, content_, static_cast<uint8_t>(player),
+                                 static_cast<uint8_t>(entry), reason)) {
+            return static_cast<int>(reason);
+        }
+        return 0;
     }
 
     // 换弹状态（HUD 换弹提示 + 换弹回归用例）。

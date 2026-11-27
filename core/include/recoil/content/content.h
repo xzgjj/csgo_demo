@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "recoil/content/buy_catalog.gen.h"
 #include "recoil/movement/movement.h"
 
 namespace recoil {
@@ -71,6 +72,14 @@ struct Content {
     bool ballistics_enabled = true;
     // SPEC-04：友伤开关（数据红线 4）。关闭时队友仍挡弹道，但不掉血。
     bool friendly_fire = false;
+    // SPEC-06：购买目录（价格/限购/阵营）；enabled=false 退回旧“按键直接购买”流程。
+    // 默认关闭以保持既有单测/场景基线；宿主启动时显式 set_buy_enabled(true)。
+    BuyCatalog buy{false,
+                   kBuyZoneRequired,
+                   kBuyWindowTicks,
+                   kBuyMaxRefunds,
+                   static_cast<uint8_t>(kBuyEntryCount),
+                   kBuyEntries};
 };
 
 Content DefaultContent();

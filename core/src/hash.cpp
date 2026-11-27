@@ -90,6 +90,19 @@ uint64_t HashState(const WorldState& state) {
         mix(static_cast<uint64_t>(std::bit_cast<uint32_t>(player.inaccuracy)));
         mix(static_cast<uint64_t>(player.has_bomb) |
             (static_cast<uint64_t>(player.has_defuser) << 1));
+        // SPEC-06 购买态：手雷库存/限购计数/退款位/购买位，全部参与确定性与回放。
+        mix(static_cast<uint64_t>(player.grenade_counts[0]) |
+            (static_cast<uint64_t>(player.grenade_counts[1]) << 8) |
+            (static_cast<uint64_t>(player.grenade_counts[2]) << 16) |
+            (static_cast<uint64_t>(player.refund_count) << 24));
+        mix(static_cast<uint64_t>(player.refunded_mask));
+        mix(static_cast<uint64_t>(player.round_buy_mask) |
+            (static_cast<uint64_t>(player.last_buy_mask) << 16) |
+            (static_cast<uint64_t>(player.buy_fire_marks[0]) << 32));
+        for (uint8_t k = 0; k < 16; ++k) {
+            mix(static_cast<uint64_t>(player.bought_counts[k]) |
+                (static_cast<uint64_t>(player.bought_counts[k + 16]) << 8));
+        }
     }
     return hash;
 }

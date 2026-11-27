@@ -1,0 +1,126 @@
+{
+  "schema": "buy-catalog/1",
+  "window": {
+    "buy_time_s": 20,
+    "grace_s": 5,
+    "zone_required": false,
+    "max_refunds_per_round": 3
+  },
+  "categories": [
+    {
+      "id": "pistols",
+      "name": "手枪",
+      "slot": "secondary",
+      "items": [
+        {
+          "weapon": "glock_18",
+          "price": 200,
+          "limit": 1,
+          "sides": [
+            "T"
+          ]
+        },
+        {
+          "weapon": "usp_s",
+          "price": 200,
+          "limit": 1,
+          "sides": [
+            "CT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "smg",
+      "name": "冲锋枪",
+      "slot": "primary",
+      "items": []
+    },
+    {
+      "id": "rifles",
+      "name": "步枪",
+      "slot": "primary",
+      "items": [
+        {
+          "weapon": "ak47",
+          "price": 2700,
+          "limit": 1,
+          "sides": [
+            "T"
+          ]
+        },
+        {
+          "weapon": "m4a4",
+          "price": 3100,
+          "limit": 1,
+          "sides": [
+            "CT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "heavy",
+      "name": "重型",
+      "slot": "primary",
+      "items": [
+        {
+          "weapon": "awp",
+          "price": 4750,
+          "limit": 1,
+          "sides": [
+            "T",
+            "CT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "equipment",
+      "name": "装备",
+      "slot": "gear",
+      "items": [
+        {
+          "item": "kevlar",
+          "price": 650,
+          "limit": 1
+        },
+        {
+          "item": "helmet",
+          "price": 1000,
+          "limit": 1
+        },
+        {
+          "item": "defuse_kit",
+          "price": 400,
+          "limit": 1,
+          "sides": [
+            "CT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "grenades",
+      "name": "投掷物",
+      "slot": "grenade",
+      "items": [
+        {
+          "item": "he",
+          "price": 300,
+          "limit": 1
+        },
+        {
+          "item": "flash",
+          "price": 200,
+          "limit": 2
+        },
+        {
+          "item": "smoke",
+          "price": 300,
+          "limit": 1
+        }
+      ]
+    }
+  ]
+}
