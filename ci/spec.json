@@ -6,7 +6,8 @@
     "emails": [
       "54426784+xzgjj@users.noreply.github.com",
       "mapreset",
-      "mapreset@local"
+      "mapreset@local",
+      "xzgjj@users.noreply.github.com"
     ],
     "allowed_committers": [
       "54426784+xzgjj@users.noreply.github.com",
@@ -14,7 +15,8 @@
       "mapreset",
       "mapreset@local",
       "noreply@github.com",
-      "xzgjj"
+      "xzgjj",
+      "xzgjj@users.noreply.github.com"
     ]
   },
   "policy_approver": "xzgjj",

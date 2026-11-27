@@ -28,60 +28,7 @@ struct RayHit {
     HitGroup group = HitGroup::None;
 };
 
-void FinishReload(PlayerState& player, const WeaponDef& weapon, uint8_t source, EventList& events) {
-    const int capacity =
-        std::max(0, static_cast<int>(weapon.magazine) - static_cast<int>(player.weapon.mag));
-    const int take = std::min(static_cast<int>(player.weapon.reserve), capacity);
-    player.weapon.mag = static_cast<uint16_t>(player.weapon.mag + take);
-    player.weapon.reserve = static_cast<uint16_t>(player.weapon.reserve - take);
-    player.weapon.reloading = false;
-    player.weapon.reload_ticks_left = 0;
-    events.Push({EventKind::ReloadFinished, source, 0, player.weapon.mag});
-}
-
-void ApplyTimers(WorldState& state, const Content& content, EventList& events) {
-    for (uint8_t i = 0; i < state.player_count; ++i) {
-        PlayerState& player = state.players[i];
-        // 弹道恢复与连发复位：与冷却/换弹同处一个 tick 阶段，保证确定性顺序。
-        TickBallistics(player, BallisticsFor(ActiveWeaponId(player)), state.tick);
-        if (player.weapon.cooldown_ticks > 0) {
-            --player.weapon.cooldown_ticks;
-        }
-        if (!player.weapon.reloading) {
-            continue;
-        }
-        if (player.weapon.reload_ticks_left > 0) {
-            --player.weapon.reload_ticks_left;
-        }
-        if (player.weapon.reload_ticks_left == 0) {
-            FinishReload(player, ActiveWeaponDef(player, content), i, events);
-        }
-    }
-}
-
-void StartReload(WorldState& state, const Content& content, const Command& command,
-                 EventList& events) {
-    if (!EnsureAlivePlayer(state, command.player, events)) {
-        return;
-    }
-    PlayerState& player = state.players[command.player];
-    const WeaponDef weapon = ActiveWeaponDef(player, content);
-    if (player.weapon.reloading) {
-        PushReject(events, command.player, RejectReason::Reloading);
-        return;
-    }
-    if (player.weapon.mag >= weapon.magazine) {
-        PushReject(events, command.player, RejectReason::MagazineFull);
-        return;
-    }
-    if (player.weapon.reserve == 0) {
-        PushReject(events, command.player, RejectReason::NoReserve);
-        return;
-    }
-    player.weapon.reloading = true;
-    player.weapon.reload_ticks_left = weapon.reload_ticks;
-    events.Push({EventKind::ReloadStarted, command.player, 0, player.weapon.reload_ticks_left});
-}
+#include "step_reload.h" // 换弹/计时阶段（依赖上面的结构体与武器表）
 
 // 射线离开指定 AABB 的距离（入口之后），用于穿透后从墙背面继续追踪。
 float WallExitDistance(const Wall& wall, const Vec3& origin, const Vec3& dir, float entry_t) {
