@@ -1,0 +1,1068 @@
+{
+ "name": "de_dust2",
+ "schema": "de-ash-boxes/2",
+ "source": "tools/mapgen/import_scene_v3.py",
+ "count": 53,
+ "boxes": [
+  {
+   "center": [
+    -0.0,
+    -8.0,
+    -0.0
+   ],
+   "size": [
+    4664.0,
+    16.0,
+    4664.0
+   ],
+   "color": [
+    0.42,
+    0.34,
+    0.24
+   ],
+   "kind": "floor",
+   "material": "dirt",
+   "collision": true
+  },
+  {
+   "center": [
+    -2316.0,
+    128.0,
+    -0.0
+   ],
+   "size": [
+    32.0,
+    256.0,
+    4664.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    2316.0,
+    128.0,
+    -0.0
+   ],
+   "size": [
+    32.0,
+    256.0,
+    4664.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -0.0,
+    128.0,
+    2316.0
+   ],
+   "size": [
+    4600,
+    256.0,
+    32.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -0.0,
+    128.0,
+    -2316.0
+   ],
+   "size": [
+    4600,
+    256.0,
+    32.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1668.0,
+    184.0,
+    -1156.0
+   ],
+   "size": [
+    104.0,
+    112.0,
+    32.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1880.0,
+    194.0,
+    -1320.0
+   ],
+   "size": [
+    40.0,
+    132.0,
+    360.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1880.0,
+    176.0,
+    -1548.0
+   ],
+   "size": [
+    40.0,
+    96.0,
+    96.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1880.0,
+    194.0,
+    -1738.0
+   ],
+   "size": [
+    40.0,
+    132.0,
+    284.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1700.0,
+    184.0,
+    -1860.0
+   ],
+   "size": [
+    400.0,
+    112.0,
+    40.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1516.0,
+    132.0,
+    1570.0
+   ],
+   "size": [
+    32.0,
+    136.0,
+    620.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -2060.0,
+    184.0,
+    1510.0
+   ],
+   "size": [
+    40.0,
+    112.0,
+    740.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1723.0,
+    152.0,
+    1160.0
+   ],
+   "size": [
+    54.0,
+    176.0,
+    40.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1798.0,
+    112.0,
+    1160.0
+   ],
+   "size": [
+    96.0,
+    96.0,
+    40.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1953.0,
+    152.0,
+    1160.0
+   ],
+   "size": [
+    214.0,
+    176.0,
+    40.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -700.0,
+    120.0,
+    -170.0
+   ],
+   "size": [
+    200.0,
+    240.0,
+    100.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -700.0,
+    120.0,
+    -470.0
+   ],
+   "size": [
+    200.0,
+    240.0,
+    100.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "wall",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1575.0,
+    64.0,
+    -1510.0
+   ],
+   "size": [
+    650.0,
+    128.0,
+    740.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1550.0,
+    184.0,
+    -1540.0
+   ],
+   "size": [
+    120.0,
+    112.0,
+    140.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1630.0,
+    192.0,
+    -1270.0
+   ],
+   "size": [
+    120.0,
+    128.0,
+    120.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1410.0,
+    176.0,
+    -1780.0
+   ],
+   "size": [
+    180.0,
+    96.0,
+    160.0
+   ],
+   "color": [
+    0.52,
+    0.54,
+    0.58
+   ],
+   "kind": "prop",
+   "material": "metal",
+   "collision": true
+  },
+  {
+   "center": [
+    -1790.0,
+    160.0,
+    -1820.0
+   ],
+   "size": [
+    140.0,
+    64.0,
+    120.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "prop",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1828.0,
+    176.0,
+    -1608.0
+   ],
+   "size": [
+    96.0,
+    96.0,
+    96.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1812.0,
+    172.0,
+    -1312.0
+   ],
+   "size": [
+    64.0,
+    88.0,
+    64.0
+   ],
+   "color": [
+    0.52,
+    0.54,
+    0.58
+   ],
+   "kind": "prop",
+   "material": "metal",
+   "collision": true
+  },
+  {
+   "center": [
+    -1575.0,
+    16.0,
+    -797.5
+   ],
+   "size": [
+    290.0,
+    32.0,
+    115.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1575.0,
+    32.0,
+    -912.5
+   ],
+   "size": [
+    290.0,
+    64.0,
+    115.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1575.0,
+    48.0,
+    -1027.5
+   ],
+   "size": [
+    290.0,
+    96.0,
+    115.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1575.0,
+    64.0,
+    -1142.5
+   ],
+   "size": [
+    290.0,
+    128.0,
+    115.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -820.0,
+    32.0,
+    -660.0
+   ],
+   "size": [
+    240.0,
+    64.0,
+    280.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1790.0,
+    32.0,
+    1510.0
+   ],
+   "size": [
+    580.0,
+    64.0,
+    740.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1970.0,
+    64.0,
+    1510.0
+   ],
+   "size": [
+    180.0,
+    128.0,
+    700.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -1655.0,
+    128.0,
+    1355.0
+   ],
+   "size": [
+    130.0,
+    128.0,
+    130.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1610.0,
+    184.0,
+    1710.0
+   ],
+   "size": [
+    130.0,
+    240.0,
+    160.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1948.0,
+    176.0,
+    1652.0
+   ],
+   "size": [
+    96.0,
+    96.0,
+    96.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -1885.0,
+    176.0,
+    1325.0
+   ],
+   "size": [
+    170.0,
+    96.0,
+    150.0
+   ],
+   "color": [
+    0.52,
+    0.54,
+    0.58
+   ],
+   "kind": "prop",
+   "material": "metal",
+   "collision": true
+  },
+  {
+   "center": [
+    -1552.0,
+    96.0,
+    1564.0
+   ],
+   "size": [
+    64.0,
+    64.0,
+    128.0
+   ],
+   "color": [
+    0.45,
+    0.4,
+    0.32
+   ],
+   "kind": "prop",
+   "material": "fabric",
+   "collision": true
+  },
+  {
+   "center": [
+    1630.0,
+    110.0,
+    -960.0
+   ],
+   "size": [
+    30.0,
+    220.0,
+    170.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    480.0,
+    64.0,
+    -1155.0
+   ],
+   "size": [
+    160.0,
+    128.0,
+    190.0
+   ],
+   "color": [
+    0.52,
+    0.54,
+    0.58
+   ],
+   "kind": "prop",
+   "material": "metal",
+   "collision": true
+  },
+  {
+   "center": [
+    1040.0,
+    32.0,
+    -1430.0
+   ],
+   "size": [
+    320.0,
+    64.0,
+    300.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    1075.0,
+    112.0,
+    -1440.0
+   ],
+   "size": [
+    110.0,
+    96.0,
+    120.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -700.0,
+    110.0,
+    -320.0
+   ],
+   "size": [
+    200.0,
+    220.0,
+    200.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    640.0,
+    48.0,
+    -80.0
+   ],
+   "size": [
+    120.0,
+    96.0,
+    160.0
+   ],
+   "color": [
+    0.42,
+    0.29,
+    0.17
+   ],
+   "kind": "prop",
+   "material": "wood",
+   "collision": true
+  },
+  {
+   "center": [
+    -10.0,
+    32.0,
+    -520.0
+   ],
+   "size": [
+    300.0,
+    64.0,
+    520.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -155.0,
+    16.0,
+    -795.0
+   ],
+   "size": [
+    110.0,
+    32.0,
+    210.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -265.0,
+    32.0,
+    -795.0
+   ],
+   "size": [
+    110.0,
+    64.0,
+    210.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "stairs",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -520.0,
+    64.0,
+    -890.0
+   ],
+   "size": [
+    440.0,
+    128.0,
+    220.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -790.0,
+    64.0,
+    -940.0
+   ],
+   "size": [
+    180.0,
+    128.0,
+    360.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    -980.0,
+    64.0,
+    -1050.0
+   ],
+   "size": [
+    320.0,
+    128.0,
+    220.0
+   ],
+   "color": [
+    0.58,
+    0.48,
+    0.36
+   ],
+   "kind": "platform",
+   "material": "concrete",
+   "collision": true
+  },
+  {
+   "center": [
+    148.0,
+    48.0,
+    -520.0
+   ],
+   "size": [
+    16.0,
+    96.0,
+    520.0
+   ],
+   "color": [
+    0.52,
+    0.54,
+    0.58
+   ],
+   "kind": "prop",
+   "material": "metal",
+   "collision": true
+  },
+  {
+   "center": [
+    -1566.0,
+    1.5,
+    -1500.0
+   ],
+   "size": [
+    256.0,
+    3.0,
+    256.0
+   ],
+   "color": [
+    0.62,
+    0.22,
+    0.18
+   ],
+   "kind": "site",
+   "material": "site",
+   "collision": false
+  },
+  {
+   "center": [
+    -1771.0,
+    1.5,
+    1506.0
+   ],
+   "size": [
+    256.0,
+    3.0,
+    256.0
+   ],
+   "color": [
+    0.62,
+    0.22,
+    0.18
+   ],
+   "kind": "site",
+   "material": "site",
+   "collision": false
+  },
+  {
+   "center": [
+    1835.0,
+    1.5,
+    565.0
+   ],
+   "size": [
+    128.0,
+    3.0,
+    128.0
+   ],
+   "color": [
+    0.2,
+    0.38,
+    0.62
+   ],
+   "kind": "spawn",
+   "material": "spawn",
+   "collision": false
+  },
+  {
+   "center": [
+    -1420.0,
+    1.5,
+    -380.0
+   ],
+   "size": [
+    128.0,
+    3.0,
+    128.0
+   ],
+   "color": [
+    0.2,
+    0.38,
+    0.62
+   ],
+   "kind": "spawn",
+   "material": "spawn",
+   "collision": false
+  }
+ ]
+}

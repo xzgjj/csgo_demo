@@ -1,0 +1,1251 @@
+{
+ "schema": "map-layout/2",
+ "name": "de_dust2",
+ "reference": "de_dust2 雷达（仅拓扑/节奏参考；几何、命名、贴图全部自建，见 SPEC-01）",
+ "units": "source_units",
+ "bounds": {
+  "min": [
+   -2300,
+   -2300,
+   0
+  ],
+  "max": [
+   2300,
+   2300,
+   288
+  ]
+ },
+ "floor_z": 0,
+ "wall_height": 256,
+ "perimeter_thickness": 32,
+ "layers": [
+  {
+   "id": "L0",
+   "z": 0,
+   "walkable": true,
+   "note": "地面：通道/包点/出生"
+  },
+  {
+   "id": "L1",
+   "z": 64,
+   "walkable": true,
+   "note": "一级台/猫道/侧屋"
+  },
+  {
+   "id": "L2",
+   "z": 128,
+   "walkable": true,
+   "note": "A 台/A 短"
+  }
+ ],
+ "reach": {
+  "jump_max": 57,
+  "step_max": 32,
+  "door_width": 96,
+  "door_height": 128,
+  "roof_walkable": false,
+  "max_building_height": 256,
+  "note": "v3 折角/支路；单级 32u，门洞 96/128"
+ },
+ "materials": [
+  "concrete",
+  "metal",
+  "wood",
+  "glass",
+  "fabric",
+  "dirt"
+ ],
+ "spawns": {
+  "T": {
+   "center": [
+    -565,
+    -1835,
+    0
+   ],
+   "size": [
+    770,
+    520
+   ],
+   "facing": [
+    0,
+    1
+   ],
+   "slots": [
+    [
+     -780,
+     -1900
+    ],
+    [
+     -600,
+     -1900
+    ],
+    [
+     -420,
+     -1900
+    ],
+    [
+     -240,
+     -1900
+    ],
+    [
+     -560,
+     -1760
+    ]
+   ]
+  },
+  "CT": {
+   "center": [
+    380,
+    1420,
+    0
+   ],
+   "size": [
+    800,
+    440
+   ],
+   "facing": [
+    0,
+    -1
+   ],
+   "slots": [
+    [
+     60,
+     1410
+    ],
+    [
+     240,
+     1410
+    ],
+    [
+     420,
+     1410
+    ],
+    [
+     600,
+     1410
+    ],
+    [
+     380,
+     1540
+    ]
+   ]
+  }
+ },
+ "buy_zones": [
+  {
+   "team": "T",
+   "center": [
+    -565,
+    -1925,
+    0
+   ],
+   "size": [
+    730,
+    470
+   ]
+  },
+  {
+   "team": "CT",
+   "center": [
+    380,
+    1425,
+    0
+   ],
+   "size": [
+    780,
+    390
+   ]
+  }
+ ],
+ "bombsites": [
+  {
+   "id": "A",
+   "center": [
+    1500,
+    1566,
+    128
+   ],
+   "size": [
+    740,
+    650
+   ],
+   "plant_radius": 64
+  },
+  {
+   "id": "B",
+   "center": [
+    -1506,
+    1771,
+    64
+   ],
+   "size": [
+    740,
+    580
+   ],
+   "plant_radius": 64
+  }
+ ],
+ "buildings": [],
+ "structures": [
+  {
+   "id": "A-03_0",
+   "kind": "wall",
+   "center": [
+    1156.0,
+    1668.0
+   ],
+   "size": [
+    32,
+    104
+   ],
+   "height": 112.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "A-04_0",
+   "kind": "wall",
+   "center": [
+    1320.0,
+    1880.0
+   ],
+   "size": [
+    360,
+    40
+   ],
+   "height": 132.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "A-04_1",
+   "kind": "wall",
+   "center": [
+    1548.0,
+    1880.0
+   ],
+   "size": [
+    96,
+    40
+   ],
+   "height": 96.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "A-04_3",
+   "kind": "wall",
+   "center": [
+    1738.0,
+    1880.0
+   ],
+   "size": [
+    284,
+    40
+   ],
+   "height": 132.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "A-05_0",
+   "kind": "wall",
+   "center": [
+    1860.0,
+    1700.0
+   ],
+   "size": [
+    40,
+    400
+   ],
+   "height": 112.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "B-03_0",
+   "kind": "wall",
+   "center": [
+    -1570.0,
+    1516.0
+   ],
+   "size": [
+    620,
+    32
+   ],
+   "height": 136.0,
+   "base_z": 64.0,
+   "material": "concrete"
+  },
+  {
+   "id": "B-04_0",
+   "kind": "wall",
+   "center": [
+    -1510.0,
+    2060.0
+   ],
+   "size": [
+    740,
+    40
+   ],
+   "height": 112.0,
+   "base_z": 128.0,
+   "material": "concrete"
+  },
+  {
+   "id": "B-05_0",
+   "kind": "wall",
+   "center": [
+    -1160.0,
+    1723.0
+   ],
+   "size": [
+    40,
+    54
+   ],
+   "height": 176.0,
+   "base_z": 64.0,
+   "material": "concrete"
+  },
+  {
+   "id": "B-05_1",
+   "kind": "wall",
+   "center": [
+    -1160.0,
+    1798.0
+   ],
+   "size": [
+    40,
+    96
+   ],
+   "height": 96.0,
+   "base_z": 64.0,
+   "material": "concrete"
+  },
+  {
+   "id": "B-05_3",
+   "kind": "wall",
+   "center": [
+    -1160.0,
+    1953.0
+   ],
+   "size": [
+    40,
+    214
+   ],
+   "height": 176.0,
+   "base_z": 64.0,
+   "material": "concrete"
+  },
+  {
+   "id": "M-05_0",
+   "kind": "wall",
+   "center": [
+    170.0,
+    700.0
+   ],
+   "size": [
+    100,
+    200
+   ],
+   "height": 240.0,
+   "base_z": 0.0,
+   "material": "concrete"
+  },
+  {
+   "id": "M-06_0",
+   "kind": "wall",
+   "center": [
+    470.0,
+    700.0
+   ],
+   "size": [
+    100,
+    200
+   ],
+   "height": 240.0,
+   "base_z": 0.0,
+   "material": "concrete"
+  }
+ ],
+ "lanes": [
+  {
+   "id": "A_long",
+   "width": 240,
+   "points": [
+    [
+     -420,
+     -1900
+    ],
+    [
+     660,
+     -1800
+    ],
+    [
+     990,
+     -1560
+    ],
+    [
+     1160,
+     -1300
+    ],
+    [
+     1160,
+     -400
+    ],
+    [
+     1290,
+     -210
+    ],
+    [
+     1460,
+     -100
+    ],
+    [
+     1460,
+     520
+    ],
+    [
+     1360,
+     860
+    ],
+    [
+     1300,
+     1100
+    ],
+    [
+     1470,
+     1450
+    ]
+   ]
+  },
+  {
+   "id": "A_short",
+   "width": 220,
+   "points": [
+    [
+     -230,
+     -1700
+    ],
+    [
+     -20,
+     -1440
+    ],
+    [
+     -20,
+     -760
+    ],
+    [
+     220,
+     -580
+    ],
+    [
+     300,
+     -300
+    ],
+    [
+     300,
+     140
+    ],
+    [
+     600,
+     100
+    ],
+    [
+     830,
+     280
+    ],
+    [
+     830,
+     660
+    ],
+    [
+     1000,
+     840
+    ],
+    [
+     1070,
+     1120
+    ],
+    [
+     1080,
+     1250
+    ]
+   ]
+  },
+  {
+   "id": "B_tunnel",
+   "width": 240,
+   "points": [
+    [
+     -780,
+     -1760
+    ],
+    [
+     -1000,
+     -1300
+    ],
+    [
+     -1040,
+     -400
+    ],
+    [
+     -980,
+     -60
+    ],
+    [
+     -700,
+     -40
+    ],
+    [
+     -1000,
+     600
+    ],
+    [
+     -1010,
+     1300
+    ],
+    [
+     -1100,
+     1450
+    ],
+    [
+     -1350,
+     1700
+    ]
+   ]
+  },
+  {
+   "id": "CT_A",
+   "width": 220,
+   "points": [
+    [
+     380,
+     1320
+    ],
+    [
+     860,
+     1480
+    ],
+    [
+     1100,
+     1400
+    ],
+    [
+     1300,
+     1290
+    ]
+   ]
+  },
+  {
+   "id": "CT_B",
+   "width": 180,
+   "points": [
+    [
+     300,
+     1240
+    ],
+    [
+     -150,
+     1480
+    ],
+    [
+     -640,
+     1590
+    ],
+    [
+     -1000,
+     1640
+    ],
+    [
+     -1240,
+     1700
+    ]
+   ]
+  },
+  {
+   "id": "CT_mid",
+   "width": 400,
+   "points": [
+    [
+     150,
+     1200
+    ],
+    [
+     300,
+     1090
+    ],
+    [
+     320,
+     900
+    ],
+    [
+     320,
+     720
+    ]
+   ]
+  },
+  {
+   "id": "T_mid",
+   "width": 400,
+   "points": [
+    [
+     -420,
+     -1640
+    ],
+    [
+     -100,
+     -1420
+    ],
+    [
+     -60,
+     -900
+    ],
+    [
+     120,
+     -600
+    ],
+    [
+     260,
+     -300
+    ],
+    [
+     260,
+     100
+    ],
+    [
+     320,
+     500
+    ],
+    [
+     320,
+     700
+    ]
+   ]
+  },
+  {
+   "id": "B_loop",
+   "width": 200,
+   "points": [
+    [
+     -1010,
+     1200
+    ],
+    [
+     -950,
+     700
+    ],
+    [
+     -780,
+     -100
+    ],
+    [
+     -560,
+     -520
+    ],
+    [
+     -300,
+     -620
+    ],
+    [
+     -60,
+     -620
+    ]
+   ]
+  }
+ ],
+ "choke_points": [
+  {
+   "id": "long_door",
+   "center": [
+    960,
+    -1560
+   ],
+   "width": 170
+  },
+  {
+   "id": "mid_door",
+   "center": [
+    320,
+    700
+   ],
+   "width": 200
+  },
+  {
+   "id": "b_door",
+   "center": [
+    -700,
+    1600
+   ],
+   "width": 110
+  },
+  {
+   "id": "a_short",
+   "center": [
+    1080,
+    1210
+   ],
+   "width": 200
+  },
+  {
+   "id": "b_tunnel",
+   "center": [
+    -1020,
+    1240
+   ],
+   "width": 128
+  }
+ ],
+ "sightlines": [],
+ "props": [
+  {
+   "id": "A-01",
+   "kind": "platform",
+   "center": [
+    1510.0,
+    1575.0,
+    0.0
+   ],
+   "size": [
+    740,
+    650,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "A-06",
+   "kind": "prop",
+   "center": [
+    1540.0,
+    1550.0,
+    128.0
+   ],
+   "size": [
+    140,
+    120,
+    112.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "A-07",
+   "kind": "prop",
+   "center": [
+    1270.0,
+    1630.0,
+    128.0
+   ],
+   "size": [
+    120,
+    120,
+    128.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "A-08",
+   "kind": "prop",
+   "center": [
+    1780.0,
+    1410.0,
+    128.0
+   ],
+   "size": [
+    160,
+    180,
+    96.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "A-09",
+   "kind": "prop",
+   "center": [
+    1820.0,
+    1790.0,
+    128.0
+   ],
+   "size": [
+    120,
+    140,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true,
+   "collision": true
+  },
+  {
+   "id": "A-10",
+   "kind": "prop",
+   "center": [
+    1608.0,
+    1828.0,
+    128.0
+   ],
+   "size": [
+    96,
+    96,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "A-11",
+   "kind": "prop",
+   "center": [
+    1312.0,
+    1812.0,
+    128.0
+   ],
+   "size": [
+    64,
+    64,
+    88.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "A-14_step0",
+   "kind": "stairs",
+   "center": [
+    797.5,
+    1575.0,
+    0.0
+   ],
+   "size": [
+    115.0,
+    290,
+    32.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "A-14_step1",
+   "kind": "stairs",
+   "center": [
+    912.5,
+    1575.0,
+    0.0
+   ],
+   "size": [
+    115.0,
+    290,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "A-14_step2",
+   "kind": "stairs",
+   "center": [
+    1027.5,
+    1575.0,
+    0.0
+   ],
+   "size": [
+    115.0,
+    290,
+    96.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "A-14_step3",
+   "kind": "stairs",
+   "center": [
+    1142.5,
+    1575.0,
+    0.0
+   ],
+   "size": [
+    115.0,
+    290,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "A-18",
+   "kind": "platform",
+   "center": [
+    660.0,
+    820.0,
+    0.0
+   ],
+   "size": [
+    280,
+    240,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "B-01",
+   "kind": "platform",
+   "center": [
+    -1510.0,
+    1790.0,
+    0.0
+   ],
+   "size": [
+    740,
+    580,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "B-02",
+   "kind": "platform",
+   "center": [
+    -1510.0,
+    1970.0,
+    0.0
+   ],
+   "size": [
+    700,
+    180,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "B-06",
+   "kind": "prop",
+   "center": [
+    -1355.0,
+    1655.0,
+    64.0
+   ],
+   "size": [
+    130,
+    130,
+    128.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "B-07",
+   "kind": "prop",
+   "center": [
+    -1710.0,
+    1610.0,
+    64.0
+   ],
+   "size": [
+    160,
+    130,
+    240.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "B-08",
+   "kind": "prop",
+   "center": [
+    -1652.0,
+    1948.0,
+    128.0
+   ],
+   "size": [
+    96,
+    96,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "B-09",
+   "kind": "prop",
+   "center": [
+    -1325.0,
+    1885.0,
+    128.0
+   ],
+   "size": [
+    150,
+    170,
+    96.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "B-10",
+   "kind": "prop",
+   "center": [
+    -1564.0,
+    1552.0,
+    64.0
+   ],
+   "size": [
+    128,
+    64,
+    64.0
+   ],
+   "material": "fabric",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "L-03",
+   "kind": "prop",
+   "center": [
+    960.0,
+    -1630.0,
+    0.0
+   ],
+   "size": [
+    170,
+    30,
+    220.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "L-09",
+   "kind": "prop",
+   "center": [
+    1155.0,
+    -480.0,
+    0.0
+   ],
+   "size": [
+    190,
+    160,
+    128.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "L-10",
+   "kind": "platform",
+   "center": [
+    1430.0,
+    -1040.0,
+    0.0
+   ],
+   "size": [
+    300,
+    320,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "L-13",
+   "kind": "prop",
+   "center": [
+    1440.0,
+    -1075.0,
+    64.0
+   ],
+   "size": [
+    120,
+    110,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "M-04",
+   "kind": "prop",
+   "center": [
+    320.0,
+    700.0,
+    0.0
+   ],
+   "size": [
+    200,
+    200,
+    220.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "M-07",
+   "kind": "prop",
+   "center": [
+    80.0,
+    -640.0,
+    0.0
+   ],
+   "size": [
+    160,
+    120,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true
+  },
+  {
+   "id": "M-10",
+   "kind": "platform",
+   "center": [
+    520.0,
+    10.0,
+    0.0
+   ],
+   "size": [
+    520,
+    300,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-11_step0",
+   "kind": "stairs",
+   "center": [
+    795.0,
+    155.0,
+    0.0
+   ],
+   "size": [
+    210,
+    110.0,
+    32.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-11_step1",
+   "kind": "stairs",
+   "center": [
+    795.0,
+    265.0,
+    0.0
+   ],
+   "size": [
+    210,
+    110.0,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-12",
+   "kind": "platform",
+   "center": [
+    890.0,
+    520.0,
+    0.0
+   ],
+   "size": [
+    220,
+    440,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-13",
+   "kind": "platform",
+   "center": [
+    940.0,
+    790.0,
+    0.0
+   ],
+   "size": [
+    360,
+    180,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-14",
+   "kind": "platform",
+   "center": [
+    1050.0,
+    980.0,
+    0.0
+   ],
+   "size": [
+    220,
+    320,
+    128.0
+   ],
+   "material": "concrete",
+   "walkable": true
+  },
+  {
+   "id": "M-17",
+   "kind": "prop",
+   "center": [
+    520.0,
+    -148.0,
+    0.0
+   ],
+   "size": [
+    520,
+    16,
+    96.0
+   ],
+   "material": "metal",
+   "walkable": true,
+   "collision": true
+  }
+ ],
+ "rotation_seconds_target": {
+  "A_long": 19.0,
+  "A_short": 14.7,
+  "B_tunnel": 15.9,
+  "CT_A": 3.9,
+  "CT_B": 6.5,
+  "CT_mid": 2.2,
+  "T_mid": 10.4,
+  "B_loop": 9.3
+ },
+ "checks": {
+  "layoutcheck": [
+   "bounds",
+   "openings",
+   "clearance",
+   "lanes_8",
+   "rotation_times",
+   "boxes_sync"
+  ]
+ }
+}

@@ -143,6 +143,7 @@ def structure_boxes(structure):
     cx, cy = structure["center"]
     sx, sy = structure["size"]
     h = float(structure["height"])
+    base = float(structure.get("base_z", 0.0))
     return [
         make_box(
             structure["id"],
@@ -152,8 +153,8 @@ def structure_boxes(structure):
             cx + sx / 2,
             cy - sy / 2,
             cy + sy / 2,
-            0.0,
-            h,
+            base,
+            base + h,
         )
     ]
 
@@ -218,3 +219,4 @@ def marker_boxes(layout):
             )
         )
     return boxes
+

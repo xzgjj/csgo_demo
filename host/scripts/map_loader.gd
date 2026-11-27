@@ -8,9 +8,14 @@ const BOXES_PATH := "res://scenes/de_ash_boxes.json"
 
 ## 返回注入的碰撞盒数量；读取失败时保持调用方默认地图（返回 0）。
 static func apply(sim: RefCounted) -> int:
-	var text := FileAccess.get_file_as_string(BOXES_PATH)
+	return apply_path(sim, BOXES_PATH)
+
+
+## 指定清单注入（换图/测试用；默认路径行为不变）。
+static func apply_path(sim: RefCounted, path: String) -> int:
+	var text := FileAccess.get_file_as_string(path)
 	if text.is_empty():
-		push_warning("缺少 de_ash_boxes.json，保持默认竞技场")
+		push_warning("缺少 %s，保持默认竞技场" % path)
 		return 0
 	var data: Variant = JSON.parse_string(text)
 	if typeof(data) != TYPE_DICTIONARY:
@@ -59,3 +64,4 @@ static func _surface_id(material: String) -> int:
 			return 5
 		_:
 			return 0
+
