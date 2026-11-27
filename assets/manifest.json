@@ -1,224 +1,344 @@
 {
-  "schema": "asset-manifest/1",
-  "assets": [
-    {
-      "id": "map-de_ash-blockout",
-      "type": "map_source",
-      "path": "content/maps/de_ash.glb",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/blender/build_de_ash.py 生成",
-      "hash": ""
-    },
-    {
-      "id": "tex-concrete-noise",
-      "type": "texture",
-      "tags": [
-        "material:concrete"
-      ],
-      "path": "assets/generated/concrete_noise.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:3da9ff124d928de2d0e74dcf31a36e77ba58c59970d825ac098b4a130cbe40a1"
-    },
-    {
-      "id": "tex-brick-wall",
-      "type": "texture",
-      "tags": [
-        "material:concrete"
-      ],
-      "path": "assets/generated/brick_wall.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:0f096e678fe71a229b2fd92ce53055cbe13ce32b8da7b86ae643cab4d0a1fe24"
-    },
-    {
-      "id": "tex-wood-grain",
-      "type": "texture",
-      "tags": [
-        "material:wood"
-      ],
-      "path": "assets/generated/wood_grain.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:897ef1a805fc02b60eafa3720b651c2790cc0c20f52fb2493f90748930f56397"
-    },
-    {
-      "id": "tex-metal-scratch",
-      "type": "texture",
-      "tags": [
-        "material:metal"
-      ],
-      "path": "assets/generated/metal_scratch.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:1bdeb2a211039a2c1191c8c8e032c6946b9640c632afe14ea2ae7d536a8d87eb"
-    },
-    {
-      "id": "tex-fabric-weave",
-      "type": "texture",
-      "tags": [
-        "material:fabric"
-      ],
-      "path": "assets/generated/fabric_weave.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:176583086d80b55c356d7c045791a75c199cba96f8cafc742177c8e8e71354dd"
-    },
-    {
-      "id": "tex-dirt-noise",
-      "type": "texture",
-      "tags": [
-        "material:dirt"
-      ],
-      "path": "assets/generated/dirt_noise.png",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
-      "hash": "sha256:c76703bc6a37e8e9b8bd40a146b5df5c4eee13fce50f9e601ff70ff4bdd6d717"
-    },
-    {
-      "id": "qwen-weapons-ak47_fp",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\weapons/ak47_fp.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-weapons-m4a4_fp",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\weapons/m4a4_fp.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-weapons-awp_fp",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\weapons/awp_fp.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-map-de_ash_a_site",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\map/de_ash_a_site.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-map-de_ash_b_site",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\map/de_ash_b_site.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-decals-ground_markings",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\decals/ground_markings.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "qwen-ui-loading_bg",
-      "type": "ai_image",
-      "path": "assets/generated/qwen\\ui/loading_bg.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "Qwen-Image API",
-      "hash": ""
-    },
-    {
-      "id": "model-weapon-ak47",
-      "type": "model",
-      "path": "host/models/weapons/ak47.glb",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/blender/build_weapons.py 程序化生成",
-      "hash": ""
-    },
-    {
-      "id": "model-weapon-m4a4",
-      "type": "model",
-      "path": "host/models/weapons/m4a4.glb",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/blender/build_weapons.py 程序化生成",
-      "hash": ""
-    },
-    {
-      "id": "model-weapon-awp",
-      "type": "model",
-      "path": "host/models/weapons/awp.glb",
-      "license": "Original",
-      "author": "xzgjj",
-      "source": "tools/blender/build_weapons.py 程序化生成",
-      "hash": ""
-    },
-    {
-      "id": "tex-dust2-plaster",
-      "type": "texture",
-      "tags": [
-        "material:concrete"
-      ],
-      "path": "assets/generated/dust2/plaster_sand_01.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
-      "hash": "sha256:9d92f42126447c490335e5ce114400c8dbab454250a106fe404c0f6952d4c99a"
-    },
-    {
-      "id": "tex-dust2-sandstone",
-      "type": "texture",
-      "tags": [
-        "material:concrete"
-      ],
-      "path": "assets/generated/dust2/sandstone_block_01.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
-      "hash": "sha256:3ac8074a28922e886335b69c5d6b42b1c3d88577eb6914052037e527f288ebbb"
-    },
-    {
-      "id": "tex-dust2-wood",
-      "type": "texture",
-      "tags": [
-        "material:wood"
-      ],
-      "path": "assets/generated/dust2/wood_plank_01.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
-      "hash": "sha256:fefcc153e6e1c18724635480d3b012096aa16aa64e052346ffa780d937a90e9e"
-    },
-    {
-      "id": "tex-dust2-metal",
-      "type": "texture",
-      "tags": [
-        "material:metal"
-      ],
-      "path": "assets/generated/dust2/metal_panel_01.png",
-      "license": "AI-generated",
-      "author": "xzgjj",
-      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
-      "hash": "sha256:7e01f0585d943556705ab0cd520e13f36632d9953fe7872b011b99e3fd4f828b"
-    }
-  ]
+ "schema": "asset-manifest/1",
+ "assets": [
+  {
+   "id": "map-de_ash-blockout",
+   "type": "map_source",
+   "path": "content/maps/de_ash.glb",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/blender/build_de_ash.py 生成",
+   "hash": ""
+  },
+  {
+   "id": "tex-concrete-noise",
+   "type": "texture",
+   "tags": [
+    "material:concrete"
+   ],
+   "path": "assets/generated/concrete_noise.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:3da9ff124d928de2d0e74dcf31a36e77ba58c59970d825ac098b4a130cbe40a1"
+  },
+  {
+   "id": "tex-brick-wall",
+   "type": "texture",
+   "tags": [
+    "material:concrete"
+   ],
+   "path": "assets/generated/brick_wall.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:0f096e678fe71a229b2fd92ce53055cbe13ce32b8da7b86ae643cab4d0a1fe24"
+  },
+  {
+   "id": "tex-wood-grain",
+   "type": "texture",
+   "tags": [
+    "material:wood"
+   ],
+   "path": "assets/generated/wood_grain.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:897ef1a805fc02b60eafa3720b651c2790cc0c20f52fb2493f90748930f56397"
+  },
+  {
+   "id": "tex-metal-scratch",
+   "type": "texture",
+   "tags": [
+    "material:metal"
+   ],
+   "path": "assets/generated/metal_scratch.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:1bdeb2a211039a2c1191c8c8e032c6946b9640c632afe14ea2ae7d536a8d87eb"
+  },
+  {
+   "id": "tex-fabric-weave",
+   "type": "texture",
+   "tags": [
+    "material:fabric"
+   ],
+   "path": "assets/generated/fabric_weave.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:176583086d80b55c356d7c045791a75c199cba96f8cafc742177c8e8e71354dd"
+  },
+  {
+   "id": "tex-dirt-noise",
+   "type": "texture",
+   "tags": [
+    "material:dirt"
+   ],
+   "path": "assets/generated/dirt_noise.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets/make_placeholder_assets.py 程序化生成（seed=20261104，128x128）",
+   "hash": "sha256:c76703bc6a37e8e9b8bd40a146b5df5c4eee13fce50f9e601ff70ff4bdd6d717"
+  },
+  {
+   "id": "qwen-weapons-ak47_fp",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/weapons/ak47_fp.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-weapons-m4a4_fp",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/weapons/m4a4_fp.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-weapons-awp_fp",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/weapons/awp_fp.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-map-de_ash_a_site",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/map/de_ash_a_site.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-map-de_ash_b_site",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/map/de_ash_b_site.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-decals-ground_markings",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/decals/ground_markings.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "qwen-ui-loading_bg",
+   "type": "ai_image",
+   "path": "assets/generated/qwen/ui/loading_bg.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "Qwen-Image API",
+   "hash": ""
+  },
+  {
+   "id": "model-weapon-ak47",
+   "type": "model",
+   "path": "host/models/weapons/ak47.glb",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/blender/build_weapons.py 程序化生成",
+   "hash": ""
+  },
+  {
+   "id": "model-weapon-m4a4",
+   "type": "model",
+   "path": "host/models/weapons/m4a4.glb",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/blender/build_weapons.py 程序化生成",
+   "hash": ""
+  },
+  {
+   "id": "model-weapon-awp",
+   "type": "model",
+   "path": "host/models/weapons/awp.glb",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/blender/build_weapons.py 程序化生成",
+   "hash": ""
+  },
+  {
+   "id": "tex-dust2-plaster",
+   "type": "texture",
+   "tags": [
+    "material:concrete"
+   ],
+   "path": "assets/generated/dust2/plaster_sand_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:9d92f42126447c490335e5ce114400c8dbab454250a106fe404c0f6952d4c99a"
+  },
+  {
+   "id": "tex-dust2-sandstone",
+   "type": "texture",
+   "tags": [
+    "material:concrete"
+   ],
+   "path": "assets/generated/dust2/sandstone_block_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:3ac8074a28922e886335b69c5d6b42b1c3d88577eb6914052037e527f288ebbb"
+  },
+  {
+   "id": "tex-dust2-wood",
+   "type": "texture",
+   "tags": [
+    "material:wood"
+   ],
+   "path": "assets/generated/dust2/wood_plank_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:fefcc153e6e1c18724635480d3b012096aa16aa64e052346ffa780d937a90e9e"
+  },
+  {
+   "id": "tex-dust2-metal",
+   "type": "texture",
+   "tags": [
+    "material:metal"
+   ],
+   "path": "assets/generated/dust2/metal_panel_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:7e01f0585d943556705ab0cd520e13f36632d9953fe7872b011b99e3fd4f828b"
+  },
+  {
+   "id": "tex-dust2-glass",
+   "type": "texture",
+   "tags": [
+    "material:glass"
+   ],
+   "path": "assets/generated/dust2/glass_crack_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:c9b57f0b56426ad6a541e56cb9215e319b84431f6975596d773a6b2eeb31a72d"
+  },
+  {
+   "id": "tex-dust2-sandbag",
+   "type": "texture",
+   "tags": [
+    "material:fabric"
+   ],
+   "path": "assets/generated/dust2/sandbag_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:19b10f686523b5fac5541fa80920cd88e01d309799892375461018b3a8791de5"
+  },
+  {
+   "id": "tex-dust2-dirt",
+   "type": "texture",
+   "tags": [
+    "material:dirt"
+   ],
+   "path": "assets/generated/dust2/dirt_ground_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+   "hash": "sha256:412deb7ac4400e58ea9f02aa502fac2be1f0856ddc867cafa4751dfd339f44c2"
+  },
+  {
+   "id": "tex-dust2-road",
+   "type": "texture",
+   "tags": [
+    "material:road"
+   ],
+   "path": "assets/generated/dust2/road_compacted_01.png",
+   "license": "AI-generated",
+   "author": "xzgjj",
+   "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；1536→512 缩放 + 256 色量化（252KB）",
+   "hash": "sha256:9a11fbd564d920892a60b4c986aeebdd88fe36237b2424c30aaa110bb1d0929b"
+  },
+  {
+   "id": "asset-bombsite-a-24",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/decals/bombsite_a.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:c759e144ac3b608a14daf12d189abd7fef62454d1b52e1afb92972224b2c0dcc"
+  },
+  {
+   "id": "asset-bombsite-b-25",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/decals/bombsite_b.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:8ab1e7c9ad2938e36769c76114454f615b2eb1b1e63f19b49efeb9f56c38f5e2"
+  },
+  {
+   "id": "asset-crosshair-26",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/icons/crosshair.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:98f1b56e01219fc46b26a833136b2ed7249cd1765703f8057abc5c5b714d898e"
+  },
+  {
+   "id": "asset-weapon-ak47-27",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/icons/weapon_ak47.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:483b68434f89ff120181965c187ddef5d21e46ec7e33473d84152fb60d58f1c6"
+  },
+  {
+   "id": "asset-weapon-awp-28",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/icons/weapon_awp.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:b08893c9a27c291aef927a1f2beb7d29cd8f6e6e04013477dc92480e017afc9e"
+  },
+  {
+   "id": "asset-weapon-m4a4-29",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/icons/weapon_m4a4.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:d40adb5569241d0c414da4d2b7ca4760f6cffc5b1902e07333a21f9e3ad8580a"
+  },
+  {
+   "id": "asset-de-ash-radar-30",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/radar/de_ash_radar.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:7c9ab9da2b6273f935d894f1a55e36cd4fbd3ee8a9fe95d21688782af6f4395d"
+  },
+  {
+   "id": "asset-panel-9slice-31",
+   "type": "ui_image",
+   "path": "assets/generated/procedural/ui/panel_9slice.png",
+   "license": "Original",
+   "author": "xzgjj",
+   "source": "tools/assets 程序化生成",
+   "hash": "sha256:ddf2c6f5e4c5587efa00b47a67fe812e419e1c2387d8a9a6fa4a6f3135660f4b"
+  }
+ ]
 }

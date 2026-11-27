@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "blender": {
+      "command": "node",
+      "args": [
+        "D:\\c++_myproject\\game_project\\csgo_demo\\tools\\blender\\mcp_bridge.mjs"
+      ],
+      "description": "Blender via dsh-blender-plugin gateway (MCP stdio bridge)"
+    }
+  },
+  "imports": []
+}

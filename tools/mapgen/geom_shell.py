@@ -1,153 +1,149 @@
-"""de_dust2 围合外壳：由 layout 派生「边界墙 + 空白象限填充块」。
+"""de_dust2 围合：按「设计可行走矩形并集」实体化墙体，封死非路径空地。
 
-目的：不改手工台账（scene-elements.csv 仍 75 行），用确定性算法把可玩区封起来——
-外圈四条边界墙挡住出界，空白象限用大块墙体填掉，避免玩家从建筑缝隙走进虚空。
-
-约定（与 import_scene_v3 / check_dust2 共用）：
-- 只用轴对齐盒：格子填充，不做斜墙；
-- 可玩走廊 = lane 折线按 width/2 + 96 外扩；包点/出生/买区再外扩 128；
-- 已有结构 64 内不填，保证不压建筑；
-- 墙高 288（高于 256 的上限层，保证不可跳越）。
-
-用法：import_scene_v3.main() 里 `layout["structures"] += shell.build(layout)`。
+数据源是手工台账 `scene-elements.csv` 的可走行（floor/room/spawn/...），不是 lane 中线。
+算法：64u 栅格标记「与任一可走矩形相交」的格子为通道，其余格子实心；再把实心格贪心合并成
+轴对齐墙盒（行列合并 + 同 y 区间横向合并）。墙只会在通道边界外生成，因此：
+- 玩家只能走设计路径，空地全部变成实体（不再出现大块空场）；
+- 窄连接/门洞不会被自己的墙堵住（标记按“有交集”膨胀，只会让通道略宽）。
 """
 
 from __future__ import annotations
 
 import math
 
-CELL = 384              # 填充格边长（世界单位）
-GAP = 8                 # 相邻填充块留缝：小于玩家直径 32，走不过去
-CORRIDOR_MARGIN = 48    # 走廊外扩：玩家半径 + 贴墙走位
-ZONE_MARGIN = 96       # 包点/出生/买区外扩
-BUILDING_MARGIN = 32    # 已有结构外扩，不压建筑
-SHELL_THICKNESS = 64    # 边界墙厚度
-SHELL_HEIGHT = 288      # 边界/填充墙高
+CELL = 64              # 栅格尺寸：墙厚/台阶步长
+WALL_HEIGHT = 512      # 主体围合高度：高过 256 上限层，挡住远景空场
+SHELL_THICKNESS = 64   # 外圈边界墙厚
+WALKABLE_TYPES = {
+    "floor", "room", "tunnel", "spawn", "buyzone", "choke", "step",
+    "platform", "ramp", "catwalk", "stairs", "pit", "doorway", "window",
+}
 
 
-def _rect_of_structure(item: dict) -> tuple[float, float, float, float]:
-    cx, cy = item["center"][0], item["center"][1]
-    sx, sy = item["size"][0], item["size"][1]
-    return cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2
+def _rect(row) -> tuple[int, int, int, int]:
+    return (int(row["rect_x1"]), int(row["rect_y1"]),
+            int(row["rect_x2"]), int(row["rect_y2"]))
 
 
-def _rects_overlap(a, b, margin: float) -> bool:
-    return not (
-        a[2] + margin <= b[0] or b[2] + margin <= a[0]
-        or a[3] + margin <= b[1] or b[3] + margin <= a[1]
-    )
+def _walk_mask(rows, layout: dict, lo: int, hi: int) -> list[list[bool]]:
+    """格子与任一可走矩形有交集，或中心落在 lane 走廊内，即视为通道。"""
+    rects = [_rect(row) for row in rows if row["type"] in WALKABLE_TYPES]
+    lanes = layout.get("lanes", [])
+    cells = (hi - lo) // CELL
+    grid = [[False] * cells for _ in range(cells)]
+    for j in range(cells):
+        y0, y1 = lo + j * CELL, lo + (j + 1) * CELL
+        cy = (y0 + y1) / 2.0
+        for i in range(cells):
+            x0, x1 = lo + i * CELL, lo + (i + 1) * CELL
+            cx = (x0 + x1) / 2.0
+            if any(not (x1 <= r[0] or r[2] <= x0 or y1 <= r[1] or r[3] <= y0)
+                   for r in rects):
+                grid[j][i] = True
+            elif any(_near_lane(cx, cy, lane) for lane in lanes):
+                grid[j][i] = True
+    return grid
 
 
-def _point_segment_distance(px: float, py: float, ax: float, ay: float,
-                            bx: float, by: float) -> float:
-    dx, dy = bx - ax, by - ay
-    length_sq = dx * dx + dy * dy
-    if length_sq <= 1e-9:
-        return math.hypot(px - ax, py - ay)
-    t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / length_sq))
-    return math.hypot(px - (ax + t * dx), py - (ay + t * dy))
-
-
-def _rect_corridor_distance(rect, lane) -> float:
-    """矩形到 lane 折线的最近距离（用角点 + 中心近似，格子里够用）。"""
-    x0, y0, x1, y1 = rect
-    samples = [(x0, y0), (x1, y1), (x0, y1), (x1, y0),
-               ((x0 + x1) / 2, (y0 + y1) / 2)]
-    best = float("inf")
-    for px, py in samples:
-        for (ax, ay), (bx, by) in zip(lane["points"], lane["points"][1:]):
-            best = min(best, _point_segment_distance(px, py, ax, ay, bx, by))
-    return best
-
-
-RIB_STEP = 128.0        # 走廊墙取样间距
-RIB_SIZE = 128.0        # 单块走廊墙边长（阶梯化逼近斜向边）
-RIB_HALF = 24.0         # 墙体半厚，中心在走廊边界外 24
-RIB_END_GAP = 160.0     # 段两端留口，作为路口/门洞
-
-
-def _inside_other_corridor(px: float, py: float, lanes, skip_lane: str) -> bool:
-    for lane in lanes:
-        if lane["id"] == skip_lane:
-            continue
-        half = lane["width"] / 2.0
-        for (ax, ay), (bx, by) in zip(lane["points"], lane["points"][1:]):
-            if _point_segment_distance(px, py, ax, ay, bx, by) < half + RIB_HALF:
+def _near_lane(x: float, y: float, lane: dict) -> bool:
+    half = lane["width"] / 2.0 + CELL / 2.0
+    for (ax, ay), (bx, by) in zip(lane["points"], lane["points"][1:]):
+        dx, dy = bx - ax, by - ay
+        length_sq = dx * dx + dy * dy
+        if length_sq <= 1e-9:
+            if math.hypot(x - ax, y - ay) <= half:
                 return True
-    return False
-
-
-def _inside_zone(px: float, py: float, layout: dict) -> bool:
-    rects = []
-    for site in layout.get("bombsites", []):
-        cx, cy, _ = site["center"]
-        sx, sy = site["size"]
-        rects.append((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2))
-    for spawn in layout.get("spawns", {}).values():
-        cx, cy, _ = spawn["center"]
-        sx, sy = spawn["size"]
-        rects.append((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2))
-    for zone in layout.get("buy_zones", []):
-        cx, cy, _ = zone["center"]
-        sx, sy = zone["size"]
-        rects.append((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2))
-    for rect in rects:
-        if rect[0] <= px <= rect[2] and rect[1] <= py <= rect[3]:
+            continue
+        t = max(0.0, min(1.0, ((x - ax) * dx + (y - ay) * dy) / length_sq))
+        if math.hypot(x - (ax + t * dx), y - (ay + t * dy)) <= half:
             return True
     return False
 
 
-def corridor_ribbon(layout: dict) -> list[dict]:
-    """沿每条 lane 的两侧铺阶梯化墙块，围出走廊；段端留口当路口。"""
-    chokes = [(c["center"][0], c["center"][1], c.get("width", 96) / 2 + 64)
-              for c in layout.get("choke_points", [])]
-    out: list[dict] = []
-    for lane in layout.get("lanes", []):
-        half = lane["width"] / 2.0
-        for seg_index, ((ax, ay), (bx, by)) in enumerate(
-                zip(lane["points"], lane["points"][1:])):
-            seg_len = math.hypot(bx - ax, by - ay)
-            if seg_len < RIB_END_GAP * 2 + RIB_STEP:
+def _run_end(grid, used, row: int, col: int, cells: int) -> int:
+    """该行从 col 起连续未占用实心格的右端（不含）。"""
+    while col < cells and not grid[row][col] and not used[row][col]:
+        col += 1
+    return col
+
+
+def _rows_free(grid, used, top: int, left: int, right: int, cells: int) -> int:
+    """整段 [left,right) 都未占用实心格的下端（不含）。"""
+    bottom = top
+    while bottom < cells and all(
+            not grid[bottom][col] and not used[bottom][col] for col in range(left, right)):
+        bottom += 1
+    return bottom
+
+
+def _solid_rects(grid: list[list[bool]]) -> list[tuple[int, int, int, int]]:
+    """贪心不重叠矩形：从每个未占用实心格向右/向下扩展，整块标记占用。"""
+    cells = len(grid)
+    used = [[False] * cells for _ in range(cells)]
+    rects: list[tuple[int, int, int, int]] = []
+    for j in range(cells):
+        i = 0
+        while i < cells:
+            if grid[j][i] or used[j][i]:
+                i += 1
                 continue
-            ux, uy = (bx - ax) / seg_len, (by - ay) / seg_len
-            nx, ny = -uy, ux
-            for side in (-1.0, 1.0):
-                offset = half + RIB_HALF
-                travelled = RIB_END_GAP
-                while travelled <= seg_len - RIB_END_GAP:
-                    px = ax + ux * travelled + nx * offset * side
-                    py = ay + uy * travelled + ny * offset * side
-                    travelled += RIB_STEP
-                    if any((px - cx) ** 2 + (py - cy) ** 2 < limit ** 2
-                           for cx, cy, limit in chokes):
-                        continue
-                    if _inside_other_corridor(px, py, layout.get("lanes", []), lane["id"]):
-                        continue
-                    if _inside_zone(px, py, layout):
-                        continue
-                    out.append({
-                        "id": "shell_rib_%s_%d_%d_%d" % (
-                            lane["id"], seg_index, int(side), int(travelled)),
-                        "kind": "wall",
-                        "center": [px, py],
-                        "size": [RIB_SIZE, RIB_SIZE],
-                        "height": SHELL_HEIGHT,
-                        "base_z": 0.0,
-                        "material": "concrete",
-                    })
+            right = _run_end(grid, used, j, i, cells)
+            bottom = _rows_free(grid, used, j + 1, i, right, cells)
+            for row in range(j, bottom):
+                for col in range(i, right):
+                    used[row][col] = True
+            rects.append((i, j, right, bottom))
+            i = right
+    return rects
+
+
+def route_enclosure(rows, layout: dict) -> list[dict]:
+    lo, hi = int(layout["bounds"]["min"][0]), int(layout["bounds"]["max"][0])
+    grid = _walk_mask(rows, layout, lo, hi)
+    out: list[dict] = []
+    for (x0, y0, x1, y1) in _solid_rects(grid):
+        world = (lo + x0 * CELL, lo + y0 * CELL, lo + x1 * CELL, lo + y1 * CELL)
+        out.append({
+            "id": "shell_enclose_%d_%d" % (world[0], world[1]),
+            "kind": "wall",
+            "center": [(world[0] + world[2]) / 2.0, (world[1] + world[3]) / 2.0],
+            "size": [world[2] - world[0], world[3] - world[1]],
+            "height": WALL_HEIGHT,
+            "base_z": 0.0,
+            "material": "stone",
+        })
+        out.extend(_upper_storey(world))
     return out
+
+
+def _upper_storey(world) -> list[dict]:
+    """大体块加一层退台屋顶，形成高低错落的建筑天际线（不是一堵等高的长墙）。"""
+    width, depth = world[2] - world[0], world[3] - world[1]
+    if width < 192 or depth < 192:
+        return []
+    inset = 24.0
+    level = 64 + 32 * ((world[0] // 128 + world[1] // 128) % 3)
+    return [{
+        "id": "shell_upper_%d_%d" % (world[0], world[1]),
+        "kind": "wall",
+        "center": [(world[0] + world[2]) / 2.0, (world[1] + world[3]) / 2.0, WALL_HEIGHT + level / 2.0],
+        "size": [width - inset * 2, depth - inset * 2, level],
+        "height": level,
+        "base_z": WALL_HEIGHT,
+        "material": "stone" if (world[0] + world[1]) % 256 else "concrete",
+        "collision": False,  # 屋顶层在玩家头顶以上，只做视觉天际线，不进碰撞查询
+    }]
 
 
 def perimeter(layout: dict) -> list[dict]:
     """四条边界墙：内表面与 bounds 对齐，板厚 64、高 288。"""
     lo, hi = layout["bounds"]["min"], layout["bounds"]["max"]
-    thickness = SHELL_THICKNESS
     out: list[dict] = []
     spans = [
-        ("shell_west", (lo[0], lo[1], lo[0] + thickness, hi[1])),
-        ("shell_east", (hi[0] - thickness, lo[1], hi[0], hi[1])),
-        ("shell_south", (lo[0], lo[1], hi[0], lo[1] + thickness)),
-        ("shell_north", (lo[0], hi[1] - thickness, hi[0], hi[1])),
+        ("shell_west", (lo[0], lo[1], lo[0] + SHELL_THICKNESS, hi[1])),
+        ("shell_east", (hi[0] - SHELL_THICKNESS, lo[1], hi[0], hi[1])),
+        ("shell_south", (lo[0], lo[1], hi[0], lo[1] + SHELL_THICKNESS)),
+        ("shell_north", (lo[0], hi[1] - SHELL_THICKNESS, hi[0], hi[1])),
     ]
     for name, (x0, y0, x1, y1) in spans:
         out.append({
@@ -155,82 +151,20 @@ def perimeter(layout: dict) -> list[dict]:
             "kind": "wall",
             "center": [(x0 + x1) / 2.0, (y0 + y1) / 2.0],
             "size": [x1 - x0, y1 - y0],
-            "height": SHELL_HEIGHT,
+            "height": WALL_HEIGHT,
             "base_z": 0.0,
-            "material": "concrete",
+            "material": "stone",
         })
     return out
 
 
-def _expand(rect, margin: float) -> tuple[float, float, float, float]:
-    return (rect[0] - margin, rect[1] - margin, rect[2] + margin, rect[3] + margin)
-
-
-def fill_blocks(layout: dict) -> list[dict]:
-    """把不被走廊/包点/出生/建筑覆盖的空格填成实心块。"""
-    lo, hi = layout["bounds"]["min"], layout["bounds"]["max"]
-    zone_rects: list[tuple[float, float, float, float]] = []
-    for site in layout.get("bombsites", []):
-        cx, cy, _ = site["center"]
-        sx, sy = site["size"]
-        zone_rects.append(_expand((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2),
-                                  ZONE_MARGIN))
-    for spawn in layout.get("spawns", {}).values():
-        cx, cy, _ = spawn["center"]
-        sx, sy = spawn["size"]
-        zone_rects.append(_expand((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2),
-                                  ZONE_MARGIN))
-    for zone in layout.get("buy_zones", []):
-        cx, cy, _ = zone["center"]
-        sx, sy = zone["size"]
-        zone_rects.append(_expand((cx - sx / 2, cy - sy / 2, cx + sx / 2, cy + sy / 2),
-                                  ZONE_MARGIN))
-    building_rects: list[tuple[float, float, float, float]] = []
-    for item in layout.get("structures", []):
-        building_rects.append(_expand(_rect_of_structure(item), BUILDING_MARGIN))
-    for item in layout.get("props", []):
-        building_rects.append(_expand(_rect_of_structure(item), BUILDING_MARGIN))
-
-    lanes = layout.get("lanes", [])
-    inset = SHELL_THICKNESS + GAP
-    blocks: list[dict] = []
-    x = lo[0] + inset
-    while x + CELL <= hi[0] - inset:
-        y = lo[1] + inset
-        while y + CELL <= hi[1] - inset:
-            rect = (x, y, x + CELL, y + CELL)
-            shrink = (x + GAP / 2, y + GAP / 2, x + CELL - GAP / 2, y + CELL - GAP / 2)
-            corridor = min(
-                (_rect_corridor_distance(rect, lane) - lane["width"] / 2.0
-                 for lane in lanes),
-                default=float("inf"),
-            )
-            blocked = corridor < CORRIDOR_MARGIN
-            if not blocked:
-                blocked = any(_rects_overlap(rect, keep, 0.0)
-                              for keep in zone_rects + building_rects)
-            if not blocked:
-                blocks.append({
-                    "id": "shell_fill_%d_%d" % (int(x), int(y)),
-                    "kind": "wall",
-                    "center": [(shrink[0] + shrink[2]) / 2.0, (shrink[1] + shrink[3]) / 2.0],
-                    "size": [shrink[2] - shrink[0], shrink[3] - shrink[1]],
-                    "height": SHELL_HEIGHT,
-                    "base_z": 0.0,
-                    "material": "concrete",
-                })
-            y += CELL
-        x += CELL
-    return blocks
-
-
-def build(layout: dict) -> list[dict]:
-    """返回按 id 排序的外壳结构，供 import_scene_v3 追加到 layout["structures"]。"""
-    items = perimeter(layout) + corridor_ribbon(layout) + fill_blocks(layout)
+def build(layout: dict, rows=None) -> list[dict]:
+    """rows 必须传：按手工台账的可走矩形围合；不传时只保留外圈边界。"""
+    items = perimeter(layout)
+    if rows is not None:
+        items += route_enclosure(rows, layout)
     return sorted(items, key=lambda item: item["id"])
 
 
 def is_shell(item: dict) -> bool:
-    """判断结构是否由本模块派生（命名前缀 shell_）。"""
     return str(item.get("id", "")).startswith("shell_")
-

@@ -4,7 +4,7 @@ extends RefCounted
 ## 纯程序化 StandardMaterial3D（无外部贴图依赖），按 de_ash blockout 的 kind/prop 复用。
 ## 参数权威表见 assets/materials/README.md，修改时两处同步。
 
-const BASE_IDS: Array[String] = ["concrete", "metal", "wood", "glass", "fabric", "dirt"]
+const BASE_IDS: Array[String] = ["concrete", "stone", "metal", "wood", "glass", "fabric", "dirt", "road"]
 const HIGHLIGHT_IDS: Array[String] = ["site", "spawn"]
 const TEXTURE_FILES := {
 	"concrete": "res://textures/brick_wall.png",
@@ -14,8 +14,32 @@ const TEXTURE_FILES := {
 	"dirt": "res://textures/dirt_noise.png",
 }
 const TEXTURE_SCALE := 0.01
+## 路面尺度单独放宽：1 张 = 256u（4664u 地面约 18 次平铺），避免车辙过密。
+const TEXTURE_SCALE_BY_ID := {
+	"road": 0.00390625,
+	"stone": 0.00390625,
+}
+## 世界坐标三平面：盒子是等比缩放的立方体，局部三平面会把整张贴图压进 1 个像素。
+const WORLD_TRIPLANAR_IDS := ["road", "stone"]
+const DUST2_TEXTURE_FILES := {
+	"concrete": "res://textures/dust2/plaster_sand_01.png",
+	"stone": "res://textures/dust2/sandstone_block_01.png",
+	"wood": "res://textures/dust2/wood_plank_01.png",
+	"metal": "res://textures/dust2/metal_panel_01.png",
+	"glass": "res://textures/dust2/glass_crack_01.png",
+	"fabric": "res://textures/dust2/sandbag_01.png",
+	"dirt": "res://textures/dust2/dirt_ground_01.png",
+	"road": "res://textures/dust2/road_compacted_01.png",
+}
 
 static var _cache: Dictionary = {}
+static var _texture_files: Dictionary = TEXTURE_FILES
+
+
+## 按图切换贴图集（de_ash 用程序化原版，de_dust2 用 assets/generated/dust2）。
+static func use_texture_set(map_id: String) -> void:
+	_texture_files = DUST2_TEXTURE_FILES if map_id == "de_dust2" else TEXTURE_FILES
+	_cache.clear()
 
 
 static func all_ids() -> Array[String]:
@@ -44,6 +68,8 @@ static func material_for_kind(kind: String, size: Vector3 = Vector3.ZERO) -> Sta
 			return get_material("dirt")
 		"lane":
 			return get_material("concrete")
+		"road":
+			return get_material("road")
 		"wall":
 			return get_material("concrete")
 		"site":
@@ -128,6 +154,10 @@ static func _create(id: String) -> StandardMaterial3D:
 			_set_pbr(material, Color(0.45, 0.40, 0.32), 1.0, 0.0)
 		"dirt":
 			_set_pbr(material, Color(0.42, 0.34, 0.24), 1.0, 0.0)
+		"road":
+			_set_pbr(material, Color(0.50, 0.44, 0.34), 0.92, 0.0)
+		"stone":
+			_set_pbr(material, Color(0.60, 0.53, 0.42), 0.90, 0.0)
 		"site":
 			_set_pbr(material, Color(0.62, 0.22, 0.18), 0.88, 0.0)
 			_set_emission(material, Color(0.85, 0.18, 0.12), 0.9)
@@ -141,16 +171,19 @@ static func _create(id: String) -> StandardMaterial3D:
 
 
 static func _apply_texture(material: StandardMaterial3D, id: String) -> void:
-	var path: String = TEXTURE_FILES.get(id, "")
+	var path: String = _texture_files.get(id, "")
 	if path.is_empty():
 		return
 	var image := Image.new()
 	if image.load(ProjectSettings.globalize_path(path)) != OK:
 		return
+	image.generate_mipmaps()
 	var texture := ImageTexture.create_from_image(image)
 	material.albedo_texture = texture
 	material.uv1_triplanar = true
-	material.uv1_scale = Vector3(TEXTURE_SCALE, TEXTURE_SCALE, TEXTURE_SCALE)
+	material.uv1_world_triplanar = WORLD_TRIPLANAR_IDS.has(id)
+	var scale := float(TEXTURE_SCALE_BY_ID.get(id, TEXTURE_SCALE))
+	material.uv1_scale = Vector3(scale, scale, scale)
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 
 

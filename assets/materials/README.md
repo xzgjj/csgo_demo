@@ -1,4 +1,4 @@
-# 材质规范（6 类 + 2 个高亮派生）
+# 材质规范（8 类 + 2 个高亮派生）
 
 本目录登记材质的命名与 PBR 参数；**运行时定义在 `host/scripts/material_lib.gd`（程序化
 `StandardMaterial3D`，无外部贴图依赖）**，本文件是参数权威表，改参数时两处同步。
@@ -8,11 +8,13 @@
 | 类别 | id | 派生材质 id | 用途 |
 |---|---|---|---|
 | 混凝土 | `concrete` | — | 墙体、路面（lane）、通用结构 |
+| 砂岩 | `stone` | — | de_dust2 围合墙/建筑立面/台座（砂岩砌块） |
 | 金属 | `metal` | — | 油桶、灯具、标志、门框、武器金属件 |
 | 木 | `wood` | — | 木箱、木板、门板、AK 木质护木/枪托 |
 | 玻璃 | `glass` | — | 玻璃窗、AWP 瞄具镜片 |
 | 布料 | `fabric` | — | 沙袋墙、软包 |
-| 泥土 | `dirt` | — | 地面（floor）、户外地表 |
+| 泥土 | `dirt` | — | 地面（floor）、户外地表（de_ash） |
+| 路面 | `road` | — | de_dust2 全部通道地面（压实土+碎石；内核按 Dirt 判定） |
 | 包点高亮 | — | `site` | 由 concrete 派生，红色自发光标识包点 |
 | 出生点高亮 | — | `spawn` | 由 concrete 派生，蓝色自发光标识出生点 |
 
@@ -23,11 +25,13 @@
 | id | albedo（sRGB 0–1） | roughness | metallic | transparency | emission |
 |---|---|---|---|---|---|
 | `concrete` | 0.58, 0.48, 0.36 | 0.95 | 0.0 | opaque | — |
+| `stone` | 0.60, 0.53, 0.42 | 0.90 | 0.0 | opaque | — |
 | `metal` | 0.52, 0.54, 0.58 | 0.35 | 0.90 | opaque | — |
 | `wood` | 0.42, 0.29, 0.17 | 0.80 | 0.0 | opaque | — |
 | `glass` | 0.70, 0.82, 0.88 @ a=0.34 | 0.06 | 0.10 | alpha | — |
 | `fabric` | 0.45, 0.40, 0.32 | 1.00 | 0.0 | opaque | — |
 | `dirt` | 0.42, 0.34, 0.24 | 1.00 | 0.0 | opaque | — |
+| `road` | 0.50, 0.44, 0.34 | 0.92 | 0.0 | opaque | — |
 | `site` | 0.62, 0.22, 0.18 | 0.88 | 0.0 | opaque | 0.85,0.18,0.12 ×0.9 |
 | `spawn` | 0.20, 0.38, 0.62 | 0.88 | 0.0 | opaque | 0.15,0.40,0.85 ×0.9 |
 
@@ -42,7 +46,7 @@
 |---|---|---|
 | `floor` | `dirt` | 地面厚板 |
 | `lane` | `concrete` | 路线路面 |
-| `wall` | `concrete` | 四周边界墙 |
+| `wall` | `concrete` | 四周边界墙；de_dust2 的 GLB `mat_stone` 节点会覆盖为 `stone` |
 | `site` | `site` | 包点高亮 |
 | `spawn` | `spawn` | 出生点高亮 |
 | `prop` | 由几何特征推断（`MaterialLib.prop_material_id`） | 木箱→wood、油桶/灯具/标志→metal、玻璃窗→glass、沙袋墙→fabric |

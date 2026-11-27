@@ -1,6 +1,7 @@
 class_name DeAshWorld
 extends Node3D
 const MapDecorScript = preload("res://scripts/map_decor.gd")
+const MapLoaderScript = preload("res://scripts/map_loader.gd")
 ## demo 世界：优先按 host/scenes/de_ash_boxes.json 生成 de_ash（墙 / 车道 / 包点 / 出生 / 道具，
 ## 材质由 MaterialLib 按 kind 选择）；JSON 缺失或非法时回退到与内核 ±800 对齐的 1600 灰盒。
 ## 包点/出生锚点直接取盒子清单里 kind=site/spawn 的中心，保证与布局数据一致。
@@ -13,6 +14,7 @@ const SITE_LABEL_COLOR := Color(0.95, 0.45, 0.35)
 const SPAWN_LABEL_COLOR := Color(0.45, 0.72, 0.98)
 
 var source := "none"
+var map_id := "de_ash"
 var object_count := 0
 var spawn_anchors: Array[Vector3] = []
 var site_anchors: Array[Vector3] = []
@@ -20,7 +22,9 @@ var blockout: BlockoutBuilder
 var _fallback_root: Node3D
 
 
-func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
+func build(boxes_path: String = DEFAULT_BOXES_PATH, id: String = "de_ash") -> bool:
+	map_id = id
+	MaterialLib.use_texture_set(map_id)
 	_build_environment()
 	if not FileAccess.file_exists(boxes_path):
 		push_warning("de_ash 盒子清单缺失，使用灰盒 fallback: " + boxes_path)
@@ -36,7 +40,7 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 		push_warning("de_ash 盒子清单非法，使用灰盒 fallback: " + boxes_path)
 		_build_fallback_arena()
 		return false
-	source = "de_ash"
+	source = map_id
 	object_count = blockout.box_count
 	var glb_world := _load_map_glb()
 	if glb_world != null:
@@ -44,7 +48,7 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 		blockout.visible = false
 		add_child(glb_world)
 		MapDecorScript.add(self, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
-		source = "de_ash_glb"
+		source = "%s_glb" % map_id
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)
 	for anchor: Vector3 in blockout.site_anchors:
@@ -55,13 +59,15 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH) -> bool:
 
 ## 加载 Blender 导出的细节地图；缺失/失败时返回 null（保留 blockout 视觉）。
 func _load_map_glb() -> Node3D:
-	const GLB_PATH := "res://models/map/de_ash.glb"
-	if not FileAccess.file_exists(GLB_PATH):
+	var glb_path := MapLoaderScript.glb_path_for(map_id)
+	if glb_path.is_empty():
+		glb_path = "res://models/map/de_ash.glb"
+	if not FileAccess.file_exists(glb_path):
 		return null
 	var document := GLTFDocument.new()
 	var gltf_state := GLTFState.new()
-	if document.append_from_file(ProjectSettings.globalize_path(GLB_PATH), gltf_state) != OK:
-		push_warning("de_ash GLB 解析失败，回退 blockout 视觉")
+	if document.append_from_file(ProjectSettings.globalize_path(glb_path), gltf_state) != OK:
+		push_warning("%s GLB 解析失败，回退 blockout 视觉" % glb_path)
 		return null
 	var scene := document.generate_scene(gltf_state)
 	MaterialLib.apply_to_scene(scene)

@@ -30,7 +30,16 @@ Vec3 TeamSpawn(const Vec3& center, int slot) {
     return {center.x + kSpawnOffsets[index][0], center.y + kSpawnOffsets[index][1], center.z};
 }
 
-void ResetRound(WorldState& state, const Content& content, EventList& events) {
+// 地图注入的出生中心优先；未注入时回退 de_ash 常量（旧用例/旧图行为不变）。
+Vec3 TSpawnCenter(const MapDef* map) {
+    return map != nullptr && map->custom_spawns ? map->spawn_t : kDeAshTSpawn;
+}
+
+Vec3 CTSpawnCenter(const MapDef* map) {
+    return map != nullptr && map->custom_spawns ? map->spawn_ct : kDeAshCTSpawn;
+}
+
+void ResetRound(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
     ++state.round.number;
     state.round.phase = RoundPhase::Freeze;
     state.round.phase_ticks = content.round.freeze_ticks;
@@ -68,8 +77,8 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
             continue;
         }
-        player.position =
-            is_t ? TeamSpawn(kDeAshTSpawn, t_slot++) : TeamSpawn(kDeAshCTSpawn, ct_slot++);
+        player.position = is_t ? TeamSpawn(TSpawnCenter(map), t_slot++)
+                               : TeamSpawn(CTSpawnCenter(map), ct_slot++);
     }
     // C4 给第一名 T，拆弹器给第一名 CT（不重置经济，money 按玩家各自保留）。
     uint8_t carrier = 0xFF;
@@ -134,7 +143,7 @@ void EndRound(WorldState& state, const Content& content, uint8_t winner, EventLi
     EndRoundInternal(state, content, winner, events);
 }
 
-void BeginMatch(WorldState& state, const Content& content, EventList& events) {
+void BeginMatch(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
     state = WorldState{};
     state.player_count = static_cast<uint8_t>(kTeamSize * 2);
     AssignTeams(state);
@@ -148,7 +157,7 @@ void BeginMatch(WorldState& state, const Content& content, EventList& events) {
     state.round.number = 0;
     state.round.score_t = 0;
     state.round.score_ct = 0;
-    ResetRound(state, content, events);
+    ResetRound(state, content, events, map);
 }
 
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
@@ -156,7 +165,7 @@ void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
     player.money = static_cast<uint16_t>(std::min<uint32_t>(total, def.max_money));
 }
 
-void AdvanceRound(WorldState& state, const Content& content, EventList& events) {
+void AdvanceRound(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
     RoundState& round = state.round;
     if (round.phase == RoundPhase::Freeze) {
         if (round.phase_ticks > 0) {
@@ -199,7 +208,7 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events) 
             --round.phase_ticks;
         }
         if (round.phase_ticks == 0) {
-            ResetRound(state, content, events);
+            ResetRound(state, content, events, map);
         }
     }
 }

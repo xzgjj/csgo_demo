@@ -25,6 +25,7 @@ def to_godot(box):
         "kind": box["kind"],
         "material": box["material"],
         "collision": box["collision"],
+        "hp": int(box.get("hp", 0)),
     }
 
 
@@ -35,6 +36,9 @@ def build(layout):
         "schema": "de-ash-boxes/2",
         "source": "tools/mapgen/gen_blockout.py",
         "count": len(boxes),
+        # 导航范围与出生中心随图：宿主 MapLoader 读到后才调用 set_map_frame。
+        "bounds": layout.get("bounds", {}),
+        "spawns": layout.get("spawns", {}),
         "boxes": [to_godot(box) for box in boxes],
     }
 

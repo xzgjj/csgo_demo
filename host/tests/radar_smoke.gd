@@ -13,7 +13,6 @@ var failures: Array[String] = []
 var skipped := 0
 var _capture_dir := ""
 
-
 ## 契约替身：与 RecoilSim 同名只读接口 + is_visible，用来验证雷达的暴露显示规则。
 class FakeSim:
 	extends RefCounted
@@ -48,13 +47,11 @@ class FakeSim:
 	func is_visible(_viewer: int, target: int) -> bool:
 		return exposed[target]
 
-
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() >= 2 and args[0] == "--capture":
 		_capture_dir = args[1]
 	_run.call_deferred()
-
 
 func _run() -> void:
 	await process_frame
@@ -88,7 +85,6 @@ func _run() -> void:
 		print("RADAR_FAIL ", item)
 	quit(1)
 
-
 ## ①-a 准备：读 de_ash_boxes.json 投影；执行：坐标方向映射 + 中心点；断言：轮廓有效且落在雷达框内。
 func _test_map_projection(radar: Control) -> void:
 	var world: Rect2 = radar.world_rect()
@@ -114,8 +110,6 @@ func _test_map_projection(radar: Control) -> void:
 	_expect(plus_y.x > origin.x + 0.5, "sim +y 应映射到雷达 +x（右）")
 	_expect(plus_x.y < origin.y - 0.5, "sim +x 应映射到雷达 -y（上）")
 
-
-## ①-b 准备：5v5 过冻结期并摆位；执行：自己前进 32 tick + 队友瞬移；断言：点位随坐标变化。
 func _test_self_and_teammate_move(radar: Control) -> void:
 	var sim: RefCounted = RecoilSim.new()
 	sim.reset()
@@ -156,7 +150,6 @@ func _test_self_and_teammate_move(radar: Control) -> void:
 	var heading_90: float = radar.own_heading_degrees()
 	var delta := wrapf(heading_90 - heading_0, -180.0, 180.0)
 	_expect(absf(delta - 90.0) < 0.5, "自己箭头朝向应随 yaw 旋转 90°，实际 %.2f" % delta)
-
 
 ## ② 准备：5v5 冻结期（出生点）→ 执行过冻结期到 Live → CT 5 击杀 T 队友 1；
 ## 断言：冻结期 5 灯全亮、Live 期一致、击杀后 1 灯灭且灯数与 alive_count 一致。
@@ -204,7 +197,6 @@ func _test_squad_lamps(radar: Control) -> void:
 			"阵亡后灯数 %d 应等于 alive_count %d" % [_lit_lamps(lamps), int(sim.get_alive_count(team))])
 	_expect(not radar.has_marker(1), "阵亡队友不应再画雷达点")
 
-
 ## ③ 准备：替身 sim（含 is_visible）；执行：切换暴露状态；断言：暴露前隐藏 / 暴露后显示。
 func _test_enemy_exposure(radar: Control) -> void:
 	var fake := FakeSim.new()
@@ -241,7 +233,6 @@ func _test_enemy_exposure(radar: Control) -> void:
 		_expect(radar.visible_enemies().is_empty(), "内核缺 is_visible 时不应显示任何敌人")
 		print("RADAR_EXPOSURE pending-kernel（等 kernel-weapons 的 is_visible 落地后自动切换）")
 
-
 ## ④ 准备：独立雷达（未绑 main）初始打开；执行：M 键两次 + toggle()；断言：visible 同步切换。
 func _test_toggle(radar: Control) -> void:
 	radar.set_open(true)
@@ -263,7 +254,6 @@ func _test_toggle(radar: Control) -> void:
 	await process_frame
 	_expect(bool(radar.visible), "toggle() 应能恢复 visible=true")
 
-
 ## ③-b 真实内核 LOS（is_visible 落地后才跑）：空场对穿 → 可见；中间加墙 → 遮蔽。
 func _test_kernel_los(radar: Control) -> void:
 	var sim: RefCounted = RecoilSim.new()
@@ -276,11 +266,10 @@ func _test_kernel_los(radar: Control) -> void:
 	_expect(radar.is_exposed(0, 1), "空场对穿时敌人应可见（内核 HasLineOfSight）")
 	_expect(radar.has_marker(1), "空场对穿时敌人应显示在雷达上")
 	# 执行：在两人之间放一道 sim AABB 墙（x 190..210，y -100..100，z 0..200）。
-	sim.set_map_boxes(PackedFloat32Array([190.0, -100.0, 0.0, 210.0, 100.0, 200.0]))
+	sim.set_map_boxes(PackedFloat32Array([190.0, -100.0, 0.0, 210.0, 100.0, 200.0, 0.0, 0.0]))
 	radar.refresh(sim, 0.0)
 	_expect(not radar.is_exposed(0, 1), "中间有墙时敌人不应可见")
 	_expect(not radar.has_marker(1), "被墙遮挡的敌人不应显示在雷达上")
-
 
 ## ⑤ 准备：真实 main.tscn + 5v5；执行：按 Lead 接线方式（hud.add_child + setup(self)）挂雷达；
 ## 断言：自刷新可见/有点位、M 开关、回主菜单后隐藏（不改 main.gd，只模拟接线）。
@@ -342,7 +331,6 @@ func _test_main_wiring() -> void:
 	await process_frame
 	_expect(not bool(radar.visible), "返回主菜单后雷达应隐藏")
 
-
 ## 独立面板截图（不依赖 main.gd）：5v5 真实 sim + 固定 yaw，供设计核对白箭头/点位/灯条。
 func _capture_standalone(radar: Control) -> void:
 	var sim: RefCounted = RecoilSim.new()
@@ -357,7 +345,6 @@ func _capture_standalone(radar: Control) -> void:
 	radar.set_open(true)
 	await _capture("radar_panel_only")
 
-
 func _capture(shot_name: String) -> void:
 	DirAccess.make_dir_recursive_absolute(_capture_dir)
 	await process_frame
@@ -367,7 +354,6 @@ func _capture(shot_name: String) -> void:
 	image.save_png(path)
 	print("RADAR_CAPTURE ", path, " ", image.get_width(), "x", image.get_height())
 
-
 func _press_key(code: Key) -> void:
 	var event := InputEventKey.new()
 	event.physical_keycode = code
@@ -375,14 +361,12 @@ func _press_key(code: Key) -> void:
 	event.pressed = true
 	Input.parse_input_event(event)
 
-
 func _lit_lamps(lamps: Array) -> int:
 	var total := 0
 	for state: bool in lamps:
 		if state:
 			total += 1
 	return total
-
 
 func _expect(condition: bool, message: String) -> void:
 	checks += 1

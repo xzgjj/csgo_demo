@@ -17,6 +17,7 @@ import gen_blockout
 import geom
 import geom_reach
 import geom_shell
+import scene_contract
 
 ROOT = Path(__file__).resolve().parents[2]
 CSV = ROOT / "docs/scene-design/scene-elements.csv"
@@ -29,7 +30,7 @@ MATERIAL = {
     "wood": "wood",
     "glass": "glass",
     "fabric": "fabric",
-    "stone": "concrete",
+    "stone": "stone",
     "dirt": "dirt",
     "sandbag": "fabric",
     "tarp": "wood",
@@ -44,19 +45,15 @@ RUN_SPEED = 250.0
 STEP = 32.0
 SHELL_ROUNDS = 3
 
-
 def load_rows():
     with open(CSV, encoding="utf-8") as handle:
         return [{key: row[key] for key in row} for row in csv.DictReader(handle)]
 
-
 def rect_of(row):
     return (int(row["rect_x1"]), int(row["rect_y1"]), int(row["rect_x2"]), int(row["rect_y2"]))
 
-
 def overlaps(a, b, tol=2):
     return not (a[2] <= b[0] + tol or b[2] <= a[0] + tol or a[3] <= b[1] + tol or b[3] <= a[1] + tol)
-
 
 def wall_pieces(wall, openings):
     """墙沿长轴挖洞，返回 [(x0,x1,y0,y1,z0,z1)]；窗保留窗台与过梁。"""
@@ -76,7 +73,6 @@ def wall_pieces(wall, openings):
             out.append((x0, x1, a0, a1, z0, z1))
     return out
 
-
 def _wall_holes(wall, openings, axis, lo, hi):
     holes = []
     for opening in openings:
@@ -90,7 +86,6 @@ def _wall_holes(wall, openings, axis, lo, hi):
         window = opening["type"] == "window"
         holes.append((a0, a1, window))
     return sorted(holes)
-
 
 def _hole_pieces(lo, hi, height, holes):
     pieces = []
@@ -106,7 +101,6 @@ def _hole_pieces(lo, hi, height, holes):
         pieces.append((cursor, hi, 0.0, height))
     return pieces
 
-
 def surface_top(platforms, x, y):
     """点位上已有平台的最高顶面（用于把道具/墙压到台面上）。"""
     top = 0.0
@@ -115,14 +109,20 @@ def surface_top(platforms, x, y):
             top = max(top, height)
     return top
 
-
-def _emit_walls(row, openings, platforms, structures):
+def _emit_walls(row, openings, platforms, structures, building_groups):
     x0, y0, x1, y1 = rect_of(row)
     cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
     material = MATERIAL.get(row["surface"], "concrete")
     height = float(row["height_u"])
     base = surface_top(platforms, cx, cy)
-    top = min(max(height, base + 96.0), 288.0)
+    top = min(max(height, base + 96.0), 384.0)
+    building_groups.append({
+        "id": row["id"],
+        "kind": "wall",
+        "center": [cx, cy, (base + top) / 2.0],
+        "size": [abs(x1 - x0), abs(y1 - y0), top - base],
+        "height": top - base,
+    })
     for index, (bx0, bx1, by0, by1, bz0, bz1) in enumerate(wall_pieces(row, openings)):
         z0 = base + bz0
         z1 = min(base + bz1, top)
@@ -138,7 +138,6 @@ def _emit_walls(row, openings, platforms, structures):
             "material": material,
         })
 
-
 def _emit_prop(row, platforms, props):
     x0, y0, x1, y1 = rect_of(row)
     cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
@@ -146,6 +145,9 @@ def _emit_prop(row, platforms, props):
     height = float(row["height_u"])
     if row["type"] == "door":
         height = max(height, 220.0)
+    hp = int(row["hp"]) if row["breakable"] == "yes" and row["hp"] else 0
+    # A-11 薄金属按 docs/design/03 §3.4「只凹不碎，碰撞保留」：有耐久但不移除碰撞。
+    dent_only = row["surface"] == "metal" and row["type"] == "prop" and hp > 0
     props.append({
         "id": row["id"],
         "kind": "prop",
@@ -154,8 +156,74 @@ def _emit_prop(row, platforms, props):
         "material": MATERIAL.get(row["surface"], "concrete"),
         "walkable": bool(row["enterable"] == "yes" and height <= 96),
         "collision": True,
+        "breakable": row["breakable"] == "yes" and not dent_only,
+        "hp": 0 if dent_only else hp,
     })
 
+def _emit_room(row, platforms, props, building_groups):
+    x0, y0, x1, y1 = rect_of(row)
+    height = float(row["height_u"])
+    building_groups.append({
+        "id": row["id"],
+        "kind": "room",
+        "center": [(x0 + x1) / 2.0, (y0 + y1) / 2.0, max(height, 0.0) / 2.0],
+        "size": [abs(x1 - x0), abs(y1 - y0), max(height, 0.0)],
+        "height": max(height, 0.0),
+    })
+    if height > 0:
+        _emit_platform(row, platforms, props)
+
+def _emit_level_platform(row, platforms, props):
+    if float(row["height_u"]) > 0:
+        _emit_platform(row, platforms, props)
+
+def _emit_level_stairs(row, props):
+    if float(row["height_u"]) > 0:
+        _emit_stairs(row, props)
+
+def _emit_roof(row, structures):
+    """屋面板：height_u 为板底标高，固定 32 厚；不参与可行走并集。"""
+    x0, y0, x1, y1 = rect_of(row)
+    base = float(row["height_u"])
+    structures.append({
+        "id": row["id"],
+        "kind": "wall",
+        "center": [(x0 + x1) / 2.0, (y0 + y1) / 2.0, base + 16.0],
+        "size": [abs(x1 - x0), abs(y1 - y0), 32.0],
+        "height": 32.0,
+        "base_z": base,
+        "material": MATERIAL.get(row["surface"], "concrete"),
+        "collision": False,  # 屋面板只封顶，不参与玩家碰撞
+    })
+
+def _collect_elements(rows):
+    openings = [r for r in rows if r["type"] in {"doorway", "window"}]
+    groups, structures, props, platforms = [], [], [], []
+    for row in rows:
+        if row["type"] in SOLID_TYPES:
+            _emit_walls(row, openings, platforms, structures, groups)
+    for row in rows:
+        handler = TYPE_HANDLERS.get(row["type"])
+        if handler is not None:
+            handler(row, platforms, structures, props, groups)
+    return groups, structures, props, platforms
+
+TYPE_HANDLERS = {
+    "window": lambda row, pl, st, props, groups: scene_contract.emit_window(
+        row, rect_of, surface_top, pl, props),
+    "room": lambda row, pl, st, props, groups: _emit_room(row, pl, props, groups),
+    "platform": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
+    "catwalk": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
+    "floor": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
+    "tunnel": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
+    "ramp": lambda row, pl, st, props, groups: _emit_level_stairs(row, props),
+    "stairs": lambda row, pl, st, props, groups: _emit_level_stairs(row, props),
+    "roof": lambda row, pl, st, props, groups: _emit_roof(row, st),
+}
+TYPE_HANDLERS.update({
+    kind: (lambda row, pl, st, props, groups: _emit_prop(row, pl, props))
+    for kind in PROP_TYPES
+})
 
 def _emit_platform(row, platforms, props):
     x0, y0, x1, y1 = rect_of(row)
@@ -173,7 +241,6 @@ def _emit_platform(row, platforms, props):
         "material": MATERIAL.get(row["surface"], "concrete"),
         "walkable": True,
     })
-
 
 def _emit_stairs(row, props):
     x0, y0, x1, y1 = rect_of(row)
@@ -199,28 +266,8 @@ def _emit_stairs(row, props):
             "walkable": True,
         })
 
-
-def _collect_elements(rows):
-    openings = [r for r in rows if r["type"] in {"doorway", "window"}]
-    buildings, structures, props, platforms = [], [], [], []
-    for row in rows:
-        kind = row["type"]
-        height = float(row["height_u"])
-        if kind in SOLID_TYPES:
-            _emit_walls(row, openings, platforms, structures)
-        elif kind in PROP_TYPES:
-            _emit_prop(row, platforms, props)
-        elif kind in {"platform", "catwalk"} and height > 0:
-            _emit_platform(row, platforms, props)
-        elif kind in {"ramp", "stairs"} and height > 0:
-            _emit_stairs(row, props)
-        elif kind in {"floor", "room", "tunnel"} and height > 0:
-            _emit_platform(row, platforms, props)
-    return buildings, structures, props, platforms
-
-
-def _apply_shell(layout):
-    layout["structures"].extend(geom_shell.build(layout))
+def _apply_shell(layout, rows):
+    layout["structures"].extend(geom_shell.build(layout, rows))
     for round_index in range(SHELL_ROUNDS):
         patches = geom_reach.repair_blocks(layout, geom.derive(layout))
         if not patches:
@@ -228,16 +275,14 @@ def _apply_shell(layout):
         layout["structures"].extend(patches)
         print(f"shell repair round {round_index + 1}: +{len(patches)} 块")
 
-
 def _fill_rotation(layout):
     for lane in layout["lanes"]:
         total = geom.lane_length(lane["points"])
         layout["rotation_seconds_target"][lane["id"]] = round(total / RUN_SPEED, 1)
 
-
-def _build_layout(structures, props, buildings):
+def _build_layout(structures, props, building_groups, doorways):
     return {
-        "schema": "map-layout/2",
+        "schema": "map-layout/3",
         "name": "de_dust2",
         "reference": "de_dust2 雷达（仅拓扑/节奏参考；几何、命名、贴图全部自建，见 SPEC-01）",
         "units": "source_units",
@@ -245,6 +290,8 @@ def _build_layout(structures, props, buildings):
         "floor_z": 0,
         "wall_height": 256,
         "perimeter_thickness": 32,
+        # 地面材质：de_dust2 全部通道地面用 road（压实土），de_ash 仍走默认 dirt。
+        "ground_material": "road",
         "layers": [
             {"id": "L0", "z": 0, "walkable": True, "note": "地面：通道/包点/出生"},
             {"id": "L1", "z": 64, "walkable": True, "note": "一级台/猫道/侧屋"},
@@ -259,7 +306,7 @@ def _build_layout(structures, props, buildings):
             "max_building_height": 256,
             "note": "v3 折角/支路；单级 32u，门洞 96/128",
         },
-        "materials": ["concrete", "metal", "wood", "glass", "fabric", "dirt"],
+        "materials": ["concrete", "metal", "wood", "glass", "fabric", "road"],
         "spawns": {
             "T": {
                 "center": [-565, -1835, 0],
@@ -282,7 +329,16 @@ def _build_layout(structures, props, buildings):
             {"id": "A", "center": [1500, 1566, 128], "size": [740, 650], "plant_radius": 64},
             {"id": "B", "center": [-1506, 1771, 64], "size": [740, 580], "plant_radius": 64},
         ],
-        "buildings": buildings,
+        # sites 是给 schema v3 消费端的稳定别名（bombsites 保留兼容雷达/旧工具）。
+        "sites": {
+            "A": {"center": [1500, 1566, 128], "size": [740, 650], "plant_radius": 64},
+            "B": {"center": [-1506, 1771, 64], "size": [740, 580], "plant_radius": 64},
+        },
+        # buildings 保留给 geom.derive 的建筑体（本项目由墙盒直接派生，故为空）；
+        # building_groups 是设计台账的 14 个墙/房间分组，供 checks.min_buildings 校验。
+        "buildings": [],
+        "building_groups": building_groups,
+        "doorways": doorways,
         "structures": structures,
         "lanes": [
             {"id": "A_long", "width": 240, "points": [[-420, -1900], [660, -1800], [990, -1560], [1160, -1300], [1160, -400], [1290, -210], [1460, -100], [1460, 520], [1360, 860], [1300, 1100], [1470, 1450]]},
@@ -304,9 +360,8 @@ def _build_layout(structures, props, buildings):
         "sightlines": [],
         "props": props,
         "rotation_seconds_target": {},
-        "checks": {"layoutcheck": ["bounds", "openings", "clearance", "lanes_8", "rotation_times", "boxes_sync"]},
+        "checks": scene_contract.checker_spec(),
     }
-
 
 def _write_outputs(layout):
     LAYOUT_OUT.write_text(json.dumps(layout, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -322,15 +377,15 @@ def _write_outputs(layout):
           f"props={len(layout['props'])}")
     print(f"wrote {BOXES_OUT.relative_to(ROOT)} boxes={data['count']} kinds={kinds}")
 
-
 def main() -> int:
-    buildings, structures, props, _ = _collect_elements(load_rows())
-    layout = _build_layout(structures, props, buildings)
-    _apply_shell(layout)
+    rows = load_rows()
+    building_groups, structures, props, _ = _collect_elements(rows)
+    layout = _build_layout(structures, props, building_groups,
+                           scene_contract.doorway_rows(rows, rect_of))
+    _apply_shell(layout, rows)
     _fill_rotation(layout)
     _write_outputs(layout)
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -1,0 +1,52 @@
+{
+  "pages": [
+    {
+      "id": "b3c0d6",
+      "title": "独立咖啡店的落地页",
+      "spec": {
+        "title": "独立咖啡店的落地页",
+        "kicker": "WEB / INTERFACE",
+        "subtitle": "一句话说清做什么、给谁看",
+        "body": [
+          "独立咖啡店的落地页：主打手冲课和当季豆，周六可以预约"
+        ],
+        "bullets": [
+          "先把方向定清楚",
+          "再做页面与组件",
+          "最后统一检查一遍"
+        ],
+        "tags": [],
+        "footer": "",
+        "layout": "landing",
+        "palette": {
+          "paper": "#fafaf8",
+          "ink": "#0a0a0a",
+          "accent": "#002fa7"
+        },
+        "fonts": {
+          "display": "serif",
+          "body": "sans"
+        },
+        "motif": "blob"
+      }
+    }
+  ],
+  "params": {
+    "aspect": "16:9",
+    "layout": "landing",
+    "align": "left",
+    "paper": "#fafaf8",
+    "ink": "#0a0a0a",
+    "accent": "#002fa7",
+    "display": "serif",
+    "body": "sans",
+    "scale": 1,
+    "density": 1,
+    "radius": 0,
+    "motion": 35,
+    "motif": "blob",
+    "themeId": "ikb",
+    "category": "web"
+  },
+  "activePageId": "b3c0d6"
+}

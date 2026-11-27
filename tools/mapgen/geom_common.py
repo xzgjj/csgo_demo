@@ -17,13 +17,15 @@ MATERIAL_COLORS = {
     "glass": [0.70, 0.82, 0.88],
     "fabric": [0.45, 0.40, 0.32],
     "dirt": [0.42, 0.34, 0.24],
+    # 路面专用：de_dust2 全部通道地面（内核仍按 Dirt 判定穿透/弹孔）。
+    "road": [0.50, 0.44, 0.34],
     "site": [0.62, 0.22, 0.18],
     "spawn": [0.20, 0.38, 0.62],
 }
 
 
 def make_box(
-    bid, kind, material, x0, x1, y0, y1, z0, z1, *, walkable=False, collision=True
+    bid, kind, material, x0, x1, y0, y1, z0, z1, *, walkable=False, collision=True, hp=0
 ):
     """按 min/max 建盒子（自动排序），返回派生引擎的标准盒子字典。"""
     x0, x1 = sorted((x0, x1))
@@ -40,6 +42,8 @@ def make_box(
         "color": MATERIAL_COLORS.get(material, MATERIAL_COLORS["concrete"]),
         "collision": collision,
         "walkable": walkable,
+        # 0 = 不可破坏；>0 时内核按命中减血，归零后移除碰撞盒。
+        "hp": int(hp),
     }
 
 

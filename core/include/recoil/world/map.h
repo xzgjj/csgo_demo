@@ -2,13 +2,20 @@
 
 #include <cmath>
 #include <cstdint>
+#include <span>
 
 #include "recoil/base/vec3.h"
 
 namespace recoil {
 
-// de_ash 派生盒子约 137 个碰撞盒；留 512 上限覆盖后续地图扩展。
-constexpr int kMaxWalls = 512;
+// 内核墙体容量：de_dust2 151 盒（147 碰撞）仍留余量；单次加载可用更小预算验证拒绝路径。
+constexpr int kMaxWalls = 1024;
+
+// 轴对齐盒（世界/玩家 hull 共用）；放在 map.h 以便 LoadWalls 直接接收导航范围。
+struct Aabb {
+    Vec3 min{};
+    Vec3 max{};
+};
 
 // 表面材质：决定弹孔/音效/是否可穿透（玻璃、木可穿；金属/混凝土阻挡）。
 enum class Surface : uint8_t {
@@ -35,8 +42,10 @@ struct Wall {
     Vec3 min{};
     Vec3 max{};
     Surface surface = Surface::Concrete;
-    // 当前只支持轴对齐 brush；非 0 会在载入期拒绝，避免“画面转、碰撞不转”。
+    // 只支持 90° 倍数：0/90/180/270。加载期把 OBB 归一成等价 AABB（宽深互换）。
     float yaw_degrees = 0.0f;
+    // 可破坏物 HP（0 表示不可破坏）；与 Wall 同生命周期，破坏后整盒移除。
+    uint16_t hp = 0;
 };
 
 struct MapDef;
@@ -44,37 +53,129 @@ struct MapDef;
 // 统一入口：校验有限值/尺寸/表面/旋转与容量；失败时不修改地图。
 inline MapError AddWall(MapDef& map, const Wall& wall);
 
+// 载入报告：written 成功写入数，rejected 被跳过数（非法盒/超容量），first_error 第一条原因。
+struct MapLoadReport {
+    int written = 0;
+    int rejected = 0;
+    MapError first_error = MapError::None;
+};
+
+// 跳过非法盒并记录首因（宿主加载与批量加载共用，避免两处复制同一段计数逻辑）。
+inline void NoteReject(MapLoadReport& report, MapError error) {
+    ++report.rejected;
+    if (report.first_error == MapError::None) {
+        report.first_error = error;
+    }
+}
+
 struct MapDef {
     Wall walls[kMaxWalls]{};
+    // 每面墙的剩余 HP（0 = 不可破坏）；破坏后 wall_count 减一，swap-erase 同步搬移。
+    uint16_t wall_hp[kMaxWalls]{};
     int wall_count = 0;
+    // 本次加载的墙体预算（默认 kMaxWalls）；容量测试可传 512 验证拒绝路径。
+    int wall_limit = kMaxWalls;
     float floor_z = 0.0f;
-    // 导航网格覆盖范围（水平面；de_ash 默认 ±2048）。NavPath 用它生成均匀网格。
+    // 导航网格覆盖范围（水平面）。de_ash 默认 ±2048；de_dust2 由 layout bounds 注入 ±2300。
     Vec3 nav_min{-2048.0f, -2048.0f, 0.0f};
     Vec3 nav_max{2048.0f, 2048.0f, 256.0f};
+    // 出生中心；custom_spawns=false 时回合逻辑沿用 de_ash 常量（回归不变）。
+    Vec3 spawn_t{0.0f, -1700.0f, 0.0f};
+    Vec3 spawn_ct{0.0f, 1700.0f, 0.0f};
+    bool custom_spawns = false;
 };
 
 inline bool IsFiniteVec(const Vec3& v) {
     return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z);
 }
 
+// 合法 yaw：0/90/180/270（含浮点相等容差）；返回归一后的 0 或 90（180 视同 0）。
+inline bool NormalizeYaw(float yaw_degrees, float& out_quarter_turns) {
+    constexpr float kEps = 1.0e-3f;
+    const float turns = yaw_degrees / 90.0f;
+    const float rounded = std::round(turns);
+    if (std::fabs(turns - rounded) > kEps) {
+        return false;
+    }
+    out_quarter_turns = rounded;
+    return true;
+}
+
+// 90° 倍数旋转：绕盒中心交换 x/y 半宽；非 90° 返回 RotatedBrushUnsupported。
+inline Wall RotateToAabb(const Wall& wall, float quarter_turns) {
+    Wall out = wall;
+    out.yaw_degrees = 0.0f;
+    const int turns = static_cast<int>(std::fmod(std::fabs(quarter_turns), 4.0f));
+    if (turns == 1 || turns == 3) {
+        const Vec3 center{(wall.min.x + wall.max.x) * 0.5f, (wall.min.y + wall.max.y) * 0.5f,
+                          (wall.min.z + wall.max.z) * 0.5f};
+        const float half_x = (wall.max.x - wall.min.x) * 0.5f;
+        const float half_y = (wall.max.y - wall.min.y) * 0.5f;
+        out.min = {center.x - half_y, center.y - half_x, wall.min.z};
+        out.max = {center.x + half_y, center.y + half_x, wall.max.z};
+    }
+    return out;
+}
+
 inline MapError AddWall(MapDef& map, const Wall& wall) {
     if (!IsFiniteVec(wall.min) || !IsFiniteVec(wall.max) || !std::isfinite(wall.yaw_degrees)) {
         return MapError::NonFinite;
     }
-    if (wall.min.x >= wall.max.x || wall.min.y >= wall.max.y || wall.min.z >= wall.max.z) {
-        return MapError::InvalidExtent;
-    }
-    if (wall.yaw_degrees != 0.0f) {
+    float turns = 0.0f;
+    if (!NormalizeYaw(wall.yaw_degrees, turns)) {
         return MapError::RotatedBrushUnsupported;
     }
-    if (static_cast<uint8_t>(wall.surface) > static_cast<uint8_t>(Surface::Fabric)) {
+    const Wall aabb = RotateToAabb(wall, turns);
+    if (aabb.min.x >= aabb.max.x || aabb.min.y >= aabb.max.y || aabb.min.z >= aabb.max.z) {
+        return MapError::InvalidExtent;
+    }
+    if (static_cast<uint8_t>(aabb.surface) > static_cast<uint8_t>(Surface::Fabric)) {
         return MapError::InvalidSurface;
     }
-    if (map.wall_count >= kMaxWalls) {
+    const int limit = map.wall_limit > 0 ? map.wall_limit : kMaxWalls;
+    if (map.wall_count >= limit) {
         return MapError::TooManyWalls;
     }
-    map.walls[map.wall_count++] = wall;
+    const int slot = map.wall_count;
+    map.walls[slot] = aabb;
+    map.wall_hp[slot] = aabb.hp;
+    ++map.wall_count;
     return MapError::None;
+}
+
+// 批量载入：跳过非法盒并计数（不静默截断）；导航范围随图注入。
+inline MapLoadReport LoadWalls(MapDef& map, std::span<const Wall> walls, const Aabb& nav_bounds,
+                               int wall_limit = kMaxWalls) {
+    map = MapDef{};
+    map.wall_limit = wall_limit > 0 ? wall_limit : kMaxWalls;
+    map.nav_min = nav_bounds.min;
+    map.nav_max = nav_bounds.max;
+    MapLoadReport report;
+    for (const Wall& wall : walls) {
+        const MapError error = AddWall(map, wall);
+        if (error != MapError::None) {
+            NoteReject(report, error);
+            continue;
+        }
+        ++report.written;
+    }
+    return report;
+}
+
+// 破坏后移除碰撞盒：从尾部搬一块覆盖目标（保持 O(1)），同步 HP；返回是否移除。
+inline bool RemoveWall(MapDef& map, int index) {
+    if (index < 0 || index >= map.wall_count) {
+        return false;
+    }
+    const int last = map.wall_count - 1;
+    if (index != last) {
+        map.walls[index] = map.walls[last];
+        map.wall_hp[index] = map.wall_hp[last];
+    }
+    map.walls[last] = Wall{};
+    map.wall_hp[last] = 0;
+    --map.wall_count;
+    return true;
 }
 
 } // namespace recoil

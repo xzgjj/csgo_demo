@@ -57,16 +57,58 @@ func _initialize() -> void:
 	print("PROBE nav_points=%d" % nav_count)
 	_expect(nav_count >= 2, "nav 路径点数 %d 不足" % nav_count)
 
-	# tick 预算：先跳过冻结期（约 5s=300 tick），再测 1000 tick 稳态耗时
+	# 可破坏（MAP-10）：14 个 HP>0 的盒；玻璃 20 HP 打碎后墙数减一，非法索引被拒。
+	var wall_count: int = sim.get_wall_count()
+	var breakables := 0
+	var glass_index := -1
+	for index in wall_count:
+		var hp: int = sim.get_wall_hp(index)
+		if hp > 0:
+			breakables += 1
+		if hp == 20 and glass_index < 0:
+			glass_index = index
+	print("PROBE breakables=%d glass_index=%d" % [breakables, glass_index])
+	_expect(breakables == 14, "可破坏盒应为 14，实际 %d" % breakables)
+	_expect(glass_index >= 0, "未找到 20 HP 玻璃盒")
+	if glass_index >= 0:
+		var result: int = sim.damage_wall(glass_index, 20)
+		_expect(result == 2, "玻璃 20HP 应被击碎（Destroyed=2），实际 %d" % result)
+		_expect(sim.get_wall_count() == wall_count - 1,
+				"击碎后墙数应减 1：%d -> %d" % [wall_count, sim.get_wall_count()])
+	_expect(sim.damage_wall(9999, 1) == 3, "非法墙索引应返回 InvalidIndex=3")
+
+	# tick 预算：先跳过冻结期（约 5s=300 tick），再测 1000 tick 稳态耗时与 p99
 	for i in 300:
 		sim.tick_auto()
-	var t0: int = Time.get_ticks_usec()
+	var samples: Array[float] = []
 	for i in 1000:
+		var tick_start: int = Time.get_ticks_usec()
 		sim.tick_auto()
-	var avg_ms: float = float(Time.get_ticks_usec() - t0) / 1000.0 / 1000.0
-	print("PROBE tick_avg_ms=%.3f" % avg_ms)
+		samples.append(float(Time.get_ticks_usec() - tick_start) / 1000.0)
+	var avg_ms := 0.0
+	for sample in samples:
+		avg_ms += sample
+	avg_ms /= samples.size()
+	samples.sort()
+	var p99_ms: float = samples[int(samples.size() * 0.99)]
+	print("PROBE tick_avg_ms=%.3f tick_p99_ms=%.3f" % [avg_ms, p99_ms])
 	_expect(avg_ms < 8.0, "tick 均值 %.2fms 超过 8ms 预算" % avg_ms)
+	_expect(p99_ms < 8.0, "tick p99 %.2fms 超过 8ms 预算" % p99_ms)
+	_write_tick_csv(samples, avg_ms, p99_ms)
 	_quit()
+
+
+func _write_tick_csv(samples: Array[float], avg_ms: float, p99_ms: float) -> void:
+	var out_dir := ProjectSettings.globalize_path("res://../log/map")
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	var file := FileAccess.open(out_dir.path_join("dust2_tick.csv"), FileAccess.WRITE)
+	file.store_line("tick,ms")
+	for index in samples.size():
+		file.store_line("%d,%.3f" % [index, samples[index]])
+	file.store_line("avg,%.3f" % avg_ms)
+	file.store_line("p99,%.3f" % p99_ms)
+	file.close()
+	print("PROBE tick_csv=", out_dir.path_join("dust2_tick.csv"))
 
 
 func _expect(ok: bool, message: String) -> void:

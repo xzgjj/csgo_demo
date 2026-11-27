@@ -1,0 +1,86 @@
+{
+	"boxes_path": "res://scenes/de_dust2_boxes.json",
+	"boxes_sha256": "f3645c51f7d36e4106c064586c965570b1df367052e5e916174cf417cf999333",
+	"map": "de_dust2",
+	"materials": 9,
+	"tri_count": 2100,
+	"views": [
+		{
+			"camera": "overview_top",
+			"file": "de_dust2_overview_top.png",
+			"pitch": -90.0000025044782,
+			"pos": [
+				0.0,
+				3400.0,
+				0.0
+			],
+			"yaw": 0.0
+		},
+		{
+			"camera": "A_site",
+			"file": "de_dust2_A_site.png",
+			"pitch": -22.0752875106971,
+			"pos": [
+				-1575.0,
+				420.0,
+				-780.0
+			],
+			"yaw": 0.0
+		},
+		{
+			"camera": "B_site",
+			"file": "de_dust2_B_site.png",
+			"pitch": -30.6820703555327,
+			"pos": [
+				-1790.0,
+				420.0,
+				950.0
+			],
+			"yaw": 180.000005008956
+		},
+		{
+			"camera": "mid",
+			"file": "de_dust2_mid.png",
+			"pitch": -6.08852838323186,
+			"pos": [
+				-700.0,
+				220.0,
+				-320.0
+			],
+			"yaw": -90.0000025044782
+		},
+		{
+			"camera": "T_spawn",
+			"file": "de_dust2_T_spawn.png",
+			"pitch": -10.1237943264785,
+			"pos": [
+				1835.0,
+				210.0,
+				850.0
+			],
+			"yaw": 49.1027968489228
+		},
+		{
+			"camera": "CT_spawn",
+			"file": "de_dust2_CT_spawn.png",
+			"pitch": -7.77660152575087,
+			"pos": [
+				-1420.0,
+				210.0,
+				-800.0
+			],
+			"yaw": -123.111345751542
+		},
+		{
+			"camera": "long",
+			"file": "de_dust2_long.png",
+			"pitch": -2.96093609718519,
+			"pos": [
+				1500.0,
+				210.0,
+				-1160.0
+			],
+			"yaw": 90.0000025044782
+		}
+	]
+}

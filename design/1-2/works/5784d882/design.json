@@ -1,0 +1,48 @@
+{
+  "pages": [
+    {
+      "id": "48e57b",
+      "title": "做 3 页咖啡店开业提案 PPT",
+      "spec": {
+        "title": "做 3 页咖啡店开业提案 PPT",
+        "kicker": "PRESENTATION",
+        "subtitle": "定位、菜单、开业节奏",
+        "body": [
+          "做 3 页咖啡店开业提案 PPT：定位、菜单、开业节奏"
+        ],
+        "bullets": [],
+        "tags": [],
+        "footer": "",
+        "layout": "swiss",
+        "palette": {
+          "paper": "#fafaf8",
+          "ink": "#0a0a0a",
+          "accent": "#002fa7"
+        },
+        "fonts": {
+          "display": "serif",
+          "body": "sans"
+        },
+        "motif": "grid"
+      }
+    }
+  ],
+  "params": {
+    "aspect": "16:9",
+    "layout": "swiss",
+    "align": "left",
+    "paper": "#fafaf8",
+    "ink": "#0a0a0a",
+    "accent": "#002fa7",
+    "display": "serif",
+    "body": "sans",
+    "scale": 1,
+    "density": 1,
+    "radius": 0,
+    "motion": 35,
+    "motif": "grid",
+    "themeId": "ikb",
+    "category": "ppt"
+  },
+  "activePageId": "48e57b"
+}

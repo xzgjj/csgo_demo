@@ -16,11 +16,6 @@ enum TraceMask : uint32_t {
 };
 constexpr uint32_t kTraceAll = kTraceWorld | kTracePlayers | kTraceDynamic | kTraceSmoke;
 
-struct Aabb {
-    Vec3 min{};
-    Vec3 max{};
-};
-
 struct TraceFilter {
     uint32_t mask = kTraceWorld;
     int32_t ignore_brush = -1;

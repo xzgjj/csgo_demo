@@ -49,8 +49,8 @@ def volume_overlap(a, b):
 
 def check_meta(layout):
     issues = []
-    if layout.get("schema") != "map-layout/2":
-        issues.append(f"schema 应为 map-layout/2，实际 {layout.get('schema')}")
+    if layout.get("schema") not in {"map-layout/2", "map-layout/3"}:
+        issues.append(f"schema 应为 map-layout/2 或 /3，实际 {layout.get('schema')}")
     if len(set(layout.get("materials", []))) != 6:
         issues.append("材质数量应为 6")
     if layout.get("floor_z") != 0:
@@ -89,12 +89,17 @@ def _building_shape_issues(building, boxes, max_h, issues):
 
 def check_buildings(layout, boxes):
     issues = []
-    buildings = layout.get("buildings", [])
-    if len(buildings) != 18:
-        issues.append(f"建筑数量应为 18，实际 {len(buildings)}")
+    buildings = layout.get("building_groups", []) if layout.get("schema") == "map-layout/3" \
+        else layout.get("buildings", [])
+    v3 = layout.get("schema") == "map-layout/3"
+    expected = int(layout.get("checks", {}).get("min_buildings", 18))
+    if len(buildings) < expected or (not v3 and len(buildings) != 18):
+        issues.append(f"建筑数量应 >= {expected if v3 else 18}，实际 {len(buildings)}")
     ids = [building["id"] for building in buildings]
     if len(set(ids)) != len(ids):
         issues.append("建筑 id 重复")
+    if v3:
+        return issues  # v3 的建筑是墙/房间台账，细节由 check_dust2 校验
     max_h = layout["reach"]["max_building_height"]
     for building in buildings:
         issues = _building_shape_issues(building, boxes, max_h, issues)
@@ -217,8 +222,9 @@ def _lane_corridor_issues(lane, boxes, issues):
 
 def check_lanes(layout, boxes, issues):
     lanes = layout.get("lanes", [])
-    if len(lanes) < 8:
-        issues.append(f"对线数量应 >= 8，实际 {len(lanes)}")
+    min_lanes = int(layout.get("checks", {}).get("min_lanes", 8))
+    if len(lanes) < min_lanes:
+        issues.append(f"对线数量应 >= {min_lanes}，实际 {len(lanes)}")
     computed = {}
     lo, hi = layout["bounds"]["min"], layout["bounds"]["max"]
     for lane in lanes:

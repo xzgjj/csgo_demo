@@ -1,0 +1,71 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>做 3 页咖啡店开业提案 PPT</title>
+<style>
+:root{--paper:#fafaf8;--ink:#0a0a0a;--accent:#002fa7;--radius:0px}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:transparent}
+body{width:1600px;height:900px;overflow:hidden}
+.canvas{position:relative;width:1600px;height:900px;background:var(--paper);color:var(--ink);overflow:hidden;display:flex;flex-direction:column;padding:104px;font-family:'Inter','Noto Sans SC','PingFang SC','Microsoft YaHei',system-ui,sans-serif;border-radius:var(--radius)}
+.grid{position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(to right,rgba(127,127,127,.22) 1px,transparent 1px),linear-gradient(to bottom,rgba(127,127,127,.22) 1px,transparent 1px);background-size:83px 83px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 82%)}
+.blob{position:absolute;border-radius:50%;filter:blur(104px);opacity:.55;pointer-events:none}
+.b1{width:1120px;height:1120px;right:-320px;top:-288px;background:var(--accent);opacity:.28;animation:drift 21.6s ease-in-out infinite alternate}
+.b2{width:880px;height:880px;left:-288px;bottom:-320px;background:var(--ink);opacity:.12;animation:drift 21.6s ease-in-out infinite alternate;animation-direction:alternate-reverse}
+@keyframes drift{from{transform:translate3d(0,0,0) scale(1)}50%{transform:translate3d(-6%,4%,0) scale(1.08)}to{transform:translate3d(4%,-4%,0) scale(.97)}}
+@media (prefers-reduced-motion:reduce){.blob{animation:none!important}}
+.head{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:flex-start;gap:27px;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-size:20px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);opacity:.72}
+.tags{display:flex;flex-wrap:wrap;gap:14px;justify-content:flex-end}
+.tag{border:1px solid currentColor;padding:4px 11px;border-radius:999px;letter-spacing:.06em;text-transform:none}
+main{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;justify-content:center;min-height:0}
+h1{font-family:'Noto Serif SC','Songti SC',Georgia,'Times New Roman',serif;font-size:131px;line-height:1.08;letter-spacing:-.025em;font-weight:500;max-width:1408px;overflow-wrap:anywhere}
+.sub{margin-top:22px;font-size:42px;line-height:1.45;max-width:1152px;opacity:.82}
+.body,.p-body p,.l-body p,.s-body p{font-size:28px;line-height:1.55;opacity:.86;margin-top:15px;max-width:1184px}
+.rule{height:2px;background:var(--accent);width:256px;margin-top:30px}
+.sub+.rule{margin-top:22px}
+.p-list,.l-features,.s-list{list-style:none;margin-top:32px;display:flex;flex-direction:column;gap:15px}
+.p-list li,.l-features li,.s-list li{display:flex;gap:15px;align-items:baseline;font-size:29px;line-height:1.5}
+.idx{font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-size:20px;color:var(--accent);letter-spacing:.08em;flex:none}
+.foot{position:relative;z-index:1;display:flex;justify-content:space-between;gap:27px;font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-size:20px;letter-spacing:.08em;opacity:.6}
+.mark{text-transform:uppercase}
+.align-center{text-align:center;align-items:center}
+.align-center h1,.align-center .sub,.align-center .body,.align-center .p-body p,.align-center .l-body p,.align-center .s-body p{margin-left:auto;margin-right:auto}
+.align-center .head{justify-content:center;text-align:center}
+.align-center .tags{justify-content:center}
+.align-center .foot{justify-content:center;text-align:center}
+.align-center .p-list li,.align-center .l-features li,.align-center .s-list li{justify-content:center;text-align:center}
+.align-center .rule{margin-left:auto;margin-right:auto}
+.s-rule{height:1px;background:currentColor;opacity:.25;margin-top:30px}
+.land-main .eyebrow{font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace;font-size:20px;letter-spacing:.16em;color:var(--accent);text-transform:uppercase;margin-bottom:22px}
+.l-features{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:22px;margin-top:38px}
+.l-features li{flex-direction:column;gap:9px;border-top:2px solid var(--accent);padding-top:14px}
+.s-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 38px}
+.s-list li{border-top:1px solid rgba(127,127,127,.3);padding-top:11px}
+.swiss-main h1{font-size:141px}
+.dots{position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(rgba(127,127,127,.32) 1px,transparent 1px);background-size:39px 39px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 84%)}
+.lines{position:absolute;inset:0;pointer-events:none;background-image:repeating-linear-gradient(45deg,rgba(127,127,127,.14) 0 1px,transparent 1px 27px);mask-image:linear-gradient(to bottom,rgba(0,0,0,.55),transparent 86%)}
+.gradient{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 90% at 85% 10%,var(--accent) 0%,transparent 58%),radial-gradient(90% 70% at 0% 100%,rgba(127,127,127,.25) 0%,transparent 60%);opacity:.28}
+.noise{position:absolute;inset:0;pointer-events:none;opacity:.16;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}
+.layout-editorial .p-body,.layout-split .p-body{columns:2;column-gap:43px}
+.layout-editorial .p-body p,.layout-split .p-body p{break-inside:avoid;max-width:none}
+.layout-split main{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);column-gap:59px;align-items:center}
+.layout-split h1,.layout-split .sub,.layout-split .rule{grid-column:1}
+.layout-split .p-body,.layout-split .p-list{grid-column:2}
+.layout-grid .p-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.layout-grid .p-list li{border:1px solid rgba(127,127,127,.35);padding:22px}
+.layout-stat h1{font-size:155px}
+.layout-stat .p-list{display:grid;grid-template-columns:repeat(1,minmax(0,1fr));gap:24px;margin-top:41px}
+.layout-stat .p-list li{flex-direction:column;align-items:flex-start;border-top:3px solid var(--accent);padding-top:16px;font-size:35px}
+.layout-cover main{justify-content:center;align-items:center;text-align:center}
+.layout-cover h1{max-width:1312px;text-align:center}
+.layout-cover .sub{margin-left:auto;margin-right:auto}
+.layout-cover .rule{margin-left:auto;margin-right:auto}
+.layout-cover .p-body p{margin-left:auto;margin-right:auto}
+.layout-cover .p-list{align-items:center}
+</style></head>
+<body><div class="canvas layout-swiss align-left"><div class="grid" aria-hidden="true"></div><header class="head"><span class="kicker">PRESENTATION</span><span class="tags"></span></header>
+      <main class="swiss-main">
+        <h1>做 3 页咖啡店开业提案 PPT</h1>
+        <p class="sub">定位、菜单、开业节奏</p>
+        <div class="s-rule"></div>
+        <ul class="s-list"></ul>
+        <div class="s-body"><p class="body">做 3 页咖啡店开业提案 PPT：定位、菜单、开业节奏</p></div>
+      </main>
+      <footer class="foot"><span></span><span class="mark">PRESENTATION · 16:9</span></footer></div></body></html>

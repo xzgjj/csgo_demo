@@ -13,6 +13,7 @@
 #include "recoil/sim/hitbox.h"
 #include "recoil/sim/reject.h"
 #include "recoil/sim/round.h"
+#include "recoil/world/breakable.h"
 #include "recoil/world/trace.h"
 
 namespace recoil {
@@ -196,8 +197,25 @@ void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& w
     }
 }
 
+void DamageWallOnShot(MapDef& map, const Vec3& origin, const Vec3& dir, float range,
+                      const RayHit& player_hit, uint16_t damage, uint8_t shooter,
+                      EventList& events) {
+    const TraceHit wall = TraceRay(map, origin, origin + dir * range);
+    if (!wall.hit || wall.brush < 0) {
+        return;
+    }
+    if (player_hit.hit && wall.fraction * range > player_hit.t) {
+        return;
+    }
+    const BreakableReport report = DamageWall(map, wall.brush, damage);
+    if (report.result == BreakableResult::Damaged || report.result == BreakableResult::Destroyed) {
+        events.Push(
+            {EventKind::WallDamaged, shooter, static_cast<uint8_t>(report.result), wall.brush});
+    }
+}
+
 void Fire(WorldState& state, const Content& content, const Command& command, const MapDef* map,
-          EventList& events) {
+          MapDef* mutable_map, EventList& events) {
     if (command.player >= state.player_count) {
         PushReject(events, command.player, RejectReason::InvalidPlayer);
         return;
@@ -242,8 +260,16 @@ void Fire(WorldState& state, const Content& content, const Command& command, con
         penetration_scale = PenetrationScale(*map, origin, dir, weapon.range, hit.t);
     }
     if (!hit.hit || penetration_scale < 0.0f) {
+        if (mutable_map != nullptr) {
+            DamageWallOnShot(*mutable_map, origin, dir, weapon.range, hit, weapon.damage,
+                             command.player, events);
+        }
         events.Push({EventKind::ShotMissed, command.player, 0, 0});
         return;
+    }
+    if (mutable_map != nullptr) {
+        DamageWallOnShot(*mutable_map, origin, dir, weapon.range, hit, weapon.damage,
+                         command.player, events);
     }
     ResolveDamage(state, content, weapon, command.player, hit.player, hit.t, hit.group,
                   penetration_scale, events);
@@ -274,7 +300,7 @@ void ApplyMove(WorldState& state, const Command& command, EventList& events) {
 } // namespace
 
 StepResult Step(const WorldState& prev, const Content& content, std::span<const Command> commands,
-                const MapDef* map) {
+                const MapDef* map, MapDef* mutable_map) {
     StepResult out;
     out.state = prev;
     ++out.state.tick;
@@ -282,7 +308,7 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
     for (const Command& command : commands) {
         switch (command.kind) {
         case CommandKind::Fire:
-            Fire(out.state, content, command, map, out.events);
+            Fire(out.state, content, command, map, mutable_map, out.events);
             break;
         case CommandKind::Reload:
             StartReload(out.state, content, command, out.events);
@@ -315,7 +341,7 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
     }
     StepBomb(out.state, content, out.events);
     StepGrenades(out.state, content, out.events, map);
-    AdvanceRound(out.state, content, out.events);
+    AdvanceRound(out.state, content, out.events, map);
     for (uint8_t i = 0; i < out.state.player_count; ++i) {
         Aabb blockers[kMaxPlayers];
         int blocker_count = 0;

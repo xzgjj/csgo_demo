@@ -38,7 +38,7 @@ def derive(layout):
         make_box(
             "floor",
             "floor",
-            "dirt",
+            layout.get("ground_material", "dirt"),
             lo[0] - wall_t,
             hi[0] + wall_t,
             lo[1] - wall_t,

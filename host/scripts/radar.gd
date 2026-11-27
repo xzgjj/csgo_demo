@@ -164,6 +164,13 @@ func map_rect() -> Rect2:
 func map_wall_count() -> int:
 	return _wall_rects.size()
 
+## 包点数量（雷达轮廓里 kind=site 的盒数；用于换图断言）。
+func site_count() -> int:
+	return _site_positions.size()
+
+func site_positions() -> Array[Vector2]:
+	return _site_positions.duplicate()
+
 func map_rects() -> Array[Rect2]:
 	return _wall_rects.duplicate()
 

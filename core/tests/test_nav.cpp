@@ -154,3 +154,22 @@ TEST_CASE("没有楼梯时 +128 高台不可达") {
 
     CHECK(path.empty());
 }
+
+TEST_CASE("导航越界点返回空路径而不是贴边钳制") {
+    const MapDef map = OpenMap();
+    CHECK(NavPath(map, {600.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}).empty());
+    CHECK(NavPath(map, {0.0f, 0.0f, 0.0f}, {0.0f, -600.0f, 0.0f}).empty());
+    CHECK(NavPath(map, {-600.0f, 0.0f, 0.0f}, {0.0f, 600.0f, 0.0f}).empty());
+    // 边界上仍视为图内（闭区间）。
+    CHECK(!NavPath(map, {512.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}).empty());
+}
+
+TEST_CASE("导航范围随地图 bounds 收缩后越界点被拒绝") {
+    MapDef map = OpenMap();
+    map.nav_min = {-256.0f, -256.0f, 0.0f};
+    map.nav_max = {256.0f, 256.0f, 256.0f};
+    const Vec3 from{0.0f, 0.0f, 0.0f};
+    const Vec3 to{320.0f, 0.0f, 0.0f};
+
+    CHECK(NavPath(map, from, to).empty());
+}

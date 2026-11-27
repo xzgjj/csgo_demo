@@ -9,6 +9,7 @@ add_library(recoil_core STATIC
     src/ai_tactics.cpp
     src/bomb.cpp
     src/bot.cpp
+    src/breakable.cpp
     src/content.cpp
     src/ground.cpp
     src/grenades.cpp
@@ -36,6 +37,7 @@ add_executable(recoil_tests
     tests/test_ballistics.cpp
     tests/test_bomb.cpp
     tests/test_bot.cpp
+    tests/test_breakable.cpp
     tests/test_drops.cpp
     tests/test_fire_state.cpp
     tests/test_grenades.cpp
@@ -57,3 +59,9 @@ target_link_libraries(recoil_tests PRIVATE recoil_core)
 
 enable_testing()
 add_test(NAME core_tests COMMAND recoil_tests)
+# SPEC-01 验收用过滤名：ctest -R map_capacity / map_rotation / nav_bounds
+add_test(NAME map_capacity COMMAND recoil_tests "-tc=*容量预算*")
+add_test(NAME map_rotation COMMAND recoil_tests "-tc=*yaw*")
+add_test(NAME nav_bounds COMMAND recoil_tests "-tc=*越界*")
+add_test(NAME spawn_injection COMMAND recoil_tests "-tc=*出生中心*")
+add_test(NAME breakable COMMAND recoil_tests "-tc=*可破坏*")

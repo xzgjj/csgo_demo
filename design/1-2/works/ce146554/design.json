@@ -1,0 +1,48 @@
+{
+  "pages": [
+    {
+      "id": "282b27",
+      "title": "小红书 3",
+      "spec": {
+        "title": "小红书 3",
+        "kicker": "SOCIAL CARD",
+        "subtitle": "4 首图：把「一周只做三件事」做成一句钩子",
+        "body": [
+          "小红书 3:4 首图：把「一周只做三件事」做成一句钩子"
+        ],
+        "bullets": [],
+        "tags": [],
+        "footer": "",
+        "layout": "poster",
+        "palette": {
+          "paper": "#fafaf8",
+          "ink": "#0a0a0a",
+          "accent": "#002fa7"
+        },
+        "fonts": {
+          "display": "serif",
+          "body": "sans"
+        },
+        "motif": "grid"
+      }
+    }
+  ],
+  "params": {
+    "aspect": "3:4",
+    "layout": "poster",
+    "align": "left",
+    "paper": "#fafaf8",
+    "ink": "#0a0a0a",
+    "accent": "#002fa7",
+    "display": "serif",
+    "body": "sans",
+    "scale": 1,
+    "density": 1,
+    "radius": 0,
+    "motion": 35,
+    "motif": "grid",
+    "themeId": "ikb",
+    "category": "card"
+  },
+  "activePageId": "282b27"
+}

@@ -29,6 +29,7 @@ enum class EventKind : uint8_t {
     WeaponSwitched,
     WeaponDropped,
     WeaponPickedUp,
+    WallDamaged,
 };
 
 enum class RejectReason : int32_t {

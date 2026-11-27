@@ -271,3 +271,37 @@ TEST_CASE("5v5 匹配局出生默认护甲 100 + 头盔") {
         CHECK(state.players[i].helmet);
     }
 }
+
+TEST_CASE("地图注入出生中心后 5v5 从新图出生") {
+    recoil::WorldState state;
+    recoil::EventList events;
+    recoil::MapDef map;
+    map.spawn_t = {100.0f, -500.0f, 0.0f};
+    map.spawn_ct = {-100.0f, 500.0f, 0.0f};
+    map.custom_spawns = true;
+
+    recoil::BeginMatch(state, recoil::DefaultContent(), events, &map);
+
+    REQUIRE(state.player_count == 10);
+    for (uint8_t i = 0; i < state.player_count; ++i) {
+        const recoil::PlayerState& player = state.players[i];
+        const bool is_t = player.team == static_cast<uint8_t>(recoil::Team::T);
+        const float center_y = is_t ? -500.0f : 500.0f;
+        CHECK(std::fabs(player.position.y - center_y) < 1.0e-3f);
+        if (is_t) {
+            CHECK(std::fabs(player.position.x - 100.0f) <= 128.0f + 1.0e-3f);
+        } else {
+            CHECK(std::fabs(player.position.x + 100.0f) <= 128.0f + 1.0e-3f);
+        }
+    }
+}
+
+TEST_CASE("未注入出生中心时保持 de_ash 回归坐标") {
+    recoil::WorldState state;
+    recoil::EventList events;
+    recoil::BeginMatch(state, recoil::DefaultContent(), events);
+
+    REQUIRE(state.player_count == 10);
+    CHECK(std::fabs(state.players[0].position.y + 1700.0f) < 1.0e-3f);
+    CHECK(std::fabs(state.players[5].position.y - 1700.0f) < 1.0e-3f);
+}

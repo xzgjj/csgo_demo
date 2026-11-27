@@ -91,7 +91,8 @@ void PatrolHold(const WorldState& state, uint8_t self, const SiteLayout& layout,
     out.state = TacticState::Hold;
     const Vec3 hold = HoldPoint(layout, site, role);
     if (FlatDistance(state.players[self].position, hold) > layout.patrol_radius) {
-        AimMove(state, self, hold, map, out);
+        // 已在包点 hold_radius 内，落位属于几十 u 的微调；直接朝点走，避免每 tick 跑一次全图 A*。
+        AimMove(state, self, hold, nullptr, out);
     } else {
         out.command = StopCommand(self);
     }

@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include "nav_grid.h"
 #include "recoil/base/vec3.h"
 
 namespace recoil {
@@ -24,81 +25,7 @@ constexpr float kMinWalkableTop = 8.0f;
 constexpr float kSampleOffset = 18.0f;
 constexpr int kMaxLevelsPerCell = 10;
 
-struct NavGrid {
-    int nx = 0;
-    int ny = 0;
-    float origin_x = 0.0f;
-    float origin_y = 0.0f;
-};
-
-// 导航世界：墙体按格分桶 + 每格可站层懒计算，避免 NavPath 每次重建整张网。
-struct NavWorld {
-    const MapDef* map = nullptr;
-    NavGrid grid;
-    std::vector<std::vector<int>> buckets;
-    std::vector<std::vector<Vec3>> levels;
-    std::vector<int8_t> built;
-};
-
-int CountCells(float low, float high) {
-    const float span = high - low;
-    if (span <= 0.0f) {
-        return 0;
-    }
-    return static_cast<int>(std::ceil(span / kNavCellSize));
-}
-
-int ClampIndex(int value, int count) {
-    if (count <= 0) {
-        return 0;
-    }
-    return std::clamp(value, 0, count - 1);
-}
-
-int CellIndex(const NavGrid& grid, int cx, int cy) {
-    return cy * grid.nx + cx;
-}
-
-int CellX(const NavGrid& grid, float x) {
-    return ClampIndex(static_cast<int>(std::floor((x - grid.origin_x) / kNavCellSize)), grid.nx);
-}
-
-int CellY(const NavGrid& grid, float y) {
-    return ClampIndex(static_cast<int>(std::floor((y - grid.origin_y) / kNavCellSize)), grid.ny);
-}
-
-float CenterX(const NavGrid& grid, int cx) {
-    return grid.origin_x + (static_cast<float>(cx) + 0.5f) * kNavCellSize;
-}
-
-float CenterY(const NavGrid& grid, int cy) {
-    return grid.origin_y + (static_cast<float>(cy) + 0.5f) * kNavCellSize;
-}
-
-void EnsureWorld(NavWorld& world, const MapDef& map) {
-    world.map = &map;
-    world.grid.nx = CountCells(map.nav_min.x, map.nav_max.x);
-    world.grid.ny = CountCells(map.nav_min.y, map.nav_max.y);
-    world.grid.origin_x = map.nav_min.x;
-    world.grid.origin_y = map.nav_min.y;
-    const int cells = world.grid.nx * world.grid.ny;
-    world.buckets.assign(static_cast<size_t>(cells), {});
-    world.levels.assign(static_cast<size_t>(cells), {});
-    world.built.assign(static_cast<size_t>(cells), 0);
-    // 墙体按“扩展后覆盖的格”入桶：查询点所在格即可覆盖玩家 AABB。
-    for (int i = 0; i < map.wall_count; ++i) {
-        const Wall& wall = map.walls[i];
-        const int x0 = CellX(world.grid, wall.min.x - kHalfWidth);
-        const int x1 = CellX(world.grid, wall.max.x + kHalfWidth);
-        const int y0 = CellY(world.grid, wall.min.y - kHalfWidth);
-        const int y1 = CellY(world.grid, wall.max.y + kHalfWidth);
-        for (int cy = y0; cy <= y1; ++cy) {
-            for (int cx = x0; cx <= x1; ++cx) {
-                world.buckets[static_cast<size_t>(CellIndex(world.grid, cx, cy))].push_back(i);
-            }
-        }
-    }
-}
+#include "nav_world.h" // 导航世界/路径缓存（依赖上面的 kHalfWidth 等常量）
 
 bool BodyFree(const NavWorld& world, float x, float y, float z) {
     const NavGrid& grid = world.grid;
@@ -293,35 +220,56 @@ std::vector<Vec3> BuildPath(NavWorld& world, const std::vector<int>& parent,
 } // namespace
 
 std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
-    NavWorld world;
-    EnsureWorld(world, map);
+    // 越界点直接拒绝：clamp 会生成“贴着边界”的错误路径，比空路径更危险。
+    const float z_min = map.nav_min.z - kStepUp;
+    const float z_max = map.nav_max.z + kStepUp;
+    if (from.x < map.nav_min.x || from.x > map.nav_max.x || from.y < map.nav_min.y ||
+        from.y > map.nav_max.y || from.z < z_min || from.z > z_max || to.x < map.nav_min.x ||
+        to.x > map.nav_max.x || to.y < map.nav_min.y || to.y > map.nav_max.y || to.z < z_min ||
+        to.z > z_max) {
+        return {};
+    }
+    NavWorld& world = SharedWorld(map);
     const NavGrid& grid = world.grid;
     if (grid.nx <= 1 || grid.ny <= 1) {
         return {};
     }
     const int start_cell = CellIndex(grid, CellX(grid, from.x), CellY(grid, from.y));
     const int goal_cell = CellIndex(grid, CellX(grid, to.x), CellY(grid, to.y));
+    if (world.cache_start == start_cell && world.cache_goal == goal_cell &&
+        std::fabs(world.cache_from.z - from.z) < 1.0f &&
+        std::fabs(world.cache_to.z - to.z) < 1.0f) {
+        return world.cache_path;
+    }
+    auto remember = [&](std::vector<Vec3> path) {
+        world.cache_start = start_cell;
+        world.cache_goal = goal_cell;
+        world.cache_from = from;
+        world.cache_to = to;
+        world.cache_path = path;
+        return path;
+    };
     if (start_cell == goal_cell) {
-        return {to};
+        return remember({to});
     }
     if (!BodyFree(world, to.x, to.y, to.z)) {
-        return {};
+        return remember({});
     }
     const int start_level = NearestLevel(world, start_cell, from.z);
     const int goal_level = NearestLevel(world, goal_cell, to.z);
     if (start_level < 0 || goal_level < 0) {
-        return {};
+        return remember({});
     }
     const float goal_z =
         world.levels[static_cast<size_t>(goal_cell)][static_cast<size_t>(goal_level)].z;
     if (std::fabs(goal_z - to.z) > kStepUp + kEpsilon) {
-        return {};
+        return remember({});
     }
     const int node_count = grid.nx * grid.ny * kMaxLevelsPerCell;
     const int start_node = start_cell * kMaxLevelsPerCell + start_level;
     const int goal_node = goal_cell * kMaxLevelsPerCell + goal_level;
     if (start_node == goal_node) {
-        return {to};
+        return remember({to});
     }
     std::vector<int> parent(static_cast<size_t>(node_count), -1);
     std::vector<int> cell_of_node(static_cast<size_t>(node_count), -1);
@@ -389,9 +337,9 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
         }
     }
     if (!found) {
-        return {};
+        return remember({});
     }
-    return BuildPath(world, parent, cell_of_node, start_node, goal_node, to);
+    return remember(BuildPath(world, parent, cell_of_node, start_node, goal_node, to));
 }
 
 } // namespace recoil

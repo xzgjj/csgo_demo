@@ -1,0 +1,18 @@
+{
+  "id": "6da39dd3",
+  "name": "1",
+  "slug": "1-2",
+  "type": "mixed",
+  "description": "1",
+  "tags": [],
+  "location": {
+    "kind": "workspace",
+    "root": "D:\\c++_myproject\\game_project\\csgo_demo\\design\\1-2",
+    "workspaceId": "d8a38690-b881-473d-a35f-7649b85aeb95",
+    "workspaceTitle": "csgo_demo"
+  },
+  "defaults": {},
+  "createdAt": "2026-11-06T08:03:08.541Z",
+  "updatedAt": "2026-11-06T08:03:08.541Z",
+  "archived": false
+}

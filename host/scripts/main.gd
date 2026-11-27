@@ -13,6 +13,7 @@ const PurchaseFlowScript = preload("res://scripts/purchase_flow.gd")
 const MatchFlowScript = preload("res://scripts/match_flow.gd")
 var sim: RefCounted
 var world: DeAshWorld
+var map_id := "de_ash"
 var settings: SettingsStore
 var account
 var loadout_page
@@ -64,6 +65,7 @@ func _ready() -> void:
 	settings.load_settings()
 	account = AccountStoreScript.new()
 	account.load_account()
+	map_id = MapLoaderScript.cli_map_id()
 	_build_world()
 	_build_ui()
 	_apply_settings()
@@ -72,7 +74,7 @@ func _build_world() -> void:
 	world = DeAshWorld.new()
 	world.name = "World"
 	add_child(world)
-	world.build()
+	world.build(MapLoaderScript.boxes_path_for(map_id), map_id)
 	target_mesh = _make_target_mesh()
 	smoke_mesh = _make_smoke_mesh()
 	camera = Camera3D.new()
@@ -130,12 +132,12 @@ func _start_play() -> void:
 	sim.reset()
 	_enter_game(false)
 
-## 可玩模式：de_ash 全尺寸 MapDef + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
+## 可玩模式：注册表地图 + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
 func _start_match() -> void:
 	sim.reset()
-	MapLoaderScript.apply(sim)
-	sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
-	sim.begin_match()
+	if not MapLoaderScript.start_match(sim, map_id):
+		_show_menu()
+		return
 	_enter_game(true)
 func _restart() -> void:
 	if match_mode:
@@ -279,7 +281,6 @@ func _physics_process(_delta: float) -> void:
 	_update_view()
 	_update_hud()
 
-## 是否有会抢鼠标的页面打开（暂停/设置/结算/比分板/购买菜单/物品栏/主菜单）。
 func _ui_page_open() -> bool:
 	return HostPages.page_open(self)
 

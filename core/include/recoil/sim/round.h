@@ -6,6 +6,7 @@
 #include "recoil/sim/command.h"
 #include "recoil/sim/event.h"
 #include "recoil/sim/state.h"
+#include "recoil/world/map.h"
 
 namespace recoil {
 
@@ -16,10 +17,12 @@ void AssignTeams(WorldState& state);
 
 // 开始一场 5v5：设置 10 名玩家、分队、发枪与出生点（de_ash 出生屋），进入首回合冻结期。
 // 纯函数式状态初始化；地图仍由调用方通过 Step 的 MapDef 传入。
-void BeginMatch(WorldState& state, const Content& content, EventList& events);
+void BeginMatch(WorldState& state, const Content& content, EventList& events,
+                const MapDef* map = nullptr);
 
 // 回合状态机：冻结 → 进行中 → 结算 → 重置；含胜负判定与经济结算。
-void AdvanceRound(WorldState& state, const Content& content, EventList& events);
+void AdvanceRound(WorldState& state, const Content& content, EventList& events,
+                  const MapDef* map = nullptr);
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events);
 

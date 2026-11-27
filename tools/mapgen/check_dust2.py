@@ -13,6 +13,7 @@ import sys
 
 import geom
 import geom_reach
+import gen_blockout
 from paths import ROOT
 
 LAYOUT = ROOT / "content/maps/de_dust2.layout.json"
@@ -21,6 +22,14 @@ CAPACITY = 512
 TOLERANCE = 0.35
 LEVEL_KINDS = {"platform", "stairs", "catwalk", "floor"}
 SHELL_NAMES = ("shell_west", "shell_east", "shell_south", "shell_north")
+# docs/design/03 §3.4 可破坏表（14 个真正可移除；A-11 薄金属只凹不碎）。
+EXPECTED_HP = {
+    "A-06": 200, "A-10": 200, "B-08": 200, "L-13": 200, "M-07": 200,
+    "A-07": 300, "B-06": 300, "B-07": 100,
+    "L-03": 400, "M-04": 400,
+    "A-16": 20, "A-17": 20, "B-13": 30,
+    "M-17": 80,
+}
 
 
 def rect(box):
@@ -46,15 +55,94 @@ def overlap(a, b):
 
 
 def _check_schema(layout, boxes, issues: list[str]) -> None:
-    if layout.get("schema") != "map-layout/2":
-        issues.append("schema 不是 map-layout/2")
+    if layout.get("schema") != "map-layout/3":
+        issues.append("schema 不是 map-layout/3")
     if len(set(layout.get("materials", []))) != 6:
         issues.append(f"材质应为 6 类，实际 {len(set(layout.get('materials', [])))}")
+    checks = layout.get("checks", {})
+    for key in ("min_buildings", "min_lanes", "min_breakables", "max_boxes",
+                "door_width", "max_door_width", "breakable_hp"):
+        if key not in checks:
+            issues.append(f"checks 缺少 {key}")
     lo, hi = layout["bounds"]["min"], layout["bounds"]["max"]
     for box in boxes:
         x0, x1, y0, y1 = rect(box)
         if x0 < lo[0] - 64 or x1 > hi[0] + 64 or y0 < lo[1] - 64 or y1 > hi[1] + 64:
             issues.append(f"盒越界 {box['id']} ({x0:.0f},{y0:.0f})-({x1:.0f},{y1:.0f})")
+
+
+def _check_counts(layout, solid, checks, issues: list[str]) -> None:
+    groups = len(layout.get("building_groups", []))
+    if groups < int(checks.get("min_buildings", 0)):
+        issues.append(f"建筑分组不足：{groups} < {checks.get('min_buildings')}")
+    lanes = len(layout.get("lanes", []))
+    if lanes < int(checks.get("min_lanes", 0)):
+        issues.append(f"对线不足：{lanes} < {checks.get('min_lanes')}")
+    if len(solid) < int(checks.get("min_solid", 0)):
+        issues.append(f"碰撞盒过少：{len(solid)} < {checks.get('min_solid')}")
+    limit = int(checks.get("max_boxes", CAPACITY))
+    if len(solid) > limit:
+        issues.append(f"碰撞盒 {len(solid)} 超过契约上限 {limit}")
+
+
+def _check_doors_sites(layout, checks, issues: list[str]) -> None:
+    allowed = {int(checks.get("door_width", 96)), int(checks.get("max_door_width", 128))}
+    for doorway in layout.get("doorways", []):
+        if int(doorway.get("width", 0)) not in allowed:
+            issues.append(f"门洞宽度不在 {sorted(allowed)}: {doorway['id']} "
+                          f"{doorway.get('width')}")
+    min_w, min_d = int(checks.get("min_site_width", 0)), int(checks.get("min_site_depth", 0))
+    for site in layout.get("sites", {}).values():
+        width, depth = site["size"][0], site["size"][1]
+        if width < min_w or depth < min_d:
+            issues.append(f"包点尺寸不足 {site['center']}: {width}x{depth}")
+
+
+def _check_breakables(layout, checks, issues: list[str]) -> None:
+    props = layout.get("props", [])
+    hp_set = {int(value) for value in checks.get("breakable_hp", [])}
+    actual = {p["id"]: int(p.get("hp", 0)) for p in props if int(p.get("hp", 0)) > 0}
+    if len(actual) < int(checks.get("min_breakables", 0)):
+        issues.append(f"可破坏物不足：{len(actual)} < {checks.get('min_breakables')}")
+    if actual != EXPECTED_HP:
+        missing = sorted(set(EXPECTED_HP) - set(actual))
+        extra = sorted(set(actual) - set(EXPECTED_HP))
+        wrong = sorted(key for key in EXPECTED_HP if key in actual and actual[key] != EXPECTED_HP[key])
+        issues.append(f"可破坏 HP 与 06 表不一致 missing={missing} extra={extra} wrong={wrong}")
+    for item in props:
+        hp = int(item.get("hp", 0))
+        if hp > 0 and hp not in hp_set:
+            issues.append(f"可破坏物 HP 不在契约表: {item['id']} hp={hp}")
+        if hp == 0 and item.get("breakable"):
+            issues.append(f"可破坏物缺 HP: {item['id']}")
+
+
+def _check_contract(layout, solid, issues: list[str]) -> None:
+    checks = layout.get("checks", {})
+    _check_counts(layout, solid, checks, issues)
+    _check_doors_sites(layout, checks, issues)
+    _check_breakables(layout, checks, issues)
+
+
+def _check_boxes_file(layout, boxes, issues: list[str]) -> None:
+    if not BOXES.exists():
+        issues.append(f"缺少 {BOXES.name}")
+        return
+    data = json.loads(BOXES.read_text(encoding="utf-8"))
+    actual = data.get("boxes", [])
+    if len(actual) != len(boxes):
+        issues.append(f"boxes 不同步：文件 {len(actual)} 个，派生 {len(boxes)} 个")
+        return
+    for index, (got, want_sim) in enumerate(zip(actual, boxes)):
+        want = gen_blockout.to_godot(want_sim)
+        for key in ("center", "size"):
+            if any(abs(float(a) - float(b)) > 0.01 for a, b in zip(got.get(key, []), want[key])):
+                issues.append(f"boxes 不同步 #{index} {key}")
+                return
+        for key in ("kind", "material", "collision", "hp"):
+            if got.get(key) != want.get(key):
+                issues.append(f"boxes 不同步 #{index} {key}: {got.get(key)} != {want.get(key)}")
+                return
 
 
 def _check_overlaps(solid, issues: list[str]) -> None:
@@ -194,8 +282,8 @@ def main() -> int:
     issues: list[str] = []
 
     _check_schema(layout, boxes, issues)
-    if len(solid) > CAPACITY:
-        issues.append(f"碰撞盒 {len(solid)} 超过内核容量 {CAPACITY}")
+    _check_contract(layout, solid, issues)
+    _check_boxes_file(layout, boxes, issues)
     _check_overlaps(solid, issues)
     _check_support(solid, issues)
     _check_spawns_sites(layout, solid, issues)

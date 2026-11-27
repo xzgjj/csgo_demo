@@ -1,0 +1,48 @@
+{
+  "pages": [
+    {
+      "id": "942cbb",
+      "title": "一篇文章",
+      "spec": {
+        "title": "一篇文章",
+        "kicker": "EDITORIAL",
+        "subtitle": "三种出口",
+        "body": [
+          "一篇文章，三种出口"
+        ],
+        "bullets": [],
+        "tags": [],
+        "footer": "",
+        "layout": "poster",
+        "palette": {
+          "paper": "#f4f1ea",
+          "ink": "#141413",
+          "accent": "#002fa7"
+        },
+        "fonts": {
+          "display": "serif",
+          "body": "sans"
+        },
+        "motif": "none"
+      }
+    }
+  ],
+  "params": {
+    "aspect": "4:5",
+    "layout": "poster",
+    "align": "left",
+    "paper": "#f4f1ea",
+    "ink": "#141413",
+    "accent": "#002fa7",
+    "display": "serif",
+    "body": "sans",
+    "scale": 1,
+    "density": 1,
+    "radius": 0,
+    "motion": 35,
+    "motif": "none",
+    "themeId": "",
+    "category": "page"
+  },
+  "activePageId": "942cbb"
+}

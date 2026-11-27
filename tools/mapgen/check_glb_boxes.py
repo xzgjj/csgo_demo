@@ -7,10 +7,11 @@
 
 from __future__ import annotations
 
+import argparse
 import json
 import struct
 
-import paths
+from paths import ROOT
 
 EPS = 0.01
 
@@ -29,12 +30,7 @@ def _glb_doc(path):
     raise ValueError("GLB 缺少 JSON chunk")
 
 
-def main() -> int:
-    if not paths.GLB.exists():
-        print("FAIL 缺少 host/models/map/de_ash.glb")
-        return 1
-    boxes = json.loads(paths.BOXES.read_text(encoding="utf-8"))["boxes"]
-    nodes = [n for n in _glb_doc(paths.GLB).get("nodes", []) if n.get("name", "").startswith("box_")]
+def _compare(boxes, nodes) -> list[str]:
     issues = []
     if len(nodes) != len(boxes):
         issues.append(f"盒数漂移: glb {len(nodes)} / json {len(boxes)}")
@@ -45,16 +41,38 @@ def main() -> int:
             issues.append(f"{node.get('name')}: box_index 非法")
             continue
         want = boxes[index]
-        if node.get("translation") != want["center"]:
-            issues.append(f"{node.get('name')}: 中心漂移 {node.get('translation')} != {want['center']}")
+        got_center = node.get("translation", [])
+        if len(got_center) < 3 or any(
+                abs(float(a) - float(b)) > EPS for a, b in zip(got_center, want["center"])):
+            issues.append(f"{node.get('name')}: 中心漂移 {got_center} != {want['center']}")
         for key, glb_key in (("kind", "kind"), ("material", "material_id"),
                              ("collision", "collision")):
+            # GLB 只有几何，没有“碰撞开关”；屋顶/上层体块标 collision=false 只做视觉，这里不比较。
+            if key == "collision" and not want.get(key):
+                continue
             if extras.get(glb_key) != want.get(key):
                 issues.append(f"{node.get('name')}: {key} 漂移")
+    return issues
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="GLB ↔ boxes 一致性")
+    parser.add_argument("--map", default="de_ash")
+    args = parser.parse_args()
+    boxes_path = ROOT / f"host/scenes/{args.map}_boxes.json"
+    glb_path = ROOT / ("host/models/map/de_ash.glb" if args.map == "de_ash"
+                       else f"host/models/map/{args.map}.glb")
+    if not glb_path.exists():
+        print(f"FAIL 缺少 {glb_path.relative_to(ROOT)}")
+        return 1
+    boxes = json.loads(boxes_path.read_text(encoding="utf-8"))["boxes"]
+    nodes = [n for n in _glb_doc(glb_path).get("nodes", [])
+             if n.get("name", "").startswith("box_")]
+    issues = _compare(boxes, nodes)
     if issues:
         print("FAIL " + "; ".join(issues[:8]))
         return 1
-    print(f"glbcheck PASS boxes={len(boxes)} nodes={len(nodes)}")
+    print(f"glbcheck PASS map={args.map} boxes={len(boxes)} nodes={len(nodes)}")
     return 0
 
 

@@ -16,6 +16,7 @@
 #include "recoil/sim/ground.h"
 #include "recoil/sim/round.h"
 #include "recoil/sim/step.h"
+#include "recoil/world/breakable.h"
 #include "recoil/world/map.h"
 #include "recoil_default_map.h"
 #include "recoil_host_map.h"
@@ -29,6 +30,7 @@ class RecoilSim : public RefCounted {
     recoil::WorldState state_{};
     recoil::Content content_{};
     recoil::MapDef map_{};
+    recoil_host::MapLoadReport map_report_{};
     recoil::EventList last_events_{};
     int total_damage_ = 0;
     int total_fire_ = 0;
@@ -86,7 +88,14 @@ protected:
         BIND(get_total_damage_events);
         BIND(get_total_fire_events);
         BIND(set_map_boxes, "boxes");
+        BIND(set_map_wall_hp, "hp");
+        BIND(set_map_frame, "min_x", "min_y", "max_x", "max_y", "t_x", "t_y", "t_z", "ct_x", "ct_y",
+             "ct_z");
+        BIND(get_map_rejected);
+        BIND(get_map_first_error);
         BIND(set_sites, "ax", "ay", "bx", "by");
+        BIND(damage_wall, "index", "damage");
+        BIND(get_wall_hp, "index");
         BIND(begin_match);
         BIND(tick_auto);
         BIND(get_wall_count);
@@ -279,7 +288,7 @@ public:
     }
 
     void tick() {
-        recoil::StepResult result = recoil::Step(state_, content_, pending_, &map_);
+        recoil::StepResult result = recoil::Step(state_, content_, pending_, &map_, &map_);
         state_ = result.state;
         last_events_ = result.events;
         total_damage_ += _count(recoil::EventKind::DamageApplied);
@@ -295,20 +304,11 @@ public:
         pending_.clear();
     }
 
-    // de_ash：宿主读派生盒子（Godot 坐标 → sim AABB），每盒 8 个 float。
-    int set_map_boxes(const PackedFloat32Array& boxes) {
-        return recoil_host::LoadMapBoxes(map_, boxes);
-    }
-
-    void set_sites(float ax, float ay, float bx, float by) {
-        sites_.site_a = {ax, ay, 0.0f};
-        sites_.site_b = {bx, by, 0.0f};
-    }
-
+    // 地图注入/查询组在 recoil_host_map_api.h（类体内 include，守住 400 行）。
     void begin_match() {
         state_ = recoil::WorldState{};
         content_ = recoil::DefaultContent();
-        recoil::BeginMatch(state_, content_, last_events_);
+        recoil::BeginMatch(state_, content_, last_events_, &map_);
         // 演示局出生金钱（便于试玩购买 M4/AWP；不改变竞技参考 start_money）。
         const uint16_t demo_money = content_.round.demo_start_money;
         if (demo_money > 0) {
@@ -356,8 +356,9 @@ public:
         return total;
     }
 
-    // 只读 getter 组（含 is_visible）拆到独立头文件，保持本文件 <=400 行。
+    // 地图注入/查询组与只读 getter 组拆到独立头文件（类体内 include），守住 400 行上限。
 #include "recoil_host_getters.h"
+#include "recoil_host_map_api.h"
 };
 
 namespace {

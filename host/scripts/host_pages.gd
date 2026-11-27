@@ -17,6 +17,7 @@ static func build(main: Node) -> void:
 	var radar := RadarPanelScript.new()
 	hud.add_child(radar)
 	radar.setup(main)
+	radar.use_map(str(main.get("map_id")))
 	main.set("radar", radar)
 	var scope := ScopeControllerScript.new()
 	var scope_layer := CanvasLayer.new()

@@ -140,9 +140,11 @@ def _attachments(building, material):
 
 
 def structure_boxes(structure):
-    cx, cy = structure["center"]
-    sx, sy = structure["size"]
+    center = structure["center"]
+    cx, cy = center[0], center[1]
+    sx, sy = structure["size"][0], structure["size"][1]
     h = float(structure["height"])
+    base = float(structure.get("base_z", center[2] - h / 2.0 if len(center) > 2 else 0.0))
     return [
         make_box(
             structure["id"],
@@ -152,8 +154,9 @@ def structure_boxes(structure):
             cx + sx / 2,
             cy - sy / 2,
             cy + sy / 2,
-            0.0,
-            h,
+            base,
+            base + h,
+            collision=bool(structure.get("collision", True)),
         )
     ]
 
@@ -176,6 +179,7 @@ def prop_boxes(prop):
             z0 + sz,
             walkable=bool(prop.get("walkable", False)),
             collision=bool(prop.get("collision", True)),
+            hp=int(prop.get("hp", 0)),
         )
     ]
 

@@ -26,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/verify"))
 import run_map_goldens  # noqa: E402
 import run_scenarios  # noqa: E402
+import dust2_phase  # noqa: E402
 
 PY = sys.executable
 MAP_VIEWS = ["overview_top", "A_site", "B_site", "mid", "T_spawn", "CT_spawn"]
@@ -373,13 +374,19 @@ def main() -> int:
     ap.add_argument("--build", action="store_true", help="先增量重建内核与 GDExtension")
     ap.add_argument("--update", action="store_true", help="重建截图 golden（人工门）")
     ap.add_argument("--no-ci", action="store_true", help="跳过 CI 项")
+    ap.add_argument("--map", default="", help="额外验证的新图（de_dust2）；de_ash 基线始终跑")
     args = ap.parse_args()
     started = time.time()
     thresholds = run_scenarios.load_thresholds()
     checks = phase_build_state(args)
     map_checks, map_shots = phase_map(args, thresholds)
     runtime_checks, runtime_shots = phase_runtime(args, thresholds)
-    checks += map_checks + runtime_checks + phase_gates(args)
+    checks += map_checks + runtime_checks
+    checks.append(run_cmd([run_scenarios.find_godot(), "--headless", "--path", "host",
+                           "--script", "res://tests/parse_all.gd"], 120, "parse_all"))
+    if args.map == "de_dust2":
+        checks += dust2_phase.checks(ROOT, run_cmd, PY)
+    checks += phase_gates(args)
     return write_report(args, checks, map_shots + runtime_shots, started)
 
 if __name__ == "__main__":
