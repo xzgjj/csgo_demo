@@ -1,97 +1,133 @@
 class_name BuyMenu
 extends CanvasLayer
-## 购买菜单（前端骨架）：分类（手枪/步枪/狙击/装备/手雷）+ 价格表 + 余额显示 + 买不起灰显。
-## 点击只发 purchase_requested(item_id, price) 信号，不扣钱也不改内核状态；
-## 内核 buy_weapon/购买命令绑定落地后由 main 把信号接到真实购买（模块 9 的后续）。
-## 价格对齐 content/defs/weapons.json（AK 2700 / M4A4 3100 / AWP 4750 / 手枪 200），
-## 装备与手雷取 CS:GO 参考值；内核价格 getter 落地后改为从内核读。
+## 购买菜单（SPEC-06 BUY-07）：目录来自内核（价格/限购/阵营单一事实源），
+## 列表模式 = 左侧分类 + 右侧商品按钮；轮盘模式 = 6 扇区环形选择。两种模式共用同一批按钮回调。
+## 只发信号（purchase_requested/refund_requested/rebuy_requested），不扣钱、不改内核状态。
 
 signal purchase_requested(item_id: String, price: int)
+signal refund_requested(item_id: String)
+signal rebuy_requested
 
-const CATEGORIES: Array[String] = ["手枪", "步枪", "狙击", "装备", "手雷"]
-const CATALOG := {
-	"手枪": [
-		{"id": "usp_s", "name": "USP-S", "price": 200},
-		{"id": "glock_18", "name": "Glock-18", "price": 200},
-	],
-	"步枪": [
-		{"id": "ak47", "name": "AK-47", "price": 2700},
-		{"id": "m4a4", "name": "M4A4", "price": 3100},
-	],
-	"狙击": [
-		{"id": "awp", "name": "AWP", "price": 4750},
-	],
-	"装备": [
-		{"id": "kevlar", "name": "凯夫拉护甲", "price": 650},
-		{"id": "kevlar_helmet", "name": "护甲 + 头盔", "price": 1000},
-	],
-	"手雷": [
-		{"id": "he", "name": "高爆手雷", "price": 300, "throwable": true},
-		{"id": "flash", "name": "闪光弹", "price": 200, "throwable": true},
-		{"id": "smoke", "name": "烟雾弹", "price": 300, "throwable": true},
-	],
-}
+const UNAFFORDABLE_COLOR := Color(0.52, 0.54, 0.58)
 const TAB_COLOR := Color(0.82, 0.86, 0.92)
 const TAB_ACTIVE_COLOR := Color(1.0, 0.85, 0.45)
-const UNAFFORDABLE_COLOR := Color(0.52, 0.54, 0.58)
-## 内核武器 id → AccountStore.loadout 的表现层 id（购买成功后写装备用）。
+const FALLBACK := {
+	"手枪": [{"id": "glock_18", "name": "Glock-18", "price": 200}],
+	"步枪": [{"id": "ak47", "name": "AK-47", "price": 2700}],
+}
 const LOADOUT_IDS := {"ak47": "ak", "m4a4": "m4", "awp": "awp"}
+## 分类名由宿主维护（GDExtension 只回传 category 下标，避免 DLL 字符串编码差异）。
+const CATEGORY_NAMES := ["手枪", "冲锋枪", "步枪", "重型", "装备", "投掷物"]
 
 var balance := 0
-## 购买窗口：仅内核 Freeze 阶段可买（由 PurchaseFlow 每帧同步）。
 var can_buy := true
 var balance_label: Label
+var team_label: Label
 var hint_label: Label
 var close_button: Button
-var _tab_row: HBoxContainer
+var rebuy_button: Button
+var refund_button: Button
+var mode_button: Button
+var wheel: BuyWheel
+var list_mode := true
+var catalog: Dictionary = {}
+var _tabs: HBoxContainer
 var _item_box: VBoxContainer
 var _tab_buttons: Dictionary = {}
 var _item_buttons: Dictionary = {}
 var _current := ""
 var _message := ""
-
+var _entry_checker := Callable()
+const REASON_TEXT := {
+	2: "购买窗口已关闭", 3: "不在购买区", 4: "余额不足", 5: "已达限购",
+	6: "非本方阵营/未上架", 7: "已持有", 8: "不可退款", 9: "退款次数用尽",
+	10: "条目无效", 11: "本回合已退款，禁止再买",
+}
 
 func build() -> void:
 	layer = 5
 	visible = false
-	var box := UiFactory.build_card(self, "购买菜单", 600.0)
+	var box := UiFactory.build_card(self, "购买菜单", 560.0, 760.0)
 	balance_label = UiFactory.add_label(box, "", 20)
 	balance_label.add_theme_color_override("font_color", UiFactory.TEAM_T_COLOR)
-	_tab_row = HBoxContainer.new()
-	_tab_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_tab_row.add_theme_constant_override("separation", 8)
-	box.add_child(_tab_row)
-	for category in CATEGORIES:
-		var tab := Button.new()
-		tab.text = category
-		tab.custom_minimum_size = Vector2(96.0, 34.0)
-		tab.add_theme_font_size_override("font_size", 15)
-		tab.pressed.connect(select_category.bind(category))
-		_tab_row.add_child(tab)
-		_tab_buttons[category] = tab
+	team_label = UiFactory.add_label(box, "", 14)
+	team_label.add_theme_color_override("font_color", UiFactory.NEUTRAL_COLOR)
+	_tabs = HBoxContainer.new()
+	_tabs.add_theme_constant_override("separation", 6)
+	box.add_child(_tabs)
 	_item_box = VBoxContainer.new()
-	_item_box.add_theme_constant_override("separation", 8)
+	_item_box.add_theme_constant_override("separation", 6)
 	box.add_child(_item_box)
 	hint_label = UiFactory.add_label(box, "", 14)
 	hint_label.add_theme_color_override("font_color", UiFactory.NEUTRAL_COLOR)
 	hint_label.visible = false
-	close_button = UiFactory.add_button(box, "关闭 (B)")
+	var footer := HBoxContainer.new()
+	footer.add_theme_constant_override("separation", 8)
+	box.add_child(footer)
+	mode_button = UiFactory.add_button(footer, "切换轮盘/列表 (Tab)")
+	mode_button.custom_minimum_size = Vector2(210.0, 40.0)
+	mode_button.pressed.connect(toggle_mode)
+	rebuy_button = UiFactory.add_button(footer, "重购 (F)")
+	rebuy_button.custom_minimum_size = Vector2(150.0, 40.0)
+	rebuy_button.pressed.connect(func() -> void: rebuy_requested.emit())
+	refund_button = UiFactory.add_button(footer, "退款 (R)")
+	refund_button.custom_minimum_size = Vector2(150.0, 40.0)
+	refund_button.pressed.connect(_refund_current)
+	close_button = UiFactory.add_button(footer, "关闭 (B)")
+	close_button.custom_minimum_size = Vector2(150.0, 40.0)
 	close_button.pressed.connect(close)
-	select_category(CATEGORIES[0])
+	if catalog.is_empty():
+		catalog = FALLBACK.duplicate(true)
+	_build_tabs()
+	_build_wheel()
+	select_category(str(_category_names()[0]))
 	_refresh_balance()
 
+## 由 main 在内核就绪后注入目录（id → price/limit/sides/category）。
+func set_catalog(entries: Array) -> void:
+	var by_category: Dictionary = {}
+	var names: Array[String] = []
+	for raw: Dictionary in entries:
+		var category_index := int(raw.get("category", 0))
+		var cat := "其他"
+		if category_index >= 0 and category_index < CATEGORY_NAMES.size():
+			cat = str(CATEGORY_NAMES[category_index])
+		if not by_category.has(cat):
+			by_category[cat] = []
+			names.append(cat)
+		by_category[cat].append({
+			"id": str(raw.get("id", "")), "name": _display_name(str(raw.get("id", ""))),
+			"price": int(raw.get("price", 0)), "index": int(raw.get("index", 0)),
+			"limit": int(raw.get("limit", 1)), "sides": int(raw.get("sides", 3)),
+		})
+	# 固定 6 扇区/标签顺序；空分类（如冲锋枪尚无商品）保留，显示“暂无商品”。
+	var ordered: Dictionary = {}
+	for name in CATEGORY_NAMES:
+		ordered[name] = by_category.get(name, [])
+	catalog = ordered
+	var all_names: Array[String] = []
+	for name in CATEGORY_NAMES:
+		all_names.append(name)
+	_rebuild_tabs(all_names)
+	_rebuild_wheel(all_names)
+	if not _current.is_empty():
+		select_category(_current)
+	else:
+		select_category(str(_category_names()[0]))
+	if not _current.is_empty():
+		select_category(_current)
+	else:
+		select_category(str(_category_names()[0]))
 
 func open(money: int) -> void:
 	visible = true
 	_message = ""
 	set_balance(money)
 	if _current.is_empty():
-		select_category(CATEGORIES[0])
-
+		select_category(str(_category_names()[0]))
 
 func close() -> void:
 	visible = false
-
 
 func toggle(money: int) -> void:
 	if visible:
@@ -99,17 +135,19 @@ func toggle(money: int) -> void:
 	else:
 		open(money)
 
-
 func is_open() -> bool:
 	return visible
-
 
 func set_balance(money: int) -> void:
 	balance = maxi(money, 0)
 	_refresh_balance()
 
+## 团队经济条（SPEC-06 UI 顶部）；由 purchase.refresh 每帧同步。
+func set_team_economy(team_t: int, team_ct: int) -> void:
+	if team_label == null:
+		return
+	team_label.text = "团队经济  T $%d   CT $%d" % [maxi(team_t, 0), maxi(team_ct, 0)]
 
-## 购买窗口开关（Freeze=可买；Live/RoundEnd=灰显并给出原因提示）。
 func set_can_buy(value: bool) -> void:
 	if can_buy == value:
 		return
@@ -117,141 +155,200 @@ func set_can_buy(value: bool) -> void:
 	_refresh_items_state()
 	_refresh_hint()
 
-
-## 菜单内可见提示（购买成功/被拒原因）。
 func show_message(text: String) -> void:
 	_message = text
 	_refresh_hint()
 
-
 func message_text() -> String:
 	return _message
 
-
 func category_names() -> Array[String]:
-	return CATEGORIES.duplicate()
-
+	return _category_names()
 
 func current_category() -> String:
 	return _current
 
-
 func select_category(category: String) -> void:
-	if not (category in CATEGORIES):
+	if not catalog.has(category):
 		return
 	_current = category
 	_rebuild_items()
 	_refresh_tabs()
 
+## 数字键 1-6 选分类（快捷键入口；越界忽略）。
+func select_category_index(index: int) -> void:
+	var names := _category_names()
+	if index < 0 or index >= names.size():
+		return
+	select_category(names[index])
 
-## 当前分类的商品 id（按价格表顺序）。
+## R 键退款：当前分类第一件可退款物品（失败给提示，不静默）。
+func request_refund_current() -> void:
+	_refund_current()
+
 func item_ids() -> Array[String]:
 	var ids: Array[String] = []
-	if _current.is_empty():
-		return ids
-	for item: Dictionary in CATALOG[_current]:
+	for item: Dictionary in catalog.get(_current, []):
 		ids.append(str(item["id"]))
 	return ids
 
-
 func price_of(item_id: String) -> int:
-	for category in CATEGORIES:
-		for item: Dictionary in CATALOG[category]:
+	for category in catalog:
+		for item: Dictionary in catalog[category]:
 			if str(item["id"]) == item_id:
 				return int(item["price"])
 	return -1
 
-
 func item_name(item_id: String) -> String:
-	for category in CATEGORIES:
-		for item: Dictionary in CATALOG[category]:
+	for category in catalog:
+		for item: Dictionary in catalog[category]:
 			if str(item["id"]) == item_id:
 				return str(item["name"])
 	return ""
 
-
 func buyable(item_id: String) -> bool:
 	if not can_buy:
 		return false
-	if is_throwable(item_id):
-		# 手雷不是“购买”而是对局内投掷（G/F/V），菜单里只做信息展示。
-		return false
 	var price := price_of(item_id)
-	return price >= 0 and price <= balance
+	if price < 0 or price > balance:
+		return false
+	return entry_reason(item_id) == 0
 
+## 内核给出的禁用原因（0=可买；无 checker 时只按价格判断）。
+func entry_reason(item_id: String) -> int:
+	if not _entry_checker.is_valid():
+		return 0
+	var index := entry_index_of(item_id)
+	if index < 0:
+		return 10
+	return int(_entry_checker.call(0, index))
 
-func is_throwable(item_id: String) -> bool:
-	for category in CATEGORIES:
-		for item: Dictionary in CATALOG[category]:
-			if str(item["id"]) == item_id:
-				return bool(item.get("throwable", false))
+## 由 main 注入内核校验函数（player, entry -> BuyResult 原因码）。
+func set_entry_checker(checker: Callable) -> void:
+	_entry_checker = checker
+	_refresh_items_state()
+
+func is_throwable(_item_id: String) -> bool:
 	return false
 
-
-## 内核武器 id → 装备主武器 id（非主武器返回空串）；购买成功后写 AccountStore 用。
 func loadout_id_of(item_id: String) -> String:
 	return str(LOADOUT_IDS.get(item_id, ""))
 
+## 内核 catalog 下标（PurchaseFlow 用它下单；找不到返回 -1）。
+func entry_index_of(item_id: String) -> int:
+	for category in catalog:
+		for item: Dictionary in catalog[category]:
+			if str(item["id"]) == item_id:
+				return int(item.get("index", -1))
+	return -1
 
-## 点击/调用购买：买得起才发 purchase_requested，返回是否已发请求（不扣钱，等内核）。
 func buy_item(item_id: String) -> bool:
 	if not buyable(item_id):
 		return false
 	purchase_requested.emit(item_id, price_of(item_id))
 	return true
 
+func refund_item(item_id: String) -> bool:
+	if item_id.is_empty() or price_of(item_id) < 0 or not can_buy:
+		return false
+	refund_requested.emit(item_id)
+	return true
+
+func toggle_mode() -> void:
+	list_mode = not list_mode
+	_item_box.visible = list_mode
+	wheel.visible = not list_mode
+	if mode_button != null:
+		mode_button.text = "切换列表 (Tab)" if not list_mode else "切换轮盘 (Tab)"
 
 func button_of(item_id: String) -> Button:
-	var button: Variant = _item_buttons.get(item_id, null)
-	return button as Button
+	var found: Variant = _item_buttons.get(item_id, null)
+	return found as Button
 
+func _category_names() -> Array[String]:
+	var names: Array[String] = []
+	for key in catalog:
+		names.append(str(key))
+	return names
+
+func _display_name(item_id: String) -> String:
+	var names := {"ak47": "AK-47", "m4a4": "M4A4", "awp": "AWP", "usp_s": "USP-S",
+		"glock_18": "Glock-18", "kevlar": "凯夫拉护甲", "helmet": "头盔",
+		"defuse_kit": "拆弹器", "he": "高爆手雷", "flash": "闪光弹", "smoke": "烟雾弹"}
+	return str(names.get(item_id, item_id))
+
+func _build_tabs() -> void:
+	_rebuild_tabs(_category_names())
+
+func _rebuild_tabs(names: Array[String]) -> void:
+	for child in _tabs.get_children():
+		child.queue_free()
+	_tab_buttons.clear()
+	for name in names:
+		var tab := Button.new()
+		tab.text = name
+		tab.custom_minimum_size = Vector2(88.0, 32.0)
+		tab.pressed.connect(select_category.bind(name))
+		_tabs.add_child(tab)
+		_tab_buttons[name] = tab
+
+func _build_wheel() -> void:
+	_rebuild_wheel(_category_names())
+
+func _rebuild_wheel(names: Array[String]) -> void:
+	if wheel == null:
+		wheel = BuyWheel.new()
+		wheel.custom_minimum_size = Vector2(360.0, 300.0)
+		wheel.size = Vector2(360.0, 300.0)
+		wheel.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		wheel.visible = false
+		_item_box.get_parent().add_child(wheel)
+	wheel.rebuild(names, Callable(self, "select_category"))
 
 func _rebuild_items() -> void:
 	for child in _item_box.get_children():
 		child.queue_free()
 	_item_buttons.clear()
-	if _current.is_empty():
-		return
-	for item: Dictionary in CATALOG[_current]:
+	for item: Dictionary in catalog.get(_current, []):
 		var item_id := str(item["id"])
 		var label := "%s  $%d" % [str(item["name"]), int(item["price"])]
-		if bool(item.get("throwable", false)):
-			label += "  · 对局内投掷"
 		var button := UiFactory.add_button(_item_box, label)
 		button.pressed.connect(_on_item_pressed.bind(item_id))
 		_item_buttons[item_id] = button
+	if catalog.get(_current, []).is_empty():
+		UiFactory.add_label(_item_box, "本分类暂无商品", 14)
 	_refresh_items_state()
 	_refresh_hint()
 
-
 func _on_item_pressed(item_id: String) -> void:
-	if not buy_item(item_id):
-		if not can_buy:
-			show_message("购买时间已过（仅冻结期与开局 5 秒内可购买）")
-		elif not is_throwable(item_id) and price_of(item_id) > balance:
-			show_message("余额不足：%s 需要 $%d" % [item_name(item_id), price_of(item_id)])
+	if buy_item(item_id):
+		return
+	if not can_buy:
+		show_message("购买窗口已关闭")
+	else:
+		show_message(reason_text(entry_reason(item_id)))
 
+func _refund_current() -> void:
+	for item: Dictionary in catalog.get(_current, []):
+		if refund_item(str(item["id"])):
+			return
+	show_message("当前分类没有可退款商品")
 
-## 提示优先级：购买窗口关闭 > 手动消息 > 手雷说明。
 func _refresh_hint() -> void:
 	if hint_label == null:
 		return
 	var text := ""
 	if not can_buy:
-		text = "购买时间已过（仅冻结期与开局 5 秒内可购买）"
+		text = "购买窗口已关闭（冻结期可买）"
 	elif not _message.is_empty():
 		text = _message
-	elif _current == "手雷":
-		text = "手雷不在购买菜单买：对局内按 G / F / V 投掷"
 	hint_label.text = text
 	hint_label.visible = not text.is_empty()
 
-
 func _refresh_tabs() -> void:
-	for category in CATEGORIES:
-		var tab: Button = _tab_buttons[category]
-		tab.modulate = TAB_ACTIVE_COLOR if category == _current else TAB_COLOR
-
+	for name: String in _tab_buttons:
+		var tab: Button = _tab_buttons[name]
+		tab.modulate = TAB_ACTIVE_COLOR if name == _current else TAB_COLOR
 
 func _refresh_balance() -> void:
 	if balance_label == null:
@@ -259,10 +356,16 @@ func _refresh_balance() -> void:
 	balance_label.text = "余额 $%d" % balance
 	_refresh_items_state()
 
-
 func _refresh_items_state() -> void:
-	for item_id in _item_buttons.keys():
+	for item_id: String in _item_buttons:
 		var button: Button = _item_buttons[item_id]
-		var affordable := buyable(str(item_id))
+		var affordable := buyable(item_id)
 		button.disabled = not affordable
 		button.modulate = Color(1.0, 1.0, 1.0) if affordable else UNAFFORDABLE_COLOR
+		button.tooltip_text = "" if affordable else reason_text(entry_reason(item_id))
+
+## 原因码 → 玩家可读文案（0 返回空串）。
+func reason_text(reason: int) -> String:
+	if reason == 0:
+		return ""
+	return str(REASON_TEXT.get(reason, "不可购买"))

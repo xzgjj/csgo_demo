@@ -25,6 +25,7 @@
         BIND(get_score_t);
         BIND(get_score_ct);
         BIND(get_money, "player");
+        BIND(team_money, "team");
         BIND(throw_grenade, "player", "kind", "yaw", "pitch");
         BIND(get_smoke_active);
         BIND(get_smoke_x);
@@ -79,6 +80,8 @@ BIND(set_spawn_centers, "tx", "ty", "cx", "cy");
         BIND(get_view_yaw, "player");
         BIND(get_damage_count_by, "player");
         BIND(can_buy, "player");
+        BIND(can_buy_entry, "player", "entry");
+        BIND(last_buy_failure);
         BIND(is_reloading, "player");
         // SPEC-02 弹道只读接口：HUD 准星扩散 / 相机抬枪 / 验收断言共用。
         BIND(get_shot_index, "player");
@@ -92,5 +95,11 @@ BIND(set_spawn_centers, "tx", "ty", "cx", "cy");
         BIND(get_last_hit_distance, "player");
         // SPEC-02 回滚/验收开关：false = 旧直线弹道（脚本化点射用例用）。
         BIND(set_ballistics_enabled, "enabled");
+        BIND(set_buy_enabled, "enabled");
+        BIND(buy_enabled);
+        BIND(buy_entry, "player", "entry");
+        BIND(refund_entry, "player", "entry");
+        BIND(rebuy, "player");
+        BIND(buy_catalog_entries);
 #undef BIND
 // clang-format on

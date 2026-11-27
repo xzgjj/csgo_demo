@@ -20,8 +20,9 @@ static func add_layer(parent: Node, layer_name: String, order: int) -> CanvasLay
 	return layer
 
 
-static func build_card(layer: CanvasLayer, title: String, card_height: float) -> VBoxContainer:
-	var panel := _make_panel(Vector2(CARD_WIDTH, card_height))
+static func build_card(layer: CanvasLayer, title: String, card_height: float,
+		card_width: float = CARD_WIDTH) -> VBoxContainer:
+	var panel := _make_panel(Vector2(card_width, card_height))
 	_centered_root(layer).add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 12)

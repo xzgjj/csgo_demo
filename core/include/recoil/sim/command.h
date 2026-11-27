@@ -19,6 +19,10 @@ enum class CommandKind : uint8_t {
     BuyWeapon,
     SwitchWeapon,
     Pickup,
+    // SPEC-06：目录购买 / 退款 / 重购（与旧 Buy/BuyWeapon 并存，便于回滚）。
+    BuyEntry,
+    Refund,
+    Rebuy,
 };
 
 enum class BuyItem : uint8_t {
@@ -41,6 +45,7 @@ struct Command {
     GrenadeKind grenade = GrenadeKind::HE;
     WeaponId weapon_id = WeaponId::None; // BuyWeapon 使用
     uint8_t slot = 0;                    // SwitchWeapon 使用：0=主武器，1=副武器
+    uint8_t entry = 0;                   // BuyEntry/Refund 使用：catalog 下标
 };
 
 } // namespace recoil

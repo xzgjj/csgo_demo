@@ -41,6 +41,9 @@ func refresh() -> void:
 	_refresh_balance()
 	if menu != null and menu.has_method("set_can_buy"):
 		menu.set_can_buy(_can_buy())
+		if menu.has_method("set_team_economy") and sim.has_method("team_money"):
+			# 内核 Team::T=1、CT=0（与 UiFactory.team_id 一致）。
+			menu.set_team_economy(int(sim.team_money(1)), int(sim.team_money(0)))
 
 
 ## 菜单点击 → 内核购买；成功返回 true。武器走 buy_weapon（主/副槽由内核决定），装备走 Buy。
@@ -55,7 +58,14 @@ func on_purchase(item_id: String, price: int) -> bool:
 		return false
 	var weapon_id: int = int(BUY_WEAPON_IDS.get(item_id, 0))
 	var ok := false
-	if weapon_id > 0:
+	var entry := -1
+	if menu != null and menu.has_method("entry_index_of"):
+		entry = int(menu.entry_index_of(item_id))
+	if entry >= 0 and sim.has_method("buy_entry"):
+		ok = bool(sim.buy_entry(0, entry))
+		if ok and weapon_id > 0:
+			_record_loadout(weapon_id)
+	elif weapon_id > 0:
 		ok = bool(sim.buy_weapon(0, weapon_id))
 		if ok:
 			_record_loadout(weapon_id)
@@ -79,6 +89,28 @@ func after_tick() -> void:
 	_message("已购买 %s" % name if bought else "购买失败：%s" % name)
 	_pending.clear()
 	refresh()
+
+
+func on_refund(item_id: String) -> bool:
+	if sim == null or menu == null:
+		return false
+	var entry := int(menu.entry_index_of(item_id))
+	if entry < 0 or not sim.has_method("refund_entry"):
+		return false
+	sim.refund_entry(0, entry)
+	_pending = {"name": "退款 " + _item_name(item_id), "money": int(sim.get_money(0)),
+			"weapon": int(sim.get_weapon_id(0))}
+	_refresh_balance()
+	return true
+
+
+func on_rebuy() -> bool:
+	if sim == null or not sim.has_method("rebuy"):
+		return false
+	sim.rebuy(0)
+	_pending = {"name": "重购", "money": int(sim.get_money(0)), "weapon": int(sim.get_weapon_id(0))}
+	_refresh_balance()
+	return true
 
 
 func switch_weapon(index: int) -> void:

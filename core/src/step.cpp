@@ -9,6 +9,7 @@
 #include "recoil/movement/movement.h"
 #include "recoil/sim/ballistics.h"
 #include "recoil/sim/bomb.h"
+#include "recoil/sim/buy.h"
 #include "recoil/sim/damage.h"
 #include "recoil/sim/grenades.h"
 #include "recoil/sim/ground.h"
@@ -332,6 +333,10 @@ StepResult Step(const WorldState& prev, const Content& content, std::span<const 
     ++out.state.tick;
     ApplyTimers(out.state, content, out.events);
     for (const Command& command : commands) {
+        if (IsCatalogCommand(command.kind)) {
+            ApplyCatalogCommand(out.state, content, command, out.events);
+            continue;
+        }
         switch (command.kind) {
         case CommandKind::Fire:
             Fire(out.state, content, command, map, out.events);

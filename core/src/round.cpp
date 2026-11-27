@@ -5,6 +5,7 @@
 
 #include "recoil/ai/reaction.h"
 #include "recoil/content/weapon_table.h"
+#include "recoil/sim/buy.h"
 #include "recoil/sim/match.h"
 #include "recoil/sim/reject.h"
 
@@ -61,6 +62,7 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
     int ct_slot = 0;
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
+        const bool survived = player.alive && round.number > 1;
         // 赛制模式按 side[team_id] 派生阵营；旧模式尊重调用方显式设置的 team。
         uint8_t side = player.team;
         if (rules.enabled) {
@@ -69,9 +71,26 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
         }
         player.alive = true;
         player.health = 100;
-        const bool default_armor = full_team; // 匹配局出生默认甲盔
-        player.armor = default_armor ? content.round.spawn_armor : 0;
-        player.helmet = default_armor && content.round.spawn_helmet;
+        // SPEC-06：每回合重置限购/退款/上回合购买位；存活保留装备，死亡清空（护甲不继承）。
+        player.last_buy_mask = player.round_buy_mask;
+        player.round_buy_mask = 0;
+        player.bought_counts = {};
+        player.refunded_mask = 0;
+        player.refund_count = 0;
+        player.buy_fire_marks = {{player.fire_count, player.fire_count}};
+        if (content.buy.enabled) {
+            ApplyLoadoutInheritance(player, survived, side);
+            if (!survived && round.number <= 1) {
+                GiveDefaultLoadout(player, player.team);
+                player.armor = full_team ? content.round.spawn_armor : 0;
+                player.helmet = full_team && content.round.spawn_helmet;
+            }
+        } else {
+            const bool default_armor = full_team; // 旧行为：匹配局出生默认甲盔
+            player.armor = default_armor ? content.round.spawn_armor : 0;
+            player.helmet = default_armor && content.round.spawn_helmet;
+            GiveDefaultLoadout(player, player.team);
+        }
         player.velocity = {};
         player.wish_forward = 0.0f;
         player.wish_side = 0.0f;
@@ -81,7 +100,6 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
         player.blind_ticks = 0;
         player.reaction_target = kNoReactionTarget;
         player.reaction_ticks = 0;
-        GiveDefaultLoadout(player, player.team);
         const bool is_t = side == static_cast<uint8_t>(Team::T);
         if (!full_team) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;

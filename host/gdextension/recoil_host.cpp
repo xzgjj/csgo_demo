@@ -2,17 +2,21 @@
 #include <godot_cpp/core/class_db.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
+#include <godot_cpp/variant/array.hpp>
+#include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 
 #include <vector>
 
 #include "gdextension_interface.h"
+#include "recoil/ai/buy_policy.h"
 #include "recoil/ai/nav.h"
 #include "recoil/ai/tactics.h"
 #include "recoil/ai/vision.h"
 #include "recoil/content/content.h"
 #include "recoil/content/weapon_table.h"
 #include "recoil/sim/ballistics.h"
+#include "recoil/sim/buy.h"
 #include "recoil/sim/command.h"
 #include "recoil/sim/ground.h"
 #include "recoil/sim/round.h"
@@ -31,6 +35,7 @@ class RecoilSim : public RefCounted {
     recoil::Content content_{};
     recoil::MapDef map_{};
     recoil::EventList last_events_{};
+    int last_buy_failure_ = 0;
     int total_damage_ = 0;
     int total_fire_ = 0;
     // 按射手的累计命中次数（命中归因：玩家自己的击中 FX 只认这个计数）。
@@ -50,6 +55,7 @@ class RecoilSim : public RefCounted {
     std::vector<recoil::Command> pending_{};
     std::vector<recoil::Command> bot_commands_{};
     int bot_refresh_ = 0;
+    int bot_buy_round_ = -1;
 
 protected:
     static void _bind_methods() {
@@ -69,6 +75,7 @@ public:
         pending_.clear();
         bot_commands_.clear();
         bot_refresh_ = 0;
+        bot_buy_round_ = -1;
         last_events_ = recoil::EventList{};
         total_damage_ = 0;
         total_fire_ = 0;
@@ -220,6 +227,11 @@ public:
         recoil::StepResult result = recoil::Step(state_, content_, pending_, &map_);
         state_ = result.state;
         last_events_ = result.events;
+        for (int i = 0; i < result.events.count; ++i) {
+            if (result.events.items[i].kind == recoil::EventKind::BuyFailed) {
+                last_buy_failure_ = result.events.items[i].value;
+            }
+        }
         total_damage_ += _count(recoil::EventKind::DamageApplied);
         total_fire_ += _count(recoil::EventKind::WeaponFired);
         for (int i = 0; i < result.events.count; ++i) {
@@ -270,6 +282,7 @@ public:
         pending_.clear();
         bot_commands_.clear();
         bot_refresh_ = 0;
+        bot_buy_round_ = -1;
         total_damage_ = total_fire_ = total_dry_ = 0;
         for (int& count : damage_by_) {
             count = 0;
@@ -279,6 +292,7 @@ public:
 
     // 人机由内核战术层驱动：每 4 tick 重算一次决策（导航开销分摊），中间复用命令。
     void tick_auto() {
+        _queue_bot_buys();
         if (bot_refresh_ % 4 == 0) { // 人机决策每 4 tick 刷新，导航开销分摊
             bot_commands_.clear();
             for (uint8_t i = 0; i < state_.player_count; ++i) {
@@ -308,6 +322,7 @@ public:
     }
 
     // 只读 getter 组（含 is_visible）拆到独立头文件，保持本文件 <=400 行。
+#include "recoil_host_buy_ops.h"
 #include "recoil_host_getters.h"
 };
 

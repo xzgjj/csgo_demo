@@ -155,12 +155,29 @@ struct PlayerState {
     float recoil_pitch = 0.0f;
     float recoil_yaw = 0.0f;
     float inaccuracy = 0.0f;
+    // SPEC-06 购买态（全部进 HashState，保证确定性）：
+    // grenade_counts = 手雷库存（HE/Flash/Smoke），购买上限与投掷消耗都读这里；
+    // bought_counts[entry] = 本回合各条目购买次数（退款不清零，防刷限购）；
+    // buy_fire_marks[slot] = 购买时 fire_count 快照（退款“未使用”判定）；
+    // refunded_mask = 本回合已退款条目位，退款后禁再买；round/last_buy_mask = 本回合/上回合购买位。
+    std::array<uint8_t, 3> grenade_counts{{0, 0, 0}};
+    std::array<uint8_t, 32> bought_counts{};
+    std::array<uint16_t, 2> buy_fire_marks{{0, 0}};
+    uint8_t refund_count = 0;
+    uint32_t refunded_mask = 0;
+    uint16_t round_buy_mask = 0;
+    uint16_t last_buy_mask = 0;
 };
 
 struct WorldState {
     uint64_t tick = 0;
     uint64_t rng = 0x9E3779B97F4A7C15ull;
     uint8_t player_count = 0;
+    // SPEC-06 购买区（地图 layout 标 buy_zone 后由 host 注入）；未注入时按 zone_required=false
+    // 放行。
+    bool buy_zone_set = false;
+    Vec3 buy_zone_min{};
+    Vec3 buy_zone_max{};
     MatchRules match{}; // 赛制参数（默认 enabled=false → 旧行为）
     // 出生点由地图注入（host 从盒子清单 kind=spawn 读取）；未注入时回退 de_ash 常量，
     // 保证旧测试/无地图场景仍可运行。x/y 为 sim 平面坐标。
