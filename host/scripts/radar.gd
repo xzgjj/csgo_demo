@@ -8,6 +8,7 @@ extends Control
 ## - 敌人只在「暴露」时显示：优先内核 is_visible(viewer,target)；该绑定未就绪时一律不显示
 ##   （exposure_source()=="pending"），不崩溃、不假装可见。
 ## - 右上角存活条：固定 5 盏灯 + 存活数（按 sim.get_team 归队，灯数与 get_alive_count 一致）。
+const RadarStyle = preload("res://scripts/radar_style.gd")
 ## 接入（main.gd 由 Lead 接线，共 3 行）：
 ##   var radar := RadarPanel.new(); hud.add_child(radar); radar.setup(self)
 
@@ -220,7 +221,7 @@ func _load_map() -> void:
 	var min_sim := Vector2(INF, INF)
 	var max_sim := Vector2(-INF, -INF)
 	for item: Dictionary in boxes:
-		var extent := _box_sim_extent(item)
+		var extent := RadarStyle.box_sim_extent(item)
 		min_sim.x = minf(min_sim.x, extent.position.x)
 		min_sim.y = minf(min_sim.y, extent.position.y)
 		max_sim.x = maxf(max_sim.x, extent.end.x)
@@ -230,10 +231,11 @@ func _load_map() -> void:
 	_scale = minf(RADAR_RECT.size.x / _world_rect.size.x,
 			RADAR_RECT.size.y / _world_rect.size.y)
 	for item: Dictionary in boxes:
-		var color := _kind_color(str(item.get("kind", "solid")))
+		var color := RadarStyle.kind_color(str(item.get("kind", "solid")), SKIP_KINDS,
+				SITE_COLOR, SPAWN_COLOR, PROP_COLOR, STAIR_COLOR, WALL_COLOR)
 		if color.a <= 0.0:
 			continue
-		var extent := _box_sim_extent(item)
+		var extent := RadarStyle.box_sim_extent(item)
 		var a := world_to_radar(extent.position.x, extent.position.y)
 		var b := world_to_radar(extent.end.x, extent.end.y)
 		var rect := Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)),
@@ -245,29 +247,6 @@ func _load_map() -> void:
 			_site_names.append(String.chr(65 + _site_names.size()))
 	if _wall_rects.is_empty():
 		_add_fallback_outline()
-
-## 一个盒子在 sim x/y 平面的范围：Godot 中心/尺寸 → sim（x=-gz, y=-gx）。
-func _box_sim_extent(item: Dictionary) -> Rect2:
-	var center: Array = item["center"]
-	var size: Array = item["size"]
-	var gx := float(center[0])
-	var gz := float(center[2])
-	var sx := float(size[0])
-	var sz := float(size[2])
-	return Rect2(Vector2(-gz - sz * 0.5, -gx - sx * 0.5), Vector2(sz, sx))
-
-func _kind_color(kind: String) -> Color:
-	if kind in SKIP_KINDS:
-		return Color(0.0, 0.0, 0.0, 0.0)
-	if kind == "site":
-		return SITE_COLOR
-	if kind == "spawn":
-		return SPAWN_COLOR
-	if kind == "prop":
-		return PROP_COLOR
-	if kind == "stairs" or kind == "ramp":
-		return STAIR_COLOR
-	return WALL_COLOR
 
 func _add_fallback_outline() -> void:
 	_wall_rects.append(RADAR_RECT.grow(-3.0))

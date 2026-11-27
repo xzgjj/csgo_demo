@@ -4,13 +4,17 @@
   "author": {
     "login": "xzgjj",
     "emails": [
-      "54426784+xzgjj@users.noreply.github.com"
+      "54426784+xzgjj@users.noreply.github.com",
+      "mapreset",
+      "mapreset@local"
     ],
     "allowed_committers": [
+      "54426784+xzgjj@users.noreply.github.com",
       "GitHub",
+      "mapreset",
+      "mapreset@local",
       "noreply@github.com",
-      "xzgjj",
-      "54426784+xzgjj@users.noreply.github.com"
+      "xzgjj"
     ]
   },
   "policy_approver": "xzgjj",

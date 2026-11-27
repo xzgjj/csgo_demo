@@ -171,6 +171,54 @@
       "author": "xzgjj",
       "source": "tools/blender/build_weapons.py 程序化生成",
       "hash": ""
+    },
+    {
+      "id": "tex-dust2-plaster",
+      "type": "texture",
+      "tags": [
+        "material:concrete"
+      ],
+      "path": "assets/generated/dust2/plaster_sand_01.png",
+      "license": "AI-generated",
+      "author": "xzgjj",
+      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+      "hash": "sha256:9d92f42126447c490335e5ce114400c8dbab454250a106fe404c0f6952d4c99a"
+    },
+    {
+      "id": "tex-dust2-sandstone",
+      "type": "texture",
+      "tags": [
+        "material:concrete"
+      ],
+      "path": "assets/generated/dust2/sandstone_block_01.png",
+      "license": "AI-generated",
+      "author": "xzgjj",
+      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+      "hash": "sha256:3ac8074a28922e886335b69c5d6b42b1c3d88577eb6914052037e527f288ebbb"
+    },
+    {
+      "id": "tex-dust2-wood",
+      "type": "texture",
+      "tags": [
+        "material:wood"
+      ],
+      "path": "assets/generated/dust2/wood_plank_01.png",
+      "license": "AI-generated",
+      "author": "xzgjj",
+      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+      "hash": "sha256:fefcc153e6e1c18724635480d3b012096aa16aa64e052346ffa780d937a90e9e"
+    },
+    {
+      "id": "tex-dust2-metal",
+      "type": "texture",
+      "tags": [
+        "material:metal"
+      ],
+      "path": "assets/generated/dust2/metal_panel_01.png",
+      "license": "AI-generated",
+      "author": "xzgjj",
+      "source": "image_gen seedream 5.5；无缝可平铺提示词，无游戏 IP 元素；512x512",
+      "hash": "sha256:7e01f0585d943556705ab0cd520e13f36632d9953fe7872b011b99e3fd4f828b"
     }
   ]
 }
