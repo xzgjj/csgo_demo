@@ -32,10 +32,9 @@ func _flow() -> void:
 	await process_frame
 	await process_frame
 	info.push_damage(55.0)
-	info.push_sound(640.0)
 	await process_frame
 	await _shot("info_layers_on")
-	for key in ["hit_direction", "killfeed", "radar", "sound_visual"]:
+	for key in ["hit_direction", "killfeed", "radar"]:
 		main.settings.set_value("gameplay.info." + key, false)
 	await physics_frame
 	await _shot("info_layers_off")

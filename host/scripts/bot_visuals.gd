@@ -35,6 +35,7 @@ var _death_seconds: Dictionary = {}
 var _alive_prev: Dictionary = {}
 var _fire_prev: Dictionary = {}
 var _weapon_ids: Dictionary = {}
+var _base_y: Dictionary = {}
 var _prompt_text := ""
 
 
@@ -140,7 +141,7 @@ func _attach_weapon(bot: Node3D, index: int) -> void:
 
 func _sync_bot(sim: RefCounted, index: int, bot: Node3D) -> void:
 	var alive := bool(sim.is_alive(index))
-	var pos := Vector3(-float(sim.get_y(index)), 0.0, -float(sim.get_x(index)))
+	var pos := Vector3(-float(sim.get_y(index)), float(sim.get_z(index)), -float(sim.get_x(index)))
 	var yaw := float(sim.get_view_yaw(index))
 	var weapon_id := int(sim.get_weapon_id(index))
 	_ensure_weapon_model(index, weapon_id)
@@ -149,12 +150,13 @@ func _sync_bot(sim: RefCounted, index: int, bot: Node3D) -> void:
 	if alive and not was_alive:
 		_death_seconds[index] = 0.0
 		bot.rotation.z = 0.0
-		bot.position.y = 0.0
+		bot.position.y = pos.y
 	elif not alive and was_alive:
 		_death_seconds[index] = 0.0001  # 开始倒地动画
 	_alive_prev[index] = alive
 	if alive:
 		bot.position = pos
+		_base_y[index] = pos.y
 		bot.visible = true
 	var fire_count := int(sim.get_fire_count(index))
 	if fire_count > int(_fire_prev.get(index, 0)):
@@ -226,7 +228,7 @@ func _animate(delta: float) -> void:
 		_death_seconds[index + 1] = death
 		var progress := clampf(death / DEATH_SECONDS, 0.0, 1.0)
 		bot.rotation.z = deg_to_rad(DEATH_ROLL_DEGREES * progress)
-		bot.position.y = -DEATH_SINK * progress
+		bot.position.y = float(_base_y.get(index + 1, 0.0)) - DEATH_SINK * progress
 		bot.visible = death < DEATH_SECONDS
 
 

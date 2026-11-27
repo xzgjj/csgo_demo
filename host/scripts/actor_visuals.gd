@@ -17,8 +17,13 @@ static func make_capsule(parent: Node3D, color: Color, actor_name: String = "Act
 	return mesh_instance
 
 
-static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:
-	var mesh_instance := MeshInstance3D.new()
+## 第三人称下同步玩家胶囊：胶囊原点在几何中心，脚底 z 上抬半身高 36。
+static func sync_player(mesh_instance: Node3D, sim: RefCounted) -> void:
+	mesh_instance.position = Vector3(-sim.get_y(0), float(sim.get_z(0)) + 36.0,
+			-sim.get_x(0))
+
+
+static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:	var mesh_instance := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = radius
 	sphere.height = radius * 2.0
@@ -43,7 +48,8 @@ static func update_bot_meshes(parent: Node3D, sim: RefCounted,
 		var alive: bool = sim.is_alive(index)
 		mesh.visible = alive
 		if alive:
-			mesh.position = Vector3(-float(sim.get_y(index)), 0.0, -float(sim.get_x(index)))
+			# 类人低模的脚底在原点，直接贴内核 z；写死 0 会让平台/台阶上的单位陷进地里。
+			mesh.position = Vector3(-float(sim.get_y(index)), float(sim.get_z(index)), -float(sim.get_x(index)))
 
 
 ## 类人低模：T 红装、CT 黑色复杂轮廓（肩甲 + 红色目镜），替代“红色药丸”胶囊。

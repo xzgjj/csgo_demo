@@ -149,7 +149,6 @@ func info_layer_enabled(store: SettingsStore) -> Dictionary:
 	return {
 		"killfeed": bool(store.get_value("gameplay.info.killfeed")),
 		"hit_direction": bool(store.get_value("gameplay.info.hit_direction")),
-		"sound_visual": bool(store.get_value("gameplay.info.sound_visual")),
 		"radar": bool(store.get_value("gameplay.info.radar")),
 	}
 

@@ -325,9 +325,10 @@ func _update_view() -> void:
 		camera.position = eye - camera.basis.z * 170.0 + Vector3(0.0, 55.0, 0.0)
 	_player_mesh.visible = third_person and match_mode and sim.is_alive(0)
 	if _player_mesh.visible:
-		_player_mesh.position = Vector3(-sim.get_y(0), 36.0, -sim.get_x(0))
+		ActorVisuals.sync_player(_player_mesh, sim)
 	var scoped: bool = scope.is_scoped()
 	viewmodel.visible = not third_person and not scoped
+	fx.muzzle_visible_enabled = viewmodel.visible
 	# 所有玩家（含 2 人灰盒模式的靶子）统一用 BotVisuals 类人+持枪表现，旧胶囊靶隐藏。
 	target_mesh.visible = false
 	bot_visuals.sync(sim)

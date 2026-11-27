@@ -1,9 +1,9 @@
 {
 	"boxes_path": "res://scenes/de_dust2_boxes.json",
-	"boxes_sha256": "74ffad51ab9885c4bda7880691e34ef11eb388de1d7111e0498693fcd56b8b38",
+	"boxes_sha256": "c9c9ac18675e17e8ea4d634070e00230abfd2f3c209db8f65721bc60630fdfd4",
 	"map": "de_dust2",
 	"materials": 9,
-	"tri_count": 2100,
+	"tri_count": 2904,
 	"views": [
 		{
 			"camera": "overview_top",
@@ -41,13 +41,13 @@
 		{
 			"camera": "mid",
 			"file": "de_dust2_mid.png",
-			"pitch": -6.08852838323186,
+			"pitch": -1.90735145662381,
 			"pos": [
-				-700.0,
-				220.0,
-				-320.0
+				180.0,
+				110.0,
+				-260.0
 			],
-			"yaw": -90.0000025044782
+			"yaw": 87.5104463633327
 		},
 		{
 			"camera": "T_spawn",

@@ -8,7 +8,7 @@ const VIEWS := {
 	"overview_top": [Vector3(0, 3400, 0), Vector3(0, 0, 0), false],
 	"A_site": [Vector3(-1575, 420, -780), Vector3(-1575, 128, -1500), true],
 	"B_site": [Vector3(-1790, 420, 950), Vector3(-1790, 64, 1550), true],
-	"mid": [Vector3(-700, 220, -320), Vector3(800, 60, -320), true],
+	"mid": [Vector3(180, 110, -260), Vector3(-1200, 64, -320), true],
 	"T_spawn": [Vector3(1835, 210, 850), Vector3(1200, 60, 300), true],
 	"CT_spawn": [Vector3(-1420, 210, -800), Vector3(-500, 60, -200), true],
 	"long": [Vector3(1500, 210, -1160), Vector3(-1400, 60, -1160), true],

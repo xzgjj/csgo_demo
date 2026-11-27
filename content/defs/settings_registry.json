@@ -444,14 +444,6 @@
               "target": "hud"
             },
             {
-              "id": "gameplay.info.sound_visual",
-              "label": "声音可视化",
-              "type": "bool",
-              "default": true,
-              "apply": "immediate",
-              "target": "hud"
-            },
-            {
               "id": "gameplay.info.radar",
               "label": "雷达信息层",
               "type": "bool",

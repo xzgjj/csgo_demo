@@ -98,23 +98,47 @@ def _check_doors_sites(layout, checks, issues: list[str]) -> None:
             issues.append(f"包点尺寸不足 {site['center']}: {width}x{depth}")
 
 
-def _check_breakables(layout, checks, issues: list[str]) -> None:
-    props = layout.get("props", [])
-    hp_set = {int(value) for value in checks.get("breakable_hp", [])}
-    actual = {p["id"]: int(p.get("hp", 0)) for p in props if int(p.get("hp", 0)) > 0}
-    if len(actual) < int(checks.get("min_breakables", 0)):
-        issues.append(f"可破坏物不足：{len(actual)} < {checks.get('min_breakables')}")
-    if actual != EXPECTED_HP:
-        missing = sorted(set(EXPECTED_HP) - set(actual))
-        extra = sorted(set(actual) - set(EXPECTED_HP))
-        wrong = sorted(key for key in EXPECTED_HP if key in actual and actual[key] != EXPECTED_HP[key])
-        issues.append(f"可破坏 HP 与 06 表不一致 missing={missing} extra={extra} wrong={wrong}")
+def _hp_group_issues(actual: dict[str, int]) -> tuple[list[str], list[str], list[str]]:
+    """按设计 id 前缀归组比对 HP，返回 (缺组, 多余组, HP 不符组)。
+
+    长栏杆拆节后 id 形如 M-17_1..n，每节都必须等于设计表的 80。
+    """
+    covered: set[str] = set()
+    missing: list[str] = []
+    wrong: list[str] = []
+    for expected_id, expected_hp in EXPECTED_HP.items():
+        group = [key for key in actual
+                 if key == expected_id or key.startswith(expected_id + "_")]
+        covered.update(group)
+        if not group:
+            missing.append(expected_id)
+        elif any(actual[key] != expected_hp for key in group):
+            wrong.append(expected_id)
+    return missing, sorted(set(actual) - covered), wrong
+
+
+def _hp_field_issues(props, hp_set) -> list[str]:
+    issues: list[str] = []
     for item in props:
         hp = int(item.get("hp", 0))
         if hp > 0 and hp not in hp_set:
             issues.append(f"可破坏物 HP 不在契约表: {item['id']} hp={hp}")
         if hp == 0 and item.get("breakable"):
             issues.append(f"可破坏物缺 HP: {item['id']}")
+    return issues
+
+
+def _check_breakables(layout, checks, issues: list[str]) -> None:
+    props = layout.get("props", [])
+    hp_set = {int(value) for value in checks.get("breakable_hp", [])}
+    actual = {p["id"]: int(p.get("hp", 0)) for p in props if int(p.get("hp", 0)) > 0}
+    if len(actual) < int(checks.get("min_breakables", 0)):
+        issues.append(f"可破坏物不足：{len(actual)} < {checks.get('min_breakables')}")
+    missing, extra, wrong = _hp_group_issues(actual)
+    if missing or extra or wrong:
+        issues.append(f"可破坏 HP 与 06 表不一致 missing={sorted(missing)} "
+                      f"extra={extra} wrong={sorted(wrong)}")
+    issues.extend(_hp_field_issues(props, hp_set))
 
 
 def _check_contract(layout, solid, issues: list[str]) -> None:

@@ -222,9 +222,12 @@ def check_glb_boxes(spec):
     script = ROOT / "tools/mapgen/check_glb_boxes.py"
     if not script.exists():
         return result("glb_boxes", SKIP, "无 GLB 盒一致性检查器")
-    rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=60)
-    tail = (out.strip().splitlines() or [""])[-1]
-    return result("glb_boxes", PASS if rc == 0 else FAIL, tail)
+    tails, ok = [], True
+    for map_id in ("de_ash", "de_dust2"):
+        rc, out = run([sys.executable, "-X", "utf8", str(script), "--map", map_id], timeout=90)
+        tails.append((out.strip().splitlines() or [""])[-1])
+        ok = ok and rc == 0
+    return result("glb_boxes", PASS if ok else FAIL, " | ".join(tails))
 
 
 def check_design_metrics(spec):
@@ -234,6 +237,31 @@ def check_design_metrics(spec):
     rc, out = run([sys.executable, "-X", "utf8", str(script)], timeout=120)
     tail = (out.strip().splitlines() or [""])[-1]
     return result("design_metrics", PASS if rc == 0 else FAIL, tail)
+
+
+def _tool_once(cid, rel_script, args, timeout=120):
+    script = ROOT / rel_script
+    if not script.exists():
+        return result(cid, SKIP, f"缺少 {rel_script}")
+    rc, out = run([sys.executable, "-X", "utf8", str(script)] + list(args), timeout=timeout)
+    tail = (out.strip().splitlines() or [""])[-1]
+    return result(cid, PASS if rc == 0 else FAIL, tail)
+
+
+def check_dust2_consistency(spec):
+    """de_dust2 布局 ↔ 盒表 ↔ GLB 三方一致（墙高/屋顶/尺寸漂移都在这层拦）。"""
+    return _tool_once("dust2_consistency", "tools/mapgen/check_dust2.py", [], 90)
+
+
+def check_visual_audit(spec):
+    """遮挡/体量审计：大拦路板、悬浮屋顶、出生点卡实体、缺贴图材质。"""
+    return _tool_once("visual_audit", "tools/verify/visual_audit.py",
+                      ["--map", "de_dust2"], 180)
+
+
+def check_reach(spec):
+    """跳高可达性：>72u 且无台阶/跳点的台面 = 设计上永远上不去。"""
+    return _tool_once("reach", "tools/mapgen/check_reach.py", ["--map", "de_dust2"], 90)
 
 
 def check_scenarios(spec):
@@ -346,6 +374,7 @@ def check_tests(spec):
 ALL_CHECKS = [
     check_diff_budget, check_author, check_protected_tests, check_policy,
     check_assets, check_calibration, check_map_layout, check_glb_boxes, check_design_metrics,
+    check_dust2_consistency, check_visual_audit, check_reach,
     check_scenarios, check_logs, check_lint, check_tests,
 ]
 RETRYABLE = {"tests"}

@@ -198,13 +198,24 @@ func _test_buy_menu() -> void:
 	var menu: CanvasLayer = BuyMenuScript.new()
 	root.add_child(menu)
 	menu.build()
+	# 目录由内核注入（真实链路是 main.set_catalog(sim 的 buy 目录)）；独立测试同样显式注入，
+	# 不用 FALLBACK（那是 2 分类的最小兜底，只为“内核未就绪也能开菜单”）。
+	menu.set_catalog([
+		{"id": "glock_18", "category": 0, "price": 200},
+		{"id": "usp_s", "category": 0, "price": 200},
+		{"id": "ak47", "category": 2, "price": 2700},
+		{"id": "m4a4", "category": 2, "price": 3100},
+		{"id": "awp", "category": 3, "price": 4750},
+		{"id": "kevlar", "category": 4, "price": 650},
+		{"id": "he", "category": 5, "price": 300},
+	])
 	menu.purchase_requested.connect(_on_purchase_requested)
 	menu.open(3000)
 	await process_frame
 	_expect(bool(menu.visible) and bool(menu.is_open()), "open() 后购买菜单应可见")
 	var names: Array = menu.category_names()
-	_expect(names.size() == 5, "购买菜单应有 5 个分类，实际 %d" % names.size())
-	for expected in ["手枪", "步枪", "狙击", "装备", "手雷"]:
+	_expect(names.size() == 6, "购买菜单应有 6 个分类，实际 %d" % names.size())
+	for expected in ["手枪", "步枪", "重型", "装备", "投掷物"]:
 		_expect(expected in names, "购买菜单缺分类 %s" % expected)
 	menu.select_category("步枪")
 	await process_frame
@@ -216,8 +227,8 @@ func _test_buy_menu() -> void:
 	_expect(not menu.buyable("awp"), "余额 3000 时 AWP（4750）应不可买")
 	_expect(menu.loadout_id_of("ak47") == "ak", "购买 AK-47 应能映射到装备 id ak，实际 %s"
 			% menu.loadout_id_of("ak47"))
-	# 执行：切到狙击分类看买不起的项灰显；再回步枪买 AK → 信号带 id/price。
-	menu.select_category("狙击")
+	# 执行：切到重型分类看买不起的项灰显；再回步枪买 AK → 信号带 id/price。
+	menu.select_category("重型")
 	await process_frame
 	var awp_button: Button = menu.button_of("awp")
 	_expect(awp_button != null and awp_button.disabled, "买不起的 AWP 按钮应 disabled 灰显")

@@ -60,7 +60,9 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH, id: String = "de_ash") -> bo
 		# 视觉用 Blender 细节 GLB（212 mesh/装饰件），碰撞仍以 boxes JSON / 内核 MapDef 为准。
 		blockout.visible = false
 		add_child(glb_world)
-		MapDecorScript.add(self, Vector3(900, 0, 1200), Vector3(-900, 0, -1200))
+		if blockout.site_anchors.size() >= 2:
+			MapDecorScript.add(self, blockout.site_anchors[0], blockout.site_anchors[1],
+					blockout.boxes)
 		source = "%s_glb" % map_id
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)
@@ -169,12 +171,22 @@ func _add_fallback_box(size: Vector3, at: Vector3, material: StandardMaterial3D)
 
 
 func _add_anchor_labels() -> void:
+	if not debug_anchors():
+		return
 	for index in site_anchors.size():
 		var site_label := _make_anchor_label("包点 %s" % _site_name(index), SITE_LABEL_COLOR)
 		site_label.position = site_anchors[index] + Vector3(0.0, 130.0, 0.0)
 	for index in spawn_anchors.size():
 		var spawn_label := _make_anchor_label("%s 出生点" % _team_name(index), SPAWN_LABEL_COLOR)
 		spawn_label.position = spawn_anchors[index] + Vector3(0.0, 130.0, 0.0)
+
+
+## 调试锚点文字只在显式开关下出现：对局画面不允许“包点 A / 出生点”穿墙浮动。
+static func debug_anchors() -> bool:
+	for arg in OS.get_cmdline_user_args():
+		if str(arg) == "--debug-anchors":
+			return true
+	return false
 
 
 func _make_anchor_label(text: String, color: Color) -> Label3D:
@@ -184,7 +196,7 @@ func _make_anchor_label(text: String, color: Color) -> Label3D:
 	label.pixel_size = 0.02
 	label.modulate = color
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	label.no_depth_test = true
+	label.no_depth_test = false
 	add_child(label)
 	return label
 

@@ -24,6 +24,13 @@ def checks(root: Path, run_cmd, py: str) -> list:
     result = [capture(root, run_cmd)]
     result.append(run_cmd([py, "-X", "utf8", "tools/verify/trace_contract.py",
                            "--map", "de_dust2"], 300, "trace_contract"))
+    # 地图资产自体检：遮挡/体量、跳高可达、盒↔GLB 尺寸。跟着截图一起跑，换图后不会静默漂移。
+    result.append(run_cmd([py, "-X", "utf8", "tools/verify/visual_audit.py",
+                           "--map", "de_dust2"], 240, "visual_audit"))
+    result.append(run_cmd([py, "-X", "utf8", "tools/mapgen/check_reach.py",
+                           "--map", "de_dust2"], 120, "check_reach"))
+    result.append(run_cmd([py, "-X", "utf8", "tools/mapgen/check_glb_boxes.py",
+                           "--map", "de_dust2"], 120, "glb_boxes"))
     godot = run_scenarios.find_godot()
     for script, label in (("dust2_probe.gd", "dust2_probe"),
                           ("radar_dust2_smoke.gd", "radar_dust2_smoke")):

@@ -3,6 +3,8 @@
 用法：
   python -X utf8 build.py --env      # 环境基线
   python -X utf8 build.py --core     # 配置并构建 C++ 内核（core/ 存在时）
+  python -X utf8 build.py --map      # 重建 de_dust2 资产并跑地图体检（check/audit/reach）
+  python -X utf8 build.py --bless    # 人工确认画面后刷新 golden（trace + 运行时截图）
   python -X utf8 build.py --test     # 运行测试（ctest 或 pytest）
   python -X utf8 build.py --ci       # 本地 CI
   python -X utf8 build.py --clean    # 清理构建产物
@@ -128,6 +130,61 @@ def do_host():
 
 
 
+def do_map():
+    """重建 de_dust2 三件套（layout/boxes/GLB）并跑地图体检。
+
+    顺序固定：生成 → Blender 导出 → 几何一致性 → GLB 尺寸 → 遮挡审计 → 跳高可达性。
+    任何一步红灯即停，避免“只重建了一半”的漂移资产进仓库。
+    """
+    checks = [
+        ([PY, "-X", "utf8", "tools/mapgen/import_scene_v3.py"], "mapgen"),
+        ([blender_bin(), "--background", "--python", "tools/blender/build_de_dust2.py"], "blender"),
+        ([PY, "-X", "utf8", "tools/mapgen/check_dust2.py"], "check_dust2"),
+        ([PY, "-X", "utf8", "tools/mapgen/check_glb_boxes.py", "--map", "de_dust2"], "glb_boxes"),
+        ([PY, "-X", "utf8", "tools/verify/visual_audit.py", "--map", "de_dust2"], "visual_audit"),
+        ([PY, "-X", "utf8", "tools/mapgen/check_reach.py", "--map", "de_dust2"], "check_reach"),
+    ]
+    for cmd, label in checks:
+        rc = run(cmd)
+        if rc:
+            print(f"[map] {label} 失败，停止后续重建")
+            return rc
+    print("[map] de_dust2 重建与体检全部通过")
+    return 0
+
+
+def do_bless():
+    """把当前画面固化为 golden：dust2 七机位 trace + 运行时页面截图。
+
+    只在“人工确认画面无误”后运行；CI 不自动 bless，否则回归永远绿灯。
+    """
+    g = godot_bin()
+    if not g:
+        print("[bless] 未找到 Godot")
+        return 1
+    out = ROOT / "verification/actual/de_dust2"
+    rc = run([g, "--path", "host", "--script", "res://tests/capture_map.gd", "--",
+              "--map=de_dust2", "--out=" + str(out)])
+    if rc:
+        return rc
+    rc = run([PY, "-X", "utf8", "tools/verify/trace_contract.py", "--map", "de_dust2", "--update"])
+    if rc:
+        return rc
+    return run([PY, "-X", "utf8", "tools/verify/run_all.py", "--update", "--no-ci",
+                "--map", "de_dust2"])
+
+
+def blender_bin():
+    import os
+    env = os.environ.get("BLENDER_BIN")
+    if env:
+        return env
+    for cand in (Path(r"D:\app_finish\blender\blender.exe"),):
+        if cand.exists():
+            return str(cand)
+    return "blender"
+
+
 def do_clean():
     targets = [BUILD, ROOT / "out"]
     for t in targets:
@@ -143,35 +200,22 @@ def do_clean():
 
 def main():
     ap = argparse.ArgumentParser()
-    for flag in ("--env", "--core", "--host", "--test", "--verify", "--ci", "--clean", "--all"):
+    for flag in ("--env", "--core", "--host", "--map", "--bless", "--test", "--verify", "--ci",
+                 "--clean", "--all"):
         ap.add_argument(flag, action="store_true")
     args = ap.parse_args()
     if not any(vars(args).values()):
         ap.print_help()
         return 0
+    steps = [("env", do_env), ("core", do_core), ("map", do_map), ("host", do_host),
+             ("test", do_test), ("verify", do_verify), ("bless", do_bless), ("ci", do_ci)]
     rc = 0
-    if args.all:
-        do_env()
-        rc |= do_core()
-        rc |= do_host()
-        rc |= do_test()
-        rc |= do_verify()
-        rc |= do_ci()
-    else:
-        if args.env:
-            do_env()
-        if args.core:
-            rc |= do_core()
-        if args.host:
-            rc |= do_host()
-        if args.test:
-            rc |= do_test()
-        if args.verify:
-            rc |= do_verify()
-        if args.ci:
-            rc |= do_ci()
+    for name, step in steps:
+        if args.all or getattr(args, name):
+            # do_env/do_clean 无返回值；其余步骤返回 0/非 0 累加，保证一次跑完所有阶段。
+            rc |= step() or 0
     if args.clean:
-            do_clean()
+        do_clean()
     return rc
 
 

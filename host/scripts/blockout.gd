@@ -10,6 +10,8 @@ var box_count := 0
 var material_counts: Dictionary = {}
 var spawn_anchors: Array[Vector3] = []
 var site_anchors: Array[Vector3] = []
+## 供装饰/落位检查用的 AABB 清单（Godot 坐标，含非碰撞屋顶）。
+var boxes: Array[Dictionary] = []
 
 
 func build(boxes_path: String = BOXES_PATH) -> bool:
@@ -45,6 +47,11 @@ func _add_box(item: Dictionary) -> void:
 	mesh_instance.rotation.y = float(item.get("rot_y", 0.0))
 	add_child(mesh_instance)
 	box_count += 1
+	boxes.append({
+		"min": [center.x - size.x / 2.0, center.y - size.y / 2.0, center.z - size.z / 2.0],
+		"max": [center.x + size.x / 2.0, center.y + size.y / 2.0, center.z + size.z / 2.0],
+		"collision": bool(item.get("collision", true)),
+	})
 	if kind == "spawn":
 		spawn_anchors.append(mesh_instance.position)
 	elif kind == "site":
@@ -57,7 +64,7 @@ func _add_box(item: Dictionary) -> void:
 func _material_for(item: Dictionary, size: Vector3) -> StandardMaterial3D:
 	var material_id := str(item.get("material", ""))
 	if MaterialLib.is_base_id(material_id):
-		return MaterialLib.get_material(material_id)
+		return MaterialLib.map_material(material_id)
 	var kind := str(item.get("kind", ""))
 	if kind == "site":
 		return MaterialLib.get_material("site")

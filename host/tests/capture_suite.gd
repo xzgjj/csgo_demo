@@ -142,6 +142,7 @@ func _flow() -> void:
 	main.close_loadout_page()
 
 	print("RUNTIME_META ", JSON.stringify({
+		"map": str(main.map_id),
 		"world": str(main.world.source),
 		"glb": main.viewmodel.used_glb,
 		"weapons": main.viewmodel.weapon_ids(),

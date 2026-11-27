@@ -208,9 +208,11 @@
         return damage_taken_[player];
     }
 
-    // DEP-02 声音层：上一 tick 的可听事件（枪声/换弹/投掷/爆炸）→ 位置与距离。
+    // DEP-02 声音层：上一 tick 的可听事件（枪声/换弹/投掷/爆炸）→ 位置、距离、相对朝向方位角。
+    // 只报敌方：自己的枪声（distance=0）与队友脚步不构成“敌人方位”信息，否则 HUD 会闪出“声源 0 m”。
     godot::Array sound_events() const {
         godot::Array out;
+        const recoil::PlayerState& human = state_.players[human_player_];
         for (int i = 0; i < last_events_.count; ++i) {
             const recoil::Event& event = last_events_.items[i];
             if (event.kind != recoil::EventKind::WeaponFired &&
@@ -219,18 +221,31 @@
                 event.kind != recoil::EventKind::GrenadeExploded) {
                 continue;
             }
-            if (event.source >= state_.player_count) {
+            if (event.source >= state_.player_count || event.source == human_player_) {
                 continue;
             }
             const recoil::PlayerState& owner = state_.players[event.source];
+            if (owner.team == human.team) {
+                continue;
+            }
             godot::Dictionary row;
             row["kind"] = static_cast<int>(event.kind);
             row["x"] = owner.position.x;
             row["y"] = owner.position.y;
-            const recoil::Vec3 local = state_.players[human_player_].position;
-            const float dx = owner.position.x - local.x;
-            const float dy = owner.position.y - local.y;
+            const float dx = owner.position.x - human.position.x;
+            const float dy = owner.position.y - human.position.y;
             row["distance"] = std::sqrt(dx * dx + dy * dy);
+            // 世界 bearing（0°=+y 前方）→ 相对视线 yaw，归一化到 [-180,180]；正数在右侧。
+            const float bearing = std::atan2(dy, dx) * 57.2957795f;
+            float relative = bearing - static_cast<float>(human.view_yaw);
+            while (relative > 180.0f) {
+                relative -= 360.0f;
+            }
+            while (relative < -180.0f) {
+                relative += 360.0f;
+            }
+            row["angle"] = relative;
+            row["tick"] = static_cast<int>(state_.tick);
             out.push_back(row);
         }
         return out;

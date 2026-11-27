@@ -38,13 +38,14 @@ COLORS = {
     "spawn": (0.20, 0.38, 0.62, 1.0),
 }
 
-
 def material_for(key: str) -> bpy.types.Material:
     name = f"mat_{key}"
     material = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     material.diffuse_color = COLORS.get(key, (0.5, 0.5, 0.5, 1.0))
     material.use_nodes = True
-    bsdf = material.node_tree.nodes.get("Principled BSDF")
+    # Blender 5.x 的节点名可能是本地化/重命名过的，按类型找 Principled，别按名字找。
+    bsdf = next((node for node in material.node_tree.nodes
+                 if node.type == "BSDF_PRINCIPLED"), None)
     if bsdf is not None:
         bsdf.inputs["Base Color"].default_value = material.diffuse_color
         bsdf.inputs["Roughness"].default_value = 0.85

@@ -217,8 +217,12 @@ def weapon_distinctness():
 
 def runtime_meta_assert(meta):
     issues = []
+    map_id = str(meta.get("map", ""))
     world = str(meta.get("world", ""))
-    if world != "de_ash_glb":
+    if map_id:
+        if world != f"{map_id}_glb":
+            issues.append(f"游戏内地图未使用 GLB：map={map_id} world={world}")
+    elif not world.endswith("_glb"):
         issues.append(f"游戏内地图未使用 GLB：world={world}")
     glb = meta.get("glb", {})
     for weapon in ("ak", "m4", "awp"):

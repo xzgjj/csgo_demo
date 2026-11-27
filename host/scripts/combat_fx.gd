@@ -8,7 +8,10 @@ var hit_count := 0
 var dryfire_count := 0
 var spark: CPUParticles3D
 var muzzle_flash: MeshInstance3D
+var muzzle_light: OmniLight3D
 var shell: MeshInstance3D
+## 开镜/第三人称时关掉枪口焰（scoped 视角看不到枪，闪一下会破坏“贴脸光斑”的观感）。
+var muzzle_visible_enabled := true
 var _shot_player: AudioStreamPlayer
 var _hit_player: AudioStreamPlayer
 var _flash_life := 0.0
@@ -105,24 +108,42 @@ static func hit_point(sim: RefCounted, camera: Camera3D) -> Vector3:
 
 
 ## 把枪口焰/弹壳挂到相机（第一人称，位置随视角）。main 在相机入树后调用。
+## 枪口焰用程序化星芒贴图 + ADD 混合：4 瓣短火花 + 中心热核，40ms、随机 roll（两帧内一闪），
+## 不再是一块 0.14m 的纯色方片；另配 1 帧 OmniLight 让枪口真的照亮周围墙面。
 func attach(camera: Camera3D) -> void:
 	var flash_mesh := QuadMesh.new()
-	flash_mesh.size = Vector2(0.14, 0.14)
+	flash_mesh.size = Vector2(0.34, 0.34)
 	var flash_material := StandardMaterial3D.new()
 	flash_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	flash_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	flash_material.albedo_color = Color(1.0, 0.72, 0.25, 0.95)
+	flash_material.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
+	flash_material.albedo_texture = _flash_texture()
+	flash_material.albedo_color = Color(1.0, 0.93, 0.78, 1.0)
 	flash_material.emission_enabled = true
-	flash_material.emission = Color(1.0, 0.55, 0.12)
+	flash_material.emission = Color(1.0, 0.72, 0.30)
+	flash_material.emission_energy_multiplier = 2.2
 	flash_material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
+	flash_material.no_depth_test = true
+	flash_material.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
 	flash_mesh.material = flash_material
 	muzzle_flash = MeshInstance3D.new()
 	muzzle_flash.name = "MuzzleFlash"
 	muzzle_flash.mesh = flash_mesh
-	muzzle_flash.position = Vector3(0.0, -0.04, -0.62)
+	# 对齐 viewmodel REST_POSITION(0.24,-0.26,-0.58) + 枪管末端（约 -0.31 × 0.85）。
+	muzzle_flash.position = Vector3(0.26, -0.19, -0.84)
 	muzzle_flash.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	muzzle_flash.visible = false
 	camera.add_child(muzzle_flash)
+
+	muzzle_light = OmniLight3D.new()
+	muzzle_light.name = "MuzzleLight"
+	muzzle_light.position = muzzle_flash.position
+	muzzle_light.light_color = Color(1.0, 0.72, 0.35)
+	muzzle_light.light_energy = 1.8
+	muzzle_light.omni_range = 5.0
+	muzzle_light.shadow_enabled = false
+	muzzle_light.visible = false
+	camera.add_child(muzzle_light)
 
 	var shell_mesh := BoxMesh.new()
 	shell_mesh.size = Vector3(0.008, 0.008, 0.024)
@@ -141,8 +162,11 @@ func attach(camera: Camera3D) -> void:
 func _process(delta: float) -> void:
 	if _flash_life > 0.0:
 		_flash_life = maxf(0.0, _flash_life - delta)
+		var lit := _flash_life > 0.0
 		if muzzle_flash != null:
-			muzzle_flash.visible = _flash_life > 0.0
+			muzzle_flash.visible = lit
+		if muzzle_light != null:
+			muzzle_light.visible = lit
 	if _shell_life > 0.0:
 		_shell_life = maxf(0.0, _shell_life - delta)
 		_shell_velocity.y -= 260.0 * delta
@@ -157,14 +181,42 @@ func trigger_shot() -> void:
 	shot_count += 1
 	if _shot_player.stream != null:
 		_shot_player.play()
-	if muzzle_flash != null:
+	if muzzle_flash != null and muzzle_visible_enabled:
+		# 每次开火随机 roll + 10% 尺寸抖动，连发时不会像一张静止贴图在闪。
+		muzzle_flash.rotation.z = randf() * TAU
+		muzzle_flash.scale = Vector3.ONE * randf_range(0.85, 1.15)
 		muzzle_flash.visible = true
-		_flash_life = 0.05
+		_flash_life = 0.04
+		if muzzle_light != null:
+			muzzle_light.visible = true
+			muzzle_light.light_energy = randf_range(1.6, 2.2)
 	if shell != null:
 		shell.position = Vector3(0.12, -0.12, -0.34)
 		_shell_velocity = Vector3(0.55, 0.35, 0.15)
 		_shell_life = 0.4
 		shell.visible = true
+
+
+## 程序化枪口焰贴图：中心热核 + 4 瓣短星芒（64×64），避免依赖编辑器导入资源。
+static func _flash_texture() -> ImageTexture:
+	var size := 64
+	var image := Image.create(size, size, false, Image.FORMAT_RGBA8)
+	var half := float(size) * 0.5
+	for y in size:
+		for x in size:
+			var u := (float(x) + 0.5 - half) / half
+			var v := (float(y) + 0.5 - half) / half
+			var radius := sqrt(u * u + v * v)
+			if radius >= 1.0:
+				image.set_pixel(x, y, Color(0, 0, 0, 0))
+				continue
+			var angle := atan2(v, u)
+			var core := pow(maxf(0.0, 1.0 - radius), 3.4)
+			var spikes := pow(maxf(0.0, cos(angle * 4.0)), 14.0) * pow(maxf(0.0, 1.0 - radius), 1.6)
+			var alpha := clampf(core * 1.15 + spikes * 1.25, 0.0, 1.0)
+			var warmth := clampf(core * 1.2 + spikes * 0.4, 0.0, 1.0)
+			image.set_pixel(x, y, Color(1.0, 0.86 + 0.10 * warmth, 0.55 + 0.30 * warmth, alpha))
+	return ImageTexture.create_from_image(image)
 
 
 ## 空弹/冷却被内核拒绝时只记一次"空扣扳机"，不播枪声、不给后坐（防止"没子弹还能开枪"的假反馈）。

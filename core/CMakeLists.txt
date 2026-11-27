@@ -23,6 +23,7 @@ add_library(recoil_core STATIC
     src/match.cpp
     src/match_actions.cpp
     src/movement.cpp
+    src/placement.cpp
     src/nav.cpp
     src/reaction.cpp
     src/round.cpp
@@ -59,6 +60,7 @@ add_executable(recoil_tests
     tests/test_match.cpp
     tests/test_match_phase.cpp
     tests/test_movement.cpp
+    tests/test_placement.cpp
     tests/test_nav.cpp
     tests/test_recoil.cpp
     tests/test_recoil_hash.cpp

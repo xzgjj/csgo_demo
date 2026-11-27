@@ -17,6 +17,7 @@ import gen_blockout
 import geom
 import geom_reach
 import geom_shell
+import prop_emit
 import scene_contract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -44,6 +45,9 @@ SURFACE_TYPES = {"floor", "room", "tunnel", "spawn", "buyzone", "choke", "step",
 RUN_SPEED = 250.0
 STEP = 32.0
 SHELL_ROUNDS = 3
+# 墙顶统一上限：与 geom_shell.WALL_HEIGHT 一致。原 384 的“两层楼”墙在灰盒里读作 13m 深墙，
+# 直接压到 256（人眼 64 / 跳高 72 的三倍半），天际线交给屋顶退台，不再靠加高墙体撑场面。
+WALL_TOP = 256.0
 
 def load_rows():
     with open(CSV, encoding="utf-8") as handle:
@@ -115,7 +119,7 @@ def _emit_walls(row, openings, platforms, structures, building_groups):
     material = MATERIAL.get(row["surface"], "concrete")
     height = float(row["height_u"])
     base = surface_top(platforms, cx, cy)
-    top = min(max(height, base + 96.0), 384.0)
+    top = min(max(height, base + 96.0), WALL_TOP)
     building_groups.append({
         "id": row["id"],
         "kind": "wall",
@@ -139,26 +143,16 @@ def _emit_walls(row, openings, platforms, structures, building_groups):
         })
 
 def _emit_prop(row, platforms, props):
-    x0, y0, x1, y1 = rect_of(row)
-    cx, cy = (x0 + x1) / 2.0, (y0 + y1) / 2.0
-    sx, sy = x1 - x0, y1 - y0
-    height = float(row["height_u"])
-    if row["type"] == "door":
-        height = max(height, 220.0)
-    hp = int(row["hp"]) if row["breakable"] == "yes" and row["hp"] else 0
-    # A-11 薄金属按 docs/design/03 §3.4「只凹不碎，碰撞保留」：有耐久但不移除碰撞。
-    dent_only = row["surface"] == "metal" and row["type"] == "prop" and hp > 0
-    props.append({
-        "id": row["id"],
-        "kind": "prop",
-        "center": [cx, cy, surface_top(platforms, cx, cy)],
-        "size": [sx, sy, height],
-        "material": MATERIAL.get(row["surface"], "concrete"),
-        "walkable": bool(row["enterable"] == "yes" and height <= 96),
-        "collision": True,
-        "breakable": row["breakable"] == "yes" and not dent_only,
-        "hp": 0 if dent_only else hp,
-    })
+    bounds = rect_of(row)
+    cx, cy = (bounds[0] + bounds[2]) / 2.0, (bounds[1] + bounds[3]) / 2.0
+    height, hp, dent_only = prop_emit.stats(row)
+    base = surface_top(platforms, cx, cy)
+    material = MATERIAL.get(row["surface"], "concrete")
+    panels = prop_emit.split_railing(row, bounds, base, material, hp)
+    if panels is not None:
+        props.extend(panels)
+        return
+    props.append(prop_emit.prop_box(row, bounds, base, material, height, hp, dent_only))
 
 def _emit_room(row, platforms, props, building_groups):
     x0, y0, x1, y1 = rect_of(row)
@@ -182,9 +176,14 @@ def _emit_level_stairs(row, props):
         _emit_stairs(row, props)
 
 def _emit_roof(row, structures):
-    """屋面板：height_u 为板底标高，固定 32 厚；不参与可行走并集。"""
+    """屋面板：height_u 为板底标高，固定 32 厚；不参与可行走并集。
+
+    板底钳到 WALL_TOP：墙压到 256 后，原来 384 的屋面板必须跟着落下，否则又变成一块悬空大板。
+    """
     x0, y0, x1, y1 = rect_of(row)
-    base = float(row["height_u"])
+    base = min(float(row["height_u"]), WALL_TOP - 32.0)
+    if base <= 0.0:
+        return
     structures.append({
         "id": row["id"],
         "kind": "wall",
@@ -298,7 +297,7 @@ def _build_layout(structures, props, building_groups, doorways):
             {"id": "L2", "z": 128, "walkable": True, "note": "A 台/A 短"},
         ],
         "reach": {
-            "jump_max": 57,
+            "jump_max": 72,
             "step_max": 32,
             "door_width": 96,
             "door_height": 128,

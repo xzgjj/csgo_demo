@@ -12,8 +12,11 @@ from __future__ import annotations
 import math
 
 CELL = 64              # 栅格尺寸：墙厚/台阶步长
-WALL_HEIGHT = 512      # 主体围合高度：高过 256 上限层，挡住远景空场
+WALL_HEIGHT = 256      # 围合高度：与人眼 64u / 跳跃 72u / 台面 128u 同一量级，抬头不再是一堵 13m 深墙
 SHELL_THICKNESS = 64   # 外圈边界墙厚
+ROOF_INSET = 48        # 屋顶相对实心块内缩：退台不压通道
+ROOF_TILE = 384        # 单块屋面板跨度上限：大块切瓦，避免“一张大纸”盖住天空
+ROOF_JOINT = 4         # 瓦块之间的缝（读作屋面分缝，同时避免共面 z-fighting）
 WALKABLE_TYPES = {
     "floor", "room", "tunnel", "spawn", "buyzone", "choke", "step",
     "platform", "ramp", "catwalk", "stairs", "pit", "doorway", "window",
@@ -117,22 +120,42 @@ def route_enclosure(rows, layout: dict) -> list[dict]:
 
 
 def _upper_storey(world) -> list[dict]:
-    """大体块加一层退台屋顶，形成高低错落的建筑天际线（不是一堵等高的长墙）。"""
-    width, depth = world[2] - world[0], world[3] - world[1]
+    """大体块加一层退台屋顶：内缩 48u、按 384u 切瓦、三级标高 24/48/72。
+
+    切瓦的意义是把「一整块悬浮大板」拆成可读的屋面分块：近看是屋面，远看是天际线；
+    分缝 4u 既避免共面闪烁，也让俯视图不会出现一张无边界的纸片。
+    """
+    x0, y0, x1, y1 = world
+    width, depth = x1 - x0, y1 - y0
     if width < 192 or depth < 192:
         return []
-    inset = 24.0
-    level = 64 + 32 * ((world[0] // 128 + world[1] // 128) % 3)
-    return [{
-        "id": "shell_upper_%d_%d" % (world[0], world[1]),
-        "kind": "wall",
-        "center": [(world[0] + world[2]) / 2.0, (world[1] + world[3]) / 2.0, WALL_HEIGHT + level / 2.0],
-        "size": [width - inset * 2, depth - inset * 2, level],
-        "height": level,
-        "base_z": WALL_HEIGHT,
-        "material": "stone" if (world[0] + world[1]) % 256 else "concrete",
-        "collision": False,  # 屋顶层在玩家头顶以上，只做视觉天际线，不进碰撞查询
-    }]
+    inner = (x0 + ROOF_INSET, y0 + ROOF_INSET, x1 - ROOF_INSET, y1 - ROOF_INSET)
+    if inner[2] - inner[0] < 96 or inner[3] - inner[1] < 96:
+        return []
+    out: list[dict] = []
+    levels = (24, 48, 72)
+    nx = max(1, int(math.ceil((inner[2] - inner[0]) / ROOF_TILE)))
+    ny = max(1, int(math.ceil((inner[3] - inner[1]) / ROOF_TILE)))
+    span_x = (inner[2] - inner[0]) / nx
+    span_y = (inner[3] - inner[1]) / ny
+    for ix in range(nx):
+        for iy in range(ny):
+            tx0 = inner[0] + ix * span_x + ROOF_JOINT / 2.0
+            ty0 = inner[1] + iy * span_y + ROOF_JOINT / 2.0
+            tx1 = inner[0] + (ix + 1) * span_x - ROOF_JOINT / 2.0
+            ty1 = inner[1] + (iy + 1) * span_y - ROOF_JOINT / 2.0
+            level = levels[(ix + iy * 2 + (x0 // 64 + y0 // 64)) % 3]
+            out.append({
+                "id": "shell_upper_%d_%d_%d" % (x0, y0, ix * 10 + iy),
+                "kind": "wall",
+                "center": [(tx0 + tx1) / 2.0, (ty0 + ty1) / 2.0, WALL_HEIGHT + level / 2.0],
+                "size": [tx1 - tx0, ty1 - ty0, level],
+                "height": level,
+                "base_z": WALL_HEIGHT,
+                "material": "stone" if (x0 + y0 + ix + iy) % 2 else "concrete",
+                "collision": False,  # 屋顶层在玩家头顶以上，只做视觉天际线，不进碰撞查询
+            })
+    return out
 
 
 def perimeter(layout: dict) -> list[dict]:

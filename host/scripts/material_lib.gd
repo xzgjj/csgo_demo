@@ -19,7 +19,21 @@ const TEXTURE_SCALE_BY_ID := {
 	"road": 0.00390625,
 	"stone": 0.00390625,
 }
+## 地图几何的世界尺度：1 张贴图 = 多少单位（1u≈2.54cm）。只有三平面才谈得上“贴图尺度”。
+const MAP_TILE_UNITS := {
+	"concrete": 128.0,
+	"stone": 256.0,
+	"wood": 96.0,
+	"metal": 128.0,
+	"glass": 128.0,
+	"fabric": 96.0,
+	"dirt": 256.0,
+	"road": 256.0,
+	"site": 256.0,
+	"spawn": 256.0,
+}
 ## 世界坐标三平面：盒子是等比缩放的立方体，局部三平面会把整张贴图压进 1 个像素。
+## 角色/武器不适合世界三平面（贴图会随相机移动），因此它们继续走 get_material()。
 const WORLD_TRIPLANAR_IDS := ["road", "stone"]
 const DUST2_TEXTURE_FILES := {
 	"concrete": "res://textures/dust2/plaster_sand_01.png",
@@ -33,6 +47,7 @@ const DUST2_TEXTURE_FILES := {
 }
 
 static var _cache: Dictionary = {}
+static var _map_cache: Dictionary = {}
 static var _texture_files: Dictionary = TEXTURE_FILES
 
 
@@ -40,6 +55,7 @@ static var _texture_files: Dictionary = TEXTURE_FILES
 static func use_texture_set(map_id: String) -> void:
 	_texture_files = DUST2_TEXTURE_FILES if map_id == "de_dust2" else TEXTURE_FILES
 	_cache.clear()
+	_map_cache.clear()
 
 
 static func all_ids() -> Array[String]:
@@ -61,25 +77,36 @@ static func get_material(id: String) -> StandardMaterial3D:
 	return material
 
 
+## 地图几何专用：一律世界三平面 + 每类材质的固定 tile 尺度。
+## 为什么单独一份：GLB/blockout 的盒子是「1×1×1 立方体缩放到 32×512×4664」，
+## 局部 UV 只有 0..1，贴图被拉成一整片纯色——这就是截图里“什么都没有的大长方形”。
+static func map_material(id: String) -> StandardMaterial3D:
+	if _map_cache.has(id):
+		return _map_cache[id]
+	var material := _create(id, true)
+	_map_cache[id] = material
+	return material
+
+
 ## blockout 盒子 kind → 材质。site/spawn 为高亮派生材质，墙壁/路面为混凝土。
 static func material_for_kind(kind: String, size: Vector3 = Vector3.ZERO) -> StandardMaterial3D:
 	match kind:
 		"floor":
-			return get_material("dirt")
+			return map_material("dirt")
 		"lane":
-			return get_material("concrete")
+			return map_material("concrete")
 		"road":
-			return get_material("road")
+			return map_material("road")
 		"wall":
-			return get_material("concrete")
+			return map_material("concrete")
 		"site":
 			return get_material("site")
 		"spawn":
 			return get_material("spawn")
 		"prop":
-			return get_material(prop_material_id(size))
+			return map_material(prop_material_id(size))
 		_:
-			return get_material("concrete")
+			return map_material("concrete")
 
 
 ## prop 由几何特征推断材质类别（boxes.json 只有 size/color，无 layout 的 type 字段）：
@@ -133,18 +160,18 @@ static func apply_to_scene(node: Node) -> void:
 			if current is StandardMaterial3D and current.resource_name.begins_with("mat_"):
 				var key := current.resource_name.trim_prefix("mat_")
 				if is_base_id(key):
-					mesh_instance.set_surface_override_material(surface, get_material(key))
+					mesh_instance.set_surface_override_material(surface, map_material(key))
 	for child in node.get_children():
 		apply_to_scene(child)
 
 
-static func _create(id: String) -> StandardMaterial3D:
+static func _create(id: String, world_triplanar: bool = false) -> StandardMaterial3D:
 	var material := StandardMaterial3D.new()
 	match id:
 		"concrete":
 			_set_pbr(material, Color(0.58, 0.48, 0.36), 0.95, 0.0)
 		"metal":
-			_set_pbr(material, Color(0.52, 0.54, 0.58), 0.35, 0.90)
+			_set_pbr(material, Color(0.60, 0.62, 0.66), 0.58, 0.20)
 		"wood":
 			_set_pbr(material, Color(0.42, 0.29, 0.17), 0.80, 0.0)
 		"glass":
@@ -160,17 +187,18 @@ static func _create(id: String) -> StandardMaterial3D:
 			_set_pbr(material, Color(0.60, 0.53, 0.42), 0.90, 0.0)
 		"site":
 			_set_pbr(material, Color(0.62, 0.22, 0.18), 0.88, 0.0)
-			_set_emission(material, Color(0.85, 0.18, 0.12), 0.9)
+			_set_emission(material, Color(0.85, 0.18, 0.12), 0.22)
 		"spawn":
 			_set_pbr(material, Color(0.20, 0.38, 0.62), 0.88, 0.0)
-			_set_emission(material, Color(0.15, 0.40, 0.85), 0.9)
+			_set_emission(material, Color(0.15, 0.40, 0.85), 0.22)
 		_:
 			_set_pbr(material, Color(0.30, 0.30, 0.30), 0.9, 0.0)
-	_apply_texture(material, id)
+	_apply_texture(material, id, world_triplanar)
 	return material
 
 
-static func _apply_texture(material: StandardMaterial3D, id: String) -> void:
+static func _apply_texture(material: StandardMaterial3D, id: String,
+		world_triplanar: bool = false) -> void:
 	var path: String = _texture_files.get(id, "")
 	if path.is_empty():
 		return
@@ -181,8 +209,10 @@ static func _apply_texture(material: StandardMaterial3D, id: String) -> void:
 	var texture := ImageTexture.create_from_image(image)
 	material.albedo_texture = texture
 	material.uv1_triplanar = true
-	material.uv1_world_triplanar = WORLD_TRIPLANAR_IDS.has(id)
+	material.uv1_world_triplanar = world_triplanar
 	var scale := float(TEXTURE_SCALE_BY_ID.get(id, TEXTURE_SCALE))
+	if world_triplanar:
+		scale = 1.0 / float(MAP_TILE_UNITS.get(id, 128.0))
 	material.uv1_scale = Vector3(scale, scale, scale)
 	material.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
 
