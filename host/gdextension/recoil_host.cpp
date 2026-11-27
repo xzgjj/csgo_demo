@@ -6,6 +6,7 @@
 #include <godot_cpp/variant/dictionary.hpp>
 #include <godot_cpp/variant/packed_float32_array.hpp>
 
+#include <cmath>
 #include <vector>
 
 #include "gdextension_interface.h"
@@ -49,6 +50,8 @@ class RecoilSim : public RefCounted {
         float damage = 0.0f;
     };
     HitRecord last_hit_by_[recoil::kMaxPlayers] = {};
+    float hit_direction_[recoil::kMaxPlayers] = {};
+    int damage_taken_[recoil::kMaxPlayers] = {};
     int total_dry_ = 0;
     int human_player_ = 0;
     recoil::SiteLayout sites_{};
@@ -84,6 +87,10 @@ public:
         }
         recoil_host::ClearKills();
         total_dry_ = 0;
+        for (int i = 0; i < recoil::kMaxPlayers; ++i) {
+            hit_direction_[i] = 0.0f;
+            damage_taken_[i] = 0;
+        }
 
         recoil::PlayerState& local = state_.players[0];
         local.alive = true;
@@ -236,6 +243,11 @@ public:
         total_fire_ += _count(recoil::EventKind::WeaponFired);
         for (int i = 0; i < result.events.count; ++i) {
             const recoil::Event& event = result.events.items[i];
+            if (event.kind == recoil::EventKind::PlayerHitTaken &&
+                event.target < recoil::kMaxPlayers) {
+                ++damage_taken_[event.target];
+                hit_direction_[event.target] = event.f0;
+            }
             if (event.kind == recoil::EventKind::DamageApplied &&
                 event.source < recoil::kMaxPlayers) {
                 ++damage_by_[event.source];

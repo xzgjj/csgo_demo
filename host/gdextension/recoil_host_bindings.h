@@ -93,6 +93,9 @@ BIND(set_spawn_centers, "tx", "ty", "cx", "cy");
         BIND(get_last_hit_group, "player");
         BIND(get_last_hit_flags, "player");
         BIND(get_last_hit_distance, "player");
+        BIND(get_last_hit_direction, "player");
+        BIND(get_damage_taken, "player");
+        BIND(sound_events);
         // SPEC-02 回滚/验收开关：false = 旧直线弹道（脚本化点射用例用）。
         BIND(set_ballistics_enabled, "enabled");
         BIND(set_buy_enabled, "enabled");

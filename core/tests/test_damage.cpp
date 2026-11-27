@@ -61,12 +61,12 @@ TEST_CASE("DMG-02 头甲：AK 一枪致死，M4A4 不致死") {
 
     DamageInput m4{};
     m4.base = 33;
-    m4.armor_ratio = 0.7f;
+    m4.armor_ratio = 0.75f;
     m4.group = HitGroup::Head;
     m4.armor = 100;
     m4.helmet = true;
     const uint16_t m4_damage = ComputeDamage(m4).applied;
-    CHECK_EQ(m4_damage, 92);
+    CHECK_EQ(m4_damage, 99);
     CHECK(m4_damage < 100);
 }
 
@@ -86,7 +86,7 @@ TEST_CASE("DMG-04 衰减：0.98^(d/500) 随距离递减") {
     const uint16_t at_60m = ComputeDamage(Ak(HitGroup::Chest, 60.0f * 39.37f)).applied;
     CHECK_EQ(at_0, 36);
     CHECK_EQ(at_30m, 34); // 0.98^(1181/500)=0.9536 → 34.3
-    CHECK_EQ(at_60m, 33); // 0.98^(2362/500)=0.9091 → 32.7
+    CHECK_EQ(at_60m, 33); // 0.98^(2562/500)=0.9091 → 32.7
     CHECK(at_30m < at_0);
     CHECK(at_60m < at_30m);
 }

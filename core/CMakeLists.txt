@@ -46,6 +46,8 @@ add_executable(recoil_tests
     tests/test_bomb.cpp
     tests/test_bot.cpp
     tests/test_damage.cpp
+    tests/test_depth.cpp
+    tests/test_spray.cpp
     tests/test_drops.cpp
     tests/test_fire_state.cpp
     tests/test_grenades.cpp
@@ -72,3 +74,4 @@ target_link_libraries(recoil_tests PRIVATE recoil_core)
 
 enable_testing()
 add_test(NAME core_tests COMMAND recoil_tests)
+

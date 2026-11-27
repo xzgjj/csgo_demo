@@ -20,7 +20,6 @@
 
 namespace recoil {
 namespace {
-
 struct RayHit {
     bool hit = false;
     float t = 0.0f;
@@ -193,15 +192,9 @@ void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& w
         target.armor = static_cast<uint16_t>(target.armor - std::min(dmg.armor_loss, target.armor));
     }
     uint8_t flags = 0;
-    if (group == HitGroup::Head) {
-        flags |= kEventHeadshot;
-    }
-    if (penetration_scale < 1.0f) {
-        flags |= kEventThroughWall;
-    }
-    if (dmg.armor_absorbed) {
-        flags |= kEventArmorBlocked;
-    }
+    flags |= group == HitGroup::Head ? kEventHeadshot : 0;
+    flags |= penetration_scale < 1.0f ? kEventThroughWall : 0;
+    flags |= dmg.armor_absorbed ? kEventArmorBlocked : 0;
     Event damaged{EventKind::DamageApplied, shooter, victim, applied};
     damaged.aux = weapon_id;
     damaged.flags = flags;
@@ -210,6 +203,13 @@ void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& w
     damaged.f1 = target.health;
     damaged.f2 = static_cast<float>(dmg.raw);
     events.Push(damaged);
+    if (applied > 0) {
+        // DEP-02：受击方向（相对受害者视角），供 HUD 弧线；不暴露射手坐标。
+        Event hit{EventKind::PlayerHitTaken, shooter, victim, applied};
+        hit.f0 = RelativeHitAngle(attacker.position.x, attacker.position.y, target.position.x,
+                                  target.position.y, target.view_yaw);
+        events.Push(hit);
+    }
     if (target.health == 0) {
         target.alive = false;
         target.has_bomb = false;

@@ -35,4 +35,9 @@ bool GroupArmorProtected(HitGroup group, bool helmet, uint16_t armor);
 
 DamageResult ComputeDamage(const DamageInput& input);
 
+// 受击方向：射手相对受害者视角的水平夹角，归一化到 (-180, 180]。
+// 仅暴露角度，不向表现层泄露射手坐标（SPEC-07 DEP-02）。
+float RelativeHitAngle(float attacker_x, float attacker_y, float target_x, float target_y,
+                       float target_view_yaw);
+
 } // namespace recoil
