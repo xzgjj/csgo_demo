@@ -26,7 +26,8 @@ func _initialize() -> void:
 
 	var sim = RecoilSim.new()
 	sim.reset()
-	var written: int = MapLoader.apply_path(sim, PATH)
+	var written: int = MapLoader.apply_map(sim, "de_dust2")
+	print("PROBE registry default=%s dust2_boxes=%s" % [MapLoader.default_map_id(), MapLoader.boxes_path_for("de_dust2")])
 	print("PROBE set_map_boxes written=%d" % written)
 	_expect(written == collision, "写入 %d != 碰撞盒 %d（容量或非法盒）" % [written, collision])
 
@@ -70,6 +71,7 @@ func _quit() -> void:
 	else:
 		print("dust2_probe FAIL ", failures.size())
 	quit(0 if failures.is_empty() else 1)
+
 
 
 

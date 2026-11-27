@@ -1,14 +1,28 @@
 class_name MapLoader
 extends RefCounted
-## de_ash 派生盒子（Godot 坐标）→ 内核 MapDef AABB：碰撞与画面用同一份数据。
+## 地图派生盒子（Godot 坐标）→ 内核 MapDef AABB：碰撞与画面用同一份数据。
 ## 盒子由 tools/mapgen/gen_blockout.py 从 layout JSON 派生（唯一几何事实源）。
+## 换图只改 host/scenes/map_registry.json；默认地图仍由注册表 default 决定（当前 de_ash）。
 
 const BOXES_PATH := "res://scenes/de_ash_boxes.json"
+const REGISTRY_PATH := "res://scenes/map_registry.json"
 
 
-## 返回注入的碰撞盒数量；读取失败时保持调用方默认地图（返回 0）。
+## 默认地图注入（等价 apply_map(default_map_id())）。
 static func apply(sim: RefCounted) -> int:
-	return apply_path(sim, BOXES_PATH)
+	return apply_map(sim, default_map_id())
+
+
+## 按 map_id 注入；id 不存在或缺文件时回退默认地图，再失败则返回 0（保持竞技场）。
+static func apply_map(sim: RefCounted, map_id: String) -> int:
+	var path := boxes_path_for(map_id)
+	if path.is_empty():
+		push_warning("地图 %s 未注册，回退 %s" % [map_id, default_map_id()])
+		path = boxes_path_for(default_map_id())
+	if path.is_empty() or not FileAccess.file_exists(path):
+		push_warning("地图 %s 缺少盒子清单，保持默认竞技场" % map_id)
+		return 0
+	return apply_path(sim, path)
 
 
 ## 指定清单注入（换图/测试用；默认路径行为不变）。
@@ -19,7 +33,7 @@ static func apply_path(sim: RefCounted, path: String) -> int:
 		return 0
 	var data: Variant = JSON.parse_string(text)
 	if typeof(data) != TYPE_DICTIONARY:
-		push_warning("de_ash_boxes.json 非法，保持默认竞技场")
+		push_warning("%s 非法，保持默认竞技场" % path)
 		return 0
 	var flat := PackedFloat32Array()
 	for item: Dictionary in data.get("boxes", []):
@@ -31,6 +45,34 @@ static func apply_path(sim: RefCounted, path: String) -> int:
 	if written != expected:
 		push_error("碰撞盒注入不完整：期望 %d，实际 %d（检查尺寸/旋转/材质/容量）" % [expected, written])
 	return written
+
+
+static func registry() -> Dictionary:
+	var data: Variant = JSON.parse_string(FileAccess.get_file_as_string(REGISTRY_PATH))
+	if typeof(data) != TYPE_DICTIONARY:
+		return {}
+	return data
+
+
+static func default_map_id() -> String:
+	var id := str(registry().get("default", "de_ash"))
+	return id if not id.is_empty() else "de_ash"
+
+
+## map_id → boxes 路径；未注册返回空串。
+static func boxes_path_for(map_id: String) -> String:
+	for entry: Dictionary in registry().get("maps", []):
+		if str(entry.get("id", "")) == map_id:
+			return str(entry.get("boxes", ""))
+	return ""
+
+
+## map_id → glb 路径；未注册返回空串。
+static func glb_path_for(map_id: String) -> String:
+	for entry: Dictionary in registry().get("maps", []):
+		if str(entry.get("id", "")) == map_id:
+			return str(entry.get("glb", ""))
+	return ""
 
 
 static func _flatten_box(item: Dictionary) -> PackedFloat32Array:
