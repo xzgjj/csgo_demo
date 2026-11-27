@@ -9,6 +9,7 @@
 #include "recoil/movement/movement.h"
 #include "recoil/sim/ballistics.h"
 #include "recoil/sim/bomb.h"
+#include "recoil/sim/damage.h"
 #include "recoil/sim/grenades.h"
 #include "recoil/sim/ground.h"
 #include "recoil/sim/hitbox.h"
@@ -138,11 +139,10 @@ float PenetrationScale(const MapDef& map, const Vec3& origin, const Vec3& dir, f
 RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3& origin,
                            const Vec3& dir, float max_range) {
     RayHit best;
-    const uint8_t shooter_team = state.players[shooter].team;
     for (uint8_t i = 0; i < state.player_count; ++i) {
         const PlayerState& target = state.players[i];
-        // 竞技默认 friendly fire off：队友不挡弹道、不受伤（也避免 Bot 误伤玩家）。
-        if (i == shooter || !target.alive || target.team == shooter_team) {
+        // 队友也挡弹道（SPEC-04 红线 4）；是否掉血由 ResolveDamage 的 friendly_fire 决定。
+        if (i == shooter || !target.alive) {
             continue;
         }
         if (SmokeBlocksSegment(state, origin,
@@ -164,37 +164,70 @@ RayHit TraceAgainstPlayers(const WorldState& state, uint8_t shooter, const Vec3&
 
 void ResolveDamage(WorldState& state, const Content& content, const WeaponDef& weapon,
                    uint8_t shooter, uint8_t victim, float distance, HitGroup group,
-                   float penetration_scale, EventList& events) {
+                   float penetration_scale, EventList& events, uint8_t weapon_id) {
     PlayerState& target = state.players[victim];
-    const float falloff = std::pow(weapon.range_modifier, distance / weapon.range_modifier_unit);
-    float group_multiplier = 1.0f;
-    if (group == HitGroup::Head) {
-        group_multiplier = target.helmet ? 2.0f : 4.0f;
-    } else if (group == HitGroup::Stomach) {
-        group_multiplier = 1.25f;
-    } else if (group == HitGroup::Legs) {
-        group_multiplier = 0.75f;
+    PlayerState& attacker = state.players[shooter];
+    const bool friendly = target.team == attacker.team;
+    // 友伤是数据（红线 4）：关闭时队友仍挡弹道（由 TraceAgainstPlayers 命中），但不掉血。
+    if (friendly && !content.friendly_fire) {
+        events.Push({EventKind::ShotMissed, shooter, victim, 0});
+        return;
     }
-    const float raw = static_cast<float>(weapon.damage) * falloff * group_multiplier *
-                      penetration_scale * (target.armor > 0 ? weapon.armor_ratio : 1.0f);
-    const uint16_t damage = static_cast<uint16_t>(std::lround(raw));
-    const uint16_t applied = std::min(damage, target.health);
+    DamageInput input{};
+    input.base = weapon.damage;
+    input.range_modifier = weapon.range_modifier;
+    input.range_unit = weapon.range_modifier_unit;
+    input.armor_ratio = weapon.armor_ratio;
+    input.group = group;
+    input.distance = distance;
+    input.armor = target.armor;
+    input.helmet = target.helmet;
+    input.penetration_scale = penetration_scale;
+    const DamageResult dmg = ComputeDamage(input);
+
+    const uint16_t hp_before = target.health;
+    const uint16_t applied = std::min(dmg.applied, target.health);
     target.health = static_cast<uint16_t>(target.health - applied);
-    if (target.armor > 0) {
-        const unsigned armor_loss = std::min<unsigned>(target.armor, applied / 2u);
-        target.armor = static_cast<uint16_t>(target.armor - armor_loss);
+    if (dmg.armor_loss > 0) {
+        target.armor = static_cast<uint16_t>(target.armor - std::min(dmg.armor_loss, target.armor));
     }
-    events.Push({EventKind::DamageApplied, shooter, victim, applied});
+    uint8_t flags = 0;
+    if (group == HitGroup::Head) {
+        flags |= kEventHeadshot;
+    }
+    if (penetration_scale < 1.0f) {
+        flags |= kEventThroughWall;
+    }
+    if (dmg.armor_absorbed) {
+        flags |= kEventArmorBlocked;
+    }
+    Event damaged{EventKind::DamageApplied, shooter, victim, applied};
+    damaged.aux = weapon_id;
+    damaged.flags = flags;
+    damaged.group = static_cast<uint8_t>(group);
+    damaged.f0 = distance;
+    damaged.f1 = target.health;
+    damaged.f2 = static_cast<float>(dmg.raw);
+    events.Push(damaged);
     if (target.health == 0) {
         target.alive = false;
         target.has_bomb = false;
         target.weapon.reloading = false;
         target.weapon.reload_ticks_left = 0;
-        if (target.team != state.players[shooter].team) {
-            ++state.players[shooter].kills;
-            AwardMoney(state.players[shooter], content.round.kill_reward, content.round);
+        if (!friendly) {
+            ++attacker.kills;
+            // 击杀奖励按武器类别（DMG-10）；未持枪（None）时回退到默认步枪口径。
+            const uint16_t award = KillAwardFor(static_cast<WeaponId>(weapon_id));
+            AwardMoney(attacker, award > 0 ? award : content.round.kill_reward, content.round);
         }
-        events.Push({EventKind::PlayerDied, shooter, victim, 0});
+        Event died{EventKind::PlayerDied, shooter, victim, 0};
+        died.aux = weapon_id;
+        died.flags = flags;
+        died.group = static_cast<uint8_t>(group);
+        died.f0 = distance;
+        died.f1 = static_cast<float>(hp_before);
+        died.f2 = static_cast<float>(dmg.raw);
+        events.Push(died);
         DropPrimaryOnDeath(state, victim, events);
     }
 }
@@ -265,7 +298,7 @@ void Fire(WorldState& state, const Content& content, const Command& command, con
         return;
     }
     ResolveDamage(state, content, weapon, command.player, hit.player, hit.t, hit.group,
-                  penetration_scale, events);
+                  penetration_scale, events, static_cast<uint8_t>(weapon_id));
 }
 
 void ApplyMove(WorldState& state, const Command& command, EventList& events) {

@@ -84,7 +84,7 @@ TEST_CASE("状态哈希覆盖 C4 持有者/拆弹器与炸弹位置") {
     CHECK(HashState(base) != HashState(bomb_position));
 }
 
-TEST_CASE("友军不受伤且不挡弹道（friendly fire off）") {
+TEST_CASE("友军不受伤但挡弹道（friendly fire off，SPEC-04 红线 4）") {
     WorldState state = MakeDuel();
     state.player_count = 3;
     PlayerState& mate = state.players[2];
@@ -96,6 +96,6 @@ TEST_CASE("友军不受伤且不挡弹道（friendly fire off）") {
 
     const StepResult result = Step(state, DefaultContent(), commands);
 
-    CHECK(result.state.players[2].health == 100);      // 队友不受友军伤害
-    CHECK(result.state.players[1].health == 100 - 36); // 子弹穿过队友命中敌人
+    CHECK(result.state.players[2].health == 100); // 队友不受友军伤害
+    CHECK(result.state.players[1].health == 100); // 子弹被队友挡住，敌人不掉血
 }

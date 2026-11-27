@@ -68,7 +68,7 @@ TEST_CASE("购买头盔扣钱并生效") {
     CHECK(result.state.players[0].money == 2000 - 1000);
 }
 
-TEST_CASE("戴头盔时头部伤害从 4 倍降为 2 倍") {
+TEST_CASE("戴头盔时头部仍 4× 但乘护甲穿透：AK 一枪致死（DMG-02）") {
     WorldState state = Duel();
     state.round.phase = RoundPhase::Live;
     state.players[1].helmet = true;
@@ -79,8 +79,9 @@ TEST_CASE("戴头盔时头部伤害从 4 倍降为 2 倍") {
 
     const StepResult result = Step(state, content, commands);
 
-    CHECK(result.state.players[1].health > 0);
-    CHECK(result.state.players[1].health < 50);
+    // 36 × 4 × 0.775 ≈ 111.6 → 112 ≥ 100：一枪爆头，而不是旧版 2× 的 56。
+    CHECK_FALSE(result.state.players[1].alive);
+    CHECK_EQ(result.state.players[1].health, 0);
 }
 
 TEST_CASE("已满护甲时重复购买护甲被拒绝") {

@@ -18,7 +18,13 @@ void AssignTeams(WorldState& state);
 // 纯函数式状态初始化；地图仍由调用方通过 Step 的 MapDef 传入。
 void BeginMatch(WorldState& state, const Content& content, EventList& events);
 
+// 回合初始化：按 side 分配出生点与默认装备、清空 C4/烟雾/掉落，进入 Freeze。
+// advance_number=false 用于热身结束进入第 1 回合（不递增回合号）。
+void StartRound(WorldState& state, const Content& content, EventList& events,
+                bool advance_number = true);
+
 // 回合状态机：冻结 → 进行中 → 结算 → 重置；含胜负判定与经济结算。
+// match.enabled 时委托给 match.h 的 TickMatch（半场/加时/暂停/买窗）。
 void AdvanceRound(WorldState& state, const Content& content, EventList& events);
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events);

@@ -197,7 +197,7 @@ TEST_CASE("头部命中 4 倍：AWP 一枪致死，AK 无盔也致死") {
     }
 }
 
-TEST_CASE("戴盔后头部按 2 倍：AK 一枪不死") {
+TEST_CASE("头甲仍 4× 但乘护甲穿透：AK 一枪致死（DMG-02）") {
     WorldState state = Duel(100, 300.0f);
     GiveArms(state, 0, WeaponId::AK47);
     state.players[1].helmet = true;
@@ -205,8 +205,8 @@ TEST_CASE("戴盔后头部按 2 倍：AK 一枪不死") {
 
     const StepResult result = StepOne(state, commands);
 
-    CHECK(result.state.players[1].health == 29);
-    CHECK(result.state.players[1].alive);
+    CHECK(result.state.players[1].health == 0);
+    CHECK_FALSE(result.state.players[1].alive);
 }
 
 TEST_CASE("腿部命中 0.75 倍：AK 73 / M4 76 / AWP 14 剩余") {

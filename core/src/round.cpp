@@ -5,6 +5,7 @@
 
 #include "recoil/ai/reaction.h"
 #include "recoil/content/weapon_table.h"
+#include "recoil/sim/match.h"
 #include "recoil/sim/reject.h"
 
 namespace recoil {
@@ -30,11 +31,21 @@ Vec3 TeamSpawn(const Vec3& center, int slot) {
     return {center.x + kSpawnOffsets[index][0], center.y + kSpawnOffsets[index][1], center.z};
 }
 
-void ResetRound(WorldState& state, const Content& content, EventList& events) {
-    ++state.round.number;
-    state.round.phase = RoundPhase::Freeze;
-    state.round.phase_ticks = content.round.freeze_ticks;
-    state.round.winner = 0;
+} // namespace
+
+void StartRound(WorldState& state, const Content& content, EventList& events, bool advance_number) {
+    RoundState& round = state.round;
+    if (advance_number) {
+        ++round.number;
+    }
+    const MatchRules& rules = state.match;
+    round.phase = RoundPhase::Freeze;
+    round.phase_ticks = rules.enabled ? rules.freeze_ticks : content.round.freeze_ticks;
+    round.buy_ticks_left = rules.enabled ? rules.buy_ticks : content.round.buy_grace_ticks;
+    round.buy_closed = false;
+    round.round_ticks_left = rules.enabled ? rules.round_ticks : content.round.live_ticks;
+    round.winner = 0;
+    round.end_reason = static_cast<uint8_t>(RoundEndReason::None);
     state.bomb = BombState{};
     state.smoke = SmokeZone{};
     for (GrenadeState& grenade : state.grenades) {
@@ -43,14 +54,22 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
     for (GroundWeapon& drop : state.ground_weapons) {
         drop = GroundWeapon{};
     }
-    const bool full_team = state.player_count == static_cast<uint8_t>(kTeamSize * 2);
+    const uint8_t team_size = rules.enabled ? rules.team_size : static_cast<uint8_t>(kTeamSize);
+    const bool full_team =
+        state.player_count == static_cast<uint8_t>(team_size * 2) && team_size > 1;
     int t_slot = 0;
     int ct_slot = 0;
     for (uint8_t i = 0; i < state.player_count; ++i) {
         PlayerState& player = state.players[i];
+        // 赛制模式按 side[team_id] 派生阵营；旧模式尊重调用方显式设置的 team。
+        uint8_t side = player.team;
+        if (rules.enabled) {
+            side = round.side[player.team_id < 2 ? player.team_id : 0];
+            player.team = side;
+        }
         player.alive = true;
         player.health = 100;
-        const bool default_armor = full_team; // 5v5 匹配局出生默认甲盔
+        const bool default_armor = full_team; // 匹配局出生默认甲盔
         player.armor = default_armor ? content.round.spawn_armor : 0;
         player.helmet = default_armor && content.round.spawn_helmet;
         player.velocity = {};
@@ -63,7 +82,7 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         player.reaction_target = kNoReactionTarget;
         player.reaction_ticks = 0;
         GiveDefaultLoadout(player, player.team);
-        const bool is_t = player.team == static_cast<uint8_t>(Team::T);
+        const bool is_t = side == static_cast<uint8_t>(Team::T);
         if (!full_team) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
             continue;
@@ -71,7 +90,7 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
         player.position =
             is_t ? TeamSpawn(kDeAshTSpawn, t_slot++) : TeamSpawn(kDeAshCTSpawn, ct_slot++);
     }
-    // C4 给第一名 T，拆弹器给第一名 CT（不重置经济，money 按玩家各自保留）。
+    // C4 给 T 侧第一名玩家，拆弹器给 CT 侧第一名（不重置经济）。
     uint8_t carrier = 0xFF;
     uint8_t defuser = 0xFF;
     for (uint8_t i = 0; i < state.player_count; ++i) {
@@ -91,8 +110,10 @@ void ResetRound(WorldState& state, const Content& content, EventList& events) {
     if (defuser != 0xFF) {
         state.players[defuser].has_defuser = true;
     }
-    events.Push({EventKind::RoundReset, 0, 0, state.round.number});
+    events.Push({EventKind::RoundReset, 0, 0, round.number});
 }
+
+namespace {
 
 void EndRoundInternal(WorldState& state, const Content& content, uint8_t winner,
                       EventList& events) {
@@ -127,10 +148,15 @@ void AssignTeams(WorldState& state) {
     const uint8_t t_count = static_cast<uint8_t>(half > 0 ? half : 1);
     for (uint8_t i = 0; i < state.player_count; ++i) {
         state.players[i].team = static_cast<uint8_t>(i < t_count ? Team::T : Team::CT);
+        state.players[i].team_id = static_cast<uint8_t>(i < t_count ? 0 : 1);
     }
 }
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events) {
+    if (state.match.enabled) {
+        MatchEndRound(state, content, winner, RoundEndReason::Elimination, events);
+        return;
+    }
     EndRoundInternal(state, content, winner, events);
 }
 
@@ -148,7 +174,9 @@ void BeginMatch(WorldState& state, const Content& content, EventList& events) {
     state.round.number = 0;
     state.round.score_t = 0;
     state.round.score_ct = 0;
-    ResetRound(state, content, events);
+    state.round.score_team = {{0, 0}};
+    state.round.loss_streak = {{1, 1}};
+    StartRound(state, content, events);
 }
 
 void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
@@ -157,6 +185,10 @@ void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
 }
 
 void AdvanceRound(WorldState& state, const Content& content, EventList& events) {
+    if (state.match.enabled) {
+        TickMatch(state, content, events);
+        return;
+    }
     RoundState& round = state.round;
     if (round.phase == RoundPhase::Freeze) {
         if (round.phase_ticks > 0) {
@@ -199,12 +231,15 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events) 
             --round.phase_ticks;
         }
         if (round.phase_ticks == 0) {
-            ResetRound(state, content, events);
+            StartRound(state, content, events);
         }
     }
 }
 
 bool CanBuy(const WorldState& state, const Content& content) {
+    if (state.match.enabled) {
+        return CanBuyInMatch(state);
+    }
     const RoundState& round = state.round;
     if (round.phase == RoundPhase::Freeze) {
         return true;

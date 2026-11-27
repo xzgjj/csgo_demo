@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "recoil/base/vec3.h"
+#include "recoil/sim/match_types.h"
 
 namespace recoil {
 
@@ -28,13 +29,6 @@ enum class WeaponId : uint8_t {
 
 // 武器槽数量：0=主武器、1=副武器。weapon 字段始终描述当前激活槽。
 constexpr int kWeaponSlotCount = 2;
-
-enum class RoundPhase : uint8_t {
-    Freeze = 0,
-    Live = 1,
-    RoundEnd = 2,
-    MatchEnd = 3,
-};
 
 enum class GrenadeKind : uint8_t {
     HE = 0,
@@ -76,9 +70,26 @@ struct RoundState {
     RoundPhase phase = RoundPhase::Freeze;
     uint16_t phase_ticks = 0;
     uint16_t number = 1;
+    // 兼容字段：按“当前侧”累计的比分（每次换边与 score_team 双向同步，旧调用方仍可读）。
     uint16_t score_t = 0;
     uint16_t score_ct = 0;
-    uint8_t winner = 0; // 0=无, 1=T, 2=CT
+    uint8_t winner = 0; // 0=无, 1=T, 2=CT（按 side，事件/HUD 使用）
+    // SPEC-03 赛制状态（仅在 match.enabled 时被 TickMatch/MatchEndRound 维护）。
+    std::array<uint16_t, 2> score_team{{0, 0}}; // 真源：按 team_id 记分，换边不变
+    std::array<uint8_t, 2> side{{static_cast<uint8_t>(Team::T), static_cast<uint8_t>(Team::CT)}};
+    std::array<uint8_t, 2> loss_streak{{1, 1}}; // 半场/加时重置为 1，禁止清零
+    uint8_t half = 1;                           // 1=上半场, 2=下半场
+    uint8_t overtime = 0;                       // 0=常规时间, 1..overtime_cap=第 n 个加时
+    uint8_t ot_half = 0;                        // 加时内 1/2 半场（每半 ot_rounds_per_half 回合）
+    uint8_t ot_rounds_in_half = 0;              // 当前加时半场已打回合数
+    uint8_t end_reason = 0;                     // RoundEndReason
+    uint16_t buy_ticks_left = 0;
+    bool buy_closed = false;
+    std::array<uint8_t, 2> timeout_left{{3, 3}}; // 每队剩余战术暂停
+    uint16_t timeout_ticks_left = 0;
+    uint8_t resume_phase = 0; // 暂停结束回到的阶段（RoundPhase 数值）
+    bool halves_done = false;
+    uint16_t round_ticks_left = 0; // Live 阶段的回合计时（容器）
 };
 
 struct WeaponState {
@@ -107,7 +118,8 @@ struct PlayerState {
     bool ducking = false;
     bool jump_queued = false;
     bool jump_held = false;
-    uint8_t team = 0; // Team
+    uint8_t team = 0;    // 当前阵营（Team）
+    uint8_t team_id = 0; // 队伍身份（0/1），换边不变
     uint16_t health = 0;
     uint16_t armor = 0;
     uint16_t money = 0;
@@ -149,6 +161,7 @@ struct WorldState {
     uint64_t tick = 0;
     uint64_t rng = 0x9E3779B97F4A7C15ull;
     uint8_t player_count = 0;
+    MatchRules match{}; // 赛制参数（默认 enabled=false → 旧行为）
     RoundState round{};
     BombState bomb{};
     SmokeZone smoke{};
