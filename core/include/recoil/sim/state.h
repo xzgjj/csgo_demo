@@ -162,6 +162,11 @@ struct WorldState {
     uint64_t rng = 0x9E3779B97F4A7C15ull;
     uint8_t player_count = 0;
     MatchRules match{}; // 赛制参数（默认 enabled=false → 旧行为）
+    // 出生点由地图注入（host 从盒子清单 kind=spawn 读取）；未注入时回退 de_ash 常量，
+    // 保证旧测试/无地图场景仍可运行。x/y 为 sim 平面坐标。
+    Vec3 spawn_t{};
+    Vec3 spawn_ct{};
+    bool spawn_from_map = false;
     RoundState round{};
     BombState bomb{};
     SmokeZone smoke{};

@@ -123,8 +123,14 @@ MatchError BeginMatchWithRules(WorldState& state, const MatchRules& rules, Event
         return MatchError::RosterMismatch;
     }
     const uint8_t count = state.player_count;
+    const Vec3 spawn_t = state.spawn_t;
+    const Vec3 spawn_ct = state.spawn_ct;
+    const bool spawn_from_map = state.spawn_from_map;
     state = WorldState{};
     state.player_count = count;
+    state.spawn_t = spawn_t;
+    state.spawn_ct = spawn_ct;
+    state.spawn_from_map = spawn_from_map;
     state.match = rules;
     state.round.side = {{static_cast<uint8_t>(Team::T), static_cast<uint8_t>(Team::CT)}};
     state.round.score_team = {{0, 0}};

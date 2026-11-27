@@ -44,7 +44,46 @@ static func apply_path(sim: RefCounted, path: String) -> int:
 	var written: int = sim.set_map_boxes(flat)
 	if written != expected:
 		push_error("碰撞盒注入不完整：期望 %d，实际 %d（检查尺寸/旋转/材质/容量）" % [expected, written])
+	_inject_layout_points(sim, data)
 	return written
+
+
+## 从盒子清单提取 kind=site / kind=spawn 的中心并注入内核，替换原先写死在 main.gd 的坐标。
+## 坐标映射与 _flatten_box 一致：sim x = -gz，sim y = -gx。
+## 规则：spawn 按 sim y 升序取 [T, CT]（de_ash/dust2 的 T 出生屋都在 -y 侧）；
+##      包点 A 取“距 T 出生点更近”的一个，B 为另一个。缺数据时保持内核默认（不阻断对局）。
+static func _inject_layout_points(sim: RefCounted, data: Dictionary) -> void:
+	var spawns: Array[Vector2] = []
+	var sites: Array[Vector2] = []
+	for item: Dictionary in data.get("boxes", []):
+		var kind := str(item.get("kind", ""))
+		if kind != "site" and kind != "spawn":
+			continue
+		var center: Array = item.get("center", [])
+		if center.size() < 3:
+			continue
+		var point := Vector2(-float(center[2]), -float(center[0]))
+		if kind == "site":
+			sites.append(point)
+		else:
+			spawns.append(point)
+	spawns.sort_custom(_sort_by_y)
+	if spawns.size() >= 2:
+		var spawn_t: Vector2 = spawns[0]
+		var spawn_ct: Vector2 = spawns[spawns.size() - 1]
+		sim.set_spawn_centers(spawn_t.x, spawn_t.y, spawn_ct.x, spawn_ct.y)
+		if sites.size() >= 2:
+			var site_a: Vector2 = sites[0]
+			var site_b: Vector2 = sites[1]
+			if site_b.distance_to(spawn_t) < site_a.distance_to(spawn_t):
+				var swap := site_a
+				site_a = site_b
+				site_b = swap
+			sim.set_sites(site_a.x, site_a.y, site_b.x, site_b.y)
+
+
+static func _sort_by_y(a: Vector2, b: Vector2) -> bool:
+	return a.y < b.y
 
 
 static func registry() -> Dictionary:

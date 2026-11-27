@@ -249,6 +249,13 @@ public:
         sites_.site_b = {bx, by, 0.0f};
     }
 
+    // 地图注入出生中心（sim 平面坐标）：由 MapLoader 从 kind=spawn 盒子提取；未调用时回退 de_ash。
+    void set_spawn_centers(float tx, float ty, float cx, float cy) {
+        state_.spawn_t = {tx, ty, 0.0f};
+        state_.spawn_ct = {cx, cy, 0.0f};
+        state_.spawn_from_map = true;
+    }
+
     void begin_match() {
         state_ = recoil::WorldState{};
         content_ = recoil::DefaultContent();

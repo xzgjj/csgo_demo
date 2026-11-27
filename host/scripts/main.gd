@@ -134,8 +134,8 @@ func _start_play() -> void:
 ## 可玩模式：de_ash 全尺寸 MapDef + 10 人 5v5（玩家 0 为人类 T，其余由内核战术层驱动）。
 func _start_match() -> void:
 	sim.reset()
+	# 包点/出生点由 MapLoader 从盒子清单（kind=site/spawn）注入，不再写死 de_ash 坐标。
 	MapLoaderScript.apply(sim)
-	sim.set_sites(-1200.0, -900.0, 1200.0, 900.0)
 	sim.begin_match()
 	_enter_game(true)
 func _restart() -> void:

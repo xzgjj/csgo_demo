@@ -47,6 +47,7 @@
         BIND(get_total_fire_events);
         BIND(set_map_boxes, "boxes");
         BIND(set_sites, "ax", "ay", "bx", "by");
+BIND(set_spawn_centers, "tx", "ty", "cx", "cy");
         BIND(begin_match);
         BIND(tick_auto);
         BIND(get_wall_count);

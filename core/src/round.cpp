@@ -87,8 +87,10 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
             continue;
         }
-        player.position =
-            is_t ? TeamSpawn(kDeAshTSpawn, t_slot++) : TeamSpawn(kDeAshCTSpawn, ct_slot++);
+        // 出生中心优先取地图注入值（dust2/de_ash 由 host 从 kind=spawn 盒子提取）。
+        const Vec3 t_center = state.spawn_from_map ? state.spawn_t : kDeAshTSpawn;
+        const Vec3 ct_center = state.spawn_from_map ? state.spawn_ct : kDeAshCTSpawn;
+        player.position = is_t ? TeamSpawn(t_center, t_slot++) : TeamSpawn(ct_center, ct_slot++);
     }
     // C4 给 T 侧第一名玩家，拆弹器给 CT 侧第一名（不重置经济）。
     uint8_t carrier = 0xFF;
@@ -161,7 +163,14 @@ void EndRound(WorldState& state, const Content& content, uint8_t winner, EventLi
 }
 
 void BeginMatch(WorldState& state, const Content& content, EventList& events) {
+    // 地图注入的出生点必须跨开局重置保留（host 在 apply_map 后、begin_match 前设置）。
+    const Vec3 spawn_t = state.spawn_t;
+    const Vec3 spawn_ct = state.spawn_ct;
+    const bool spawn_from_map = state.spawn_from_map;
     state = WorldState{};
+    state.spawn_t = spawn_t;
+    state.spawn_ct = spawn_ct;
+    state.spawn_from_map = spawn_from_map;
     state.player_count = static_cast<uint8_t>(kTeamSize * 2);
     AssignTeams(state);
     for (uint8_t i = 0; i < state.player_count; ++i) {
