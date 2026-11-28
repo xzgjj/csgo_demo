@@ -13,10 +13,10 @@
 namespace recoil {
 namespace {
 
-// de_ash 布局出生点（content/maps/de_ash.layout.json：T [0,-1700]、CT [0,1700]）。
+// de_ash 布局出生点（content/maps/de_ash.layout.json：T [0,-1700]、CT [0,1700]）；后两个是旧版 2
+// 人常量。
 constexpr Vec3 kDeAshTSpawn{0.0f, -1700.0f, 0.0f};
 constexpr Vec3 kDeAshCTSpawn{0.0f, 1700.0f, 0.0f};
-// 旧版 2 人出生点，保持既有行为。
 constexpr Vec3 kLegacyTSpawn{0.0f, -200.0f, 0.0f};
 constexpr Vec3 kLegacyCTSpawn{400.0f, 0.0f, 0.0f};
 constexpr int kTeamSize = 5;
@@ -27,25 +27,20 @@ constexpr float kSpawnOffsets[kTeamSize][2] = {
     {kSpawnSpacing, 0.0f},         {2.0f * kSpawnSpacing, 0.0f},
 };
 
-// 同一出生点内按队列序号错开，避免同队玩家重叠。
 Vec3 TeamSpawn(const Vec3& center, int slot) {
     const int index = slot < kTeamSize ? slot : kTeamSize - 1;
     return {center.x + kSpawnOffsets[index][0], center.y + kSpawnOffsets[index][1], center.z};
 }
 
 // 地图/状态注入的出生中心优先；未注入时回退 de_ash 常量（旧用例/旧图行为不变）。
-Vec3 TSpawnCenter(const MapDef* map, const WorldState& state) {
+Vec3 SpawnCenter(const MapDef* map, const WorldState& state, bool is_t) {
     if (map != nullptr && map->custom_spawns) {
-        return map->spawn_t;
+        return is_t ? map->spawn_t : map->spawn_ct;
     }
-    return state.spawn_from_map ? state.spawn_t : kDeAshTSpawn;
-}
-
-Vec3 CTSpawnCenter(const MapDef* map, const WorldState& state) {
-    if (map != nullptr && map->custom_spawns) {
-        return map->spawn_ct;
+    if (state.spawn_from_map) {
+        return is_t ? state.spawn_t : state.spawn_ct;
     }
-    return state.spawn_from_map ? state.spawn_ct : kDeAshCTSpawn;
+    return is_t ? kDeAshTSpawn : kDeAshCTSpawn;
 }
 } // namespace
 
@@ -117,13 +112,17 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
         player.reaction_target = kNoReactionTarget;
         player.reaction_ticks = 0;
         const bool is_t = side == static_cast<uint8_t>(Team::T);
-        if (!full_team) {
+        if (map != nullptr && map->custom_slots) {
+            // 布局给了 5 个槽就用槽：任何模式（1v1/3v3/5v5）都从这套出生点出生。
+            const int slot = is_t ? t_slot++ : ct_slot++;
+            const int index = std::min(slot, kTeamSize - 1);
+            player.position = is_t ? map->spawn_slots_t[index] : map->spawn_slots_ct[index];
+        } else if (!full_team) {
             player.position = is_t ? kLegacyTSpawn : kLegacyCTSpawn;
             continue;
+        } else {
+            player.position = TeamSpawn(SpawnCenter(map, state, is_t), is_t ? t_slot++ : ct_slot++);
         }
-        player.position = is_t ? TeamSpawn(TSpawnCenter(map, state), t_slot++)
-                               : TeamSpawn(CTSpawnCenter(map, state), ct_slot++);
-        // 出生点是“意图坐标”，道具可能吃掉净空：贴回最近可站立处（确定性）。
         player.position = map ? FindFreeSpot(*map, player.position) : player.position;
     }
     // C4 给 T 侧第一名玩家，拆弹器给 CT 侧第一名（不重置经济）。

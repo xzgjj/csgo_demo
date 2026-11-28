@@ -58,6 +58,7 @@ class RecoilSim : public RefCounted {
     int human_player_ = 0;
     recoil::SiteLayout sites_{};
     std::vector<recoil::Command> pending_{};
+    bool bot_fire_enabled_ = true;
     std::vector<recoil::Command> bot_commands_{};
     int bot_refresh_ = 0;
     int bot_buy_round_ = -1;
@@ -294,14 +295,24 @@ public:
             bot_commands_.clear();
             for (uint8_t i = 0; i < state_.player_count; ++i) {
                 if (i != human_player_) {
-                    bot_commands_.push_back(
-                        recoil::TacticalBotDecide(state_, content_, i, sites_, &map_));
+                    recoil::Command command =
+                        recoil::TacticalBotDecide(state_, content_, i, sites_, &map_);
+                    // 训练/靶场：人机照常走位，但不开火（测试与练枪模式依赖“靶子不还手”）。
+                    if (!bot_fire_enabled_ && command.kind == recoil::CommandKind::Fire) {
+                        command = recoil::Command{};
+                        command.player = static_cast<uint8_t>(i);
+                    }
+                    bot_commands_.push_back(command);
                 }
             }
         }
         ++bot_refresh_;
         pending_.insert(pending_.end(), bot_commands_.begin(), bot_commands_.end());
         tick();
+    }
+
+    void set_bot_fire_enabled(bool enabled) {
+        bot_fire_enabled_ = enabled;
     }
 
     void set_player_position(int player, float x, float y, float z) {

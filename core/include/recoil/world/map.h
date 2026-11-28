@@ -36,6 +36,7 @@ enum class MapError : int32_t {
     NonFinite = 3,
     InvalidSurface = 4,
     RotatedBrushUnsupported = 5,
+    SlopeTooSteep = 6, // 坡道超过 45°（可走坡面上限，与 Source 的 MAX_SLOPE 一致）
 };
 
 struct Wall {
@@ -47,6 +48,34 @@ struct Wall {
     // 可破坏物 HP（0 表示不可破坏）；与 Wall 同生命周期，破坏后整盒移除。
     uint16_t hp = 0;
 };
+
+// 可走坡道：不是盒体，而是一张斜面（水平矩形 + 高度插值）。
+// 单独存放而不是混进 walls，原因：斜面若当成 AABB，射线/导航会把它判成实心墙，
+// 玩家站在坡中会被“推出”，这正是「斜坡做成台阶」的根因（见 docs/spec-debug2.md §4）。
+constexpr int kMaxRamps = 64;
+
+struct Ramp {
+    Aabb bounds{};                // min.z = 低端标高，max.z = 高端标高
+    int8_t axis = 0;              // 0 = 沿 +x 变化，1 = 沿 +y 变化
+    bool ascends_positive = true; // 坐标增大时是否升高
+};
+
+// 坡面标高：把玩家中心投影到斜面上（越界点按最近端夹取）。
+inline float RampFloorAt(const Ramp& ramp, float x, float y) {
+    const float span_x = ramp.bounds.max.x - ramp.bounds.min.x;
+    const float span_y = ramp.bounds.max.y - ramp.bounds.min.y;
+    float t = 0.0f;
+    if (ramp.axis == 0) {
+        t = span_x > 1.0e-6f ? (x - ramp.bounds.min.x) / span_x : 0.0f;
+    } else {
+        t = span_y > 1.0e-6f ? (y - ramp.bounds.min.y) / span_y : 0.0f;
+    }
+    t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+    if (!ramp.ascends_positive) {
+        t = 1.0f - t;
+    }
+    return ramp.bounds.min.z + t * (ramp.bounds.max.z - ramp.bounds.min.z);
+}
 
 struct MapDef;
 
@@ -83,6 +112,13 @@ struct MapDef {
     Vec3 spawn_t{0.0f, -1700.0f, 0.0f};
     Vec3 spawn_ct{0.0f, 1700.0f, 0.0f};
     bool custom_spawns = false;
+    // 布局里的 5 个出生槽（sim 坐标）；custom_slots=false 时回合逻辑沿用 64u 横排。
+    Vec3 spawn_slots_t[5]{};
+    Vec3 spawn_slots_ct[5]{};
+    bool custom_slots = false;
+    // 可走坡道（不成盒、不参与射线阻挡）。
+    Ramp ramps[kMaxRamps]{};
+    int ramp_count = 0;
 };
 
 inline bool IsFiniteVec(const Vec3& v) {
@@ -140,6 +176,37 @@ inline MapError AddWall(MapDef& map, const Wall& wall) {
     map.walls[slot] = aabb;
     map.wall_hp[slot] = aabb.hp;
     ++map.wall_count;
+    return MapError::None;
+}
+
+// 坡道：只校验有限值/尺寸/坡度（<= 45°），不占 walls 容量；失败时不修改地图。
+inline MapError AddRamp(MapDef& map, const Aabb& bounds, int axis, bool ascends_positive) {
+    if (!IsFiniteVec(bounds.min) || !IsFiniteVec(bounds.max)) {
+        return MapError::NonFinite;
+    }
+    if (axis != 0 && axis != 1) {
+        return MapError::InvalidExtent;
+    }
+    if (bounds.min.x >= bounds.max.x || bounds.min.y >= bounds.max.y) {
+        return MapError::InvalidExtent;
+    }
+    const float rise = bounds.max.z - bounds.min.z;
+    const float run = (axis == 0) ? (bounds.max.x - bounds.min.x) : (bounds.max.y - bounds.min.y);
+    if (rise <= 0.0f || run <= 0.0f) {
+        return MapError::InvalidExtent;
+    }
+    if (rise > run + 1.0e-3f) {
+        return MapError::SlopeTooSteep;
+    }
+    if (map.ramp_count >= kMaxRamps) {
+        return MapError::TooManyWalls;
+    }
+    Ramp ramp;
+    ramp.bounds = bounds;
+    ramp.axis = static_cast<int8_t>(axis);
+    ramp.ascends_positive = ascends_positive;
+    map.ramps[map.ramp_count] = ramp;
+    ++map.ramp_count;
     return MapError::None;
 }
 

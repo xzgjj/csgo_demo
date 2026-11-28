@@ -1,4 +1,4 @@
-﻿extends Node3D
+extends Node3D
 ## Project Recoil demo 宿主：输入 → Command，内核 tick → 只读状态 → 相机 / HUD / 页面。
 ## 页面流：主菜单 → 对局 →（Esc）暂停 → 设置；回合/比赛结束自动弹结算；Tab 比分板。
 ## run_scenario.gd / capture.gd 依赖 sim、_start_play()、_update_view()、_update_hud()，签名不变。
@@ -57,7 +57,6 @@ var _debug_label: Label
 var _f3_was := false
 var shot_feedback
 var _f5_was := false
-
 func _ready() -> void:
 	sim = RecoilSim.new()
 	sim.reset()
@@ -121,11 +120,9 @@ func show_loadout_page() -> void:
 	menu.visible = false
 	loadout_page.open()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 func close_loadout_page() -> void:
 	loadout_page.close()
 	_show_menu()
-
 func _show_menu() -> void:
 	playing = false
 	paused = false
@@ -203,17 +200,14 @@ func close_settings_page() -> void:
 	pause_page.visible = _settings_return_pause
 	menu.visible = not _settings_return_pause
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-
 func toggle_scoreboard() -> void:
 	if not (playing or paused):
 		return
 	scoreboard.visible = not scoreboard.visible
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
-
 func _quit() -> void:
 	get_tree().quit()
-
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		var invert := -1.0 if bool(settings.get_value("controls.mouse.invert_y")) else 1.0
@@ -235,7 +229,6 @@ func _handle_pause_action() -> void:
 		_show_pause()
 	elif paused:
 		_resume()
-
 func _physics_process(delta: float) -> void:
 	settings.tick(delta)
 	if not playing:
@@ -244,11 +237,17 @@ func _physics_process(delta: float) -> void:
 	_sync_mouse_mode()
 	var forward := Input.get_axis("move_back", "move_forward")
 	var side := Input.get_axis("move_right", "move_left")
+	# 移动速度倍率（设置项 controls.move.speed_scale）：wish 会被归一化，
+	# 所以按比例缩小输入即可等比降速；默认 1.0 = CS 基准 250 u/s。
+	var speed_scale := 1.0
+	var speed_value: Variant = settings.get_value("controls.move.speed_scale")
+	if speed_value != null:
+		speed_scale = clampf(float(speed_value), 0.7, 1.2)
 	if Input.is_key_pressed(KEY_SHIFT):
-		forward *= 0.5
-		side *= 0.5
-	sim.set_move(0, yaw, pitch, forward, side, Input.is_action_pressed("jump"),
-			Input.is_action_pressed("duck"))
+		# Shift 走：CS 走路约 130 u/s，即 0.52 倍速；与倍率相乘，避免互相覆盖。
+		speed_scale *= 0.52
+	sim.set_move(0, yaw, pitch, forward * speed_scale, side * speed_scale,
+			Input.is_action_pressed("jump"), Input.is_action_pressed("duck"))
 	# 页面打开时不响应瞄准/开火，避免点 UI 按钮时误开火、或被遮罩"卡住"视角。
 	aiming = Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT) and not ui_open
 	var magnification: float = weapon_magnification()
@@ -283,6 +282,8 @@ func _physics_process(delta: float) -> void:
 	_throw_input("he", "throw_he", 0)
 	_throw_input("flash", "throw_flash", 1)
 	_throw_input("smoke", "throw_smoke", 2)
+	# 两种模式都由内核战术层驱动人机；训练局只有 1 个对手，同样要它会走会打。
+	# 注意：不能写成 `tick_auto() if match_mode else tick()`，void 三元取值会报错并中断本帧。
 	if match_mode:
 		sim.tick_auto()
 	else:
@@ -292,29 +293,23 @@ func _physics_process(delta: float) -> void:
 		purchase.after_tick()
 	_update_view()
 	_update_hud()
-
 func _ui_page_open() -> bool:
 	return HostPages.page_open(self)
-
 func want_mouse_mode() -> int:
 	return Input.MOUSE_MODE_VISIBLE if _ui_page_open() else Input.MOUSE_MODE_CAPTURED
-
 func _sync_mouse_mode() -> void:
 	if Input.mouse_mode != want_mouse_mode():
 		Input.mouse_mode = want_mouse_mode()
-
 func _toggle_debug() -> void:
 	var down := Input.is_key_pressed(KEY_F3)
 	if down and not _f3_was:
 		debug_visible = not debug_visible
 	_f3_was = down
-
 func _toggle_third_person() -> void:
 	var down := Input.is_key_pressed(KEY_F5)
 	if down and not _f5_was:
 		third_person = not third_person
 	_f5_was = down
-
 func _update_view() -> void:
 	# 相机抬枪与射线同源（SPEC-02 红线 5）；eye 高度含蹲伏。
 	var eye := Vector3(-sim.get_y(0), sim.get_z(0) + EYE_HEIGHT, -sim.get_x(0))
@@ -341,7 +336,6 @@ func _update_view() -> void:
 	match_flow.update(sim)
 	if scoreboard.visible:
 		scoreboard.refresh(sim)
-
 func _update_hud() -> void:
 	var weapon_name := "-"
 	if viewmodel != null:
@@ -365,19 +359,16 @@ func _weapon_name() -> String:
 	if sim != null and sim.has_method("get_weapon_name"):
 		return str(sim.get_weapon_name(int(sim.get_weapon_id(0))))
 	return viewmodel.display_name()
-
 func weapon_magnification() -> float:
 	if sim != null and sim.has_method("get_weapon_scope"):
 		return float(sim.get_weapon_scope(0))
 	return viewmodel.scope_magnification()
-
 func _pressed_weapon_key() -> int:
 	if Input.is_key_pressed(KEY_1):
 		return 0
 	if Input.is_key_pressed(KEY_2):
 		return 1
 	return -1
-
 func _switch_weapon(index: int) -> void:
 	if purchase != null:
 		purchase.switch_weapon(index)
@@ -392,7 +383,6 @@ func _try_pickup() -> bool:
 	if purchase != null:
 		purchase.sync_viewmodel()
 	return true
-
 func _throw_input(name: String, action: String, kind: int) -> void:
 	var down := Input.is_action_pressed(action)
 	if down and not _throw_was[name]:

@@ -15,10 +15,10 @@ const LEGACY_PLAYER := "player"
 const SAVE_DEBOUNCE_SECONDS := 0.5
 const DEFAULT_PATH := "user://settings.cfg"
 ## 兼容旧调用方（迁移前的三项设置）。
-const FOV_MIN := 70.0
+const FOV_MIN := 60.0
 const FOV_MAX := 110.0
-const SENSITIVITY_MIN := 0.02
-const SENSITIVITY_MAX := 0.2
+const SENSITIVITY_MIN := 0.006
+const SENSITIVITY_MAX := 0.08
 const VOLUME_MIN := 0
 const VOLUME_MAX := 100
 

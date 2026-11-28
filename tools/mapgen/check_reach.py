@@ -58,26 +58,38 @@ def load_boxes(map_id):
     return json.loads(path.read_text(encoding="utf-8"))["boxes"]
 
 
+def ramp_entries(boxes):
+    """坡道是连续的斜面：底边贴地（<=32u）就把顶边记成可达，再闭包接到相邻台面。"""
+    return [(top_of(b), footprint(b)) for b in boxes
+            if b.get("collision") and b["kind"] == "ramp" and bottom_of(b) <= STEP_REACH]
+
+
+def reachable_by(box, reachable):
+    """这个盒顶能否从已可达集合里上去（跳高内且边缘贴合）。"""
+    top = top_of(box)
+    fp = footprint(box)
+    for level, other_fp in reachable:
+        rise = top - level
+        if -0.5 <= rise <= JUMP_REACH and horizontal_gap(fp, other_fp) <= EDGE_GAP:
+            return True
+    return False
+
+
 def audit(boxes):
     walkables = [b for b in boxes if b.get("collision") and b["kind"] in WALKABLE_KINDS]
-    ground = (0.0, (-100000.0, 100000.0, -100000.0, 100000.0))
-    reachable = [ground]
+    reachable = [(0.0, (-100000.0, 100000.0, -100000.0, 100000.0))] + ramp_entries(boxes)
     remaining = list(walkables)
     while remaining:
         progressed = False
         for box in list(remaining):
-            top = top_of(box)
-            fp = footprint(box)
-            for level, other_fp in reachable:
-                rise = top - level
-                if -0.5 <= rise <= JUMP_REACH and horizontal_gap(fp, other_fp) <= EDGE_GAP:
-                    reachable.append((top, fp))
-                    remaining.remove(box)
-                    progressed = True
-                    break
+            if not reachable_by(box, reachable):
+                continue
+            reachable.append((top_of(box), footprint(box)))
+            remaining.remove(box)
+            progressed = True
         if not progressed:
             break
-    return [b for b in remaining], walkables
+    return remaining, walkables
 
 
 def main(argv=None):

@@ -32,6 +32,25 @@ bool BodyOverlaps(const MapDef& map, const Vec3& position, const MovementDef& de
     return TraceOverlap(map, hull, position);
 }
 
+// 脚下坡面标高（含 hull 半宽外扩）；没有坡返回极小值。
+float RampSupportAt(const MapDef& map, const Vec3& position, const MovementDef& def) {
+    float best = -1.0e30f;
+    for (int i = 0; i < map.ramp_count; ++i) {
+        const Ramp& ramp = map.ramps[i];
+        if (position.x + def.half_width < ramp.bounds.min.x ||
+            position.x - def.half_width > ramp.bounds.max.x ||
+            position.y + def.half_width < ramp.bounds.min.y ||
+            position.y - def.half_width > ramp.bounds.max.y) {
+            continue;
+        }
+        const float floor = RampFloorAt(ramp, position.x, position.y);
+        if (floor > best) {
+            best = floor;
+        }
+    }
+    return best;
+}
+
 // 重叠时沿最小穿透轴推出；最多两轮，避免出生重叠/被挤进箱子后卡死。
 void Depenetrate(PlayerState& player, const MovementDef& def, const MapDef* map,
                  std::span<const Aabb> blockers) {
@@ -212,6 +231,22 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map,
                 }
             }
         }
+        if (!blocked && axis != 2 && map != nullptr) {
+            // 坡面：脚下标高若在一步之内就贴着走上去；超出 32u 说明是从坡侧面撞上，
+            // 按墙处理（让玩家绕到坡脚），避免“瞬间被抬到半坡”。
+            const float ramp_floor = RampSupportAt(*map, next, def);
+            if (ramp_floor > from.z + kStepHeight + 0.01f) {
+                blocked = true;
+                if (axis == 0) {
+                    player.velocity.x = 0.0f;
+                } else {
+                    player.velocity.y = 0.0f;
+                }
+                next = from;
+            } else if (ramp_floor > next.z) {
+                next.z = ramp_floor;
+            }
+        }
         if (blocked && axis != 2 && player.on_ground && map != nullptr) {
             // 台阶：抬升到 ≤32u 的支撑面后重试同一水平位移。
             const float step_height = StepUpHeight(*map, player, def, next, height);
@@ -235,6 +270,7 @@ void MoveAxis(PlayerState& player, const MovementDef& def, const MapDef* map,
 void ResolveGround(PlayerState& player, const MovementDef& def, const MapDef* map) {
     const float floor_z = (map != nullptr) ? map->floor_z : 0.0f;
     float support = floor_z;
+    bool on_ramp = false;
     if (map != nullptr) {
         const Aabb hull = BodyHull(def, 0.0f);
         for (int w = 0; w < map->wall_count; ++w) {
@@ -249,8 +285,17 @@ void ResolveGround(PlayerState& player, const MovementDef& def, const MapDef* ma
                 support = std::max(support, wall.max.z);
             }
         }
+        // 坡面：只接受「不超过一级台阶」的高差，横向跨过坡顶时不会被吸下去。
+        const float ramp_floor = RampSupportAt(*map, player.position, def);
+        if (ramp_floor > support && ramp_floor <= player.position.z + kStepHeight + 0.01f) {
+            support = ramp_floor;
+            on_ramp = true;
+        }
     }
-    if (player.position.z <= support + kSupportEpsilon) {
+    // 下坡贴地：坡面比当前低但仍在一步之内时直接落下，避免“沿坡一路小跳”。
+    const bool snap_down = on_ramp && player.position.z > support + kSupportEpsilon &&
+                           player.position.z - support <= kStepHeight && player.velocity.z <= 0.0f;
+    if (player.position.z <= support + kSupportEpsilon || snap_down) {
         player.position.z = support;
         player.velocity.z = 0.0f;
         player.on_ground = true;

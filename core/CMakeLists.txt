@@ -48,6 +48,7 @@ add_executable(recoil_tests
     tests/test_bomb.cpp
     tests/test_bot.cpp
     tests/test_breakable.cpp
+    tests/test_bot_movement.cpp
     tests/test_damage.cpp
     tests/test_depth.cpp
     tests/test_spray.cpp
@@ -60,12 +61,14 @@ add_executable(recoil_tests
     tests/test_match.cpp
     tests/test_match_phase.cpp
     tests/test_movement.cpp
-    tests/test_placement.cpp
+    tests/test_ramp.cpp
+tests/test_placement.cpp
     tests/test_nav.cpp
     tests/test_recoil.cpp
     tests/test_recoil_hash.cpp
     tests/test_recovery.cpp
     tests/test_round.cpp
+tests/test_round_spawns.cpp
     tests/test_step.cpp
     tests/test_tactics.cpp
     tests/test_trace.cpp
@@ -84,3 +87,4 @@ add_test(NAME map_rotation COMMAND recoil_tests "-tc=*yaw*")
 add_test(NAME nav_bounds COMMAND recoil_tests "-tc=*越界*")
 add_test(NAME spawn_injection COMMAND recoil_tests "-tc=*出生中心*")
 add_test(NAME breakable COMMAND recoil_tests "-tc=*可破坏*")
+

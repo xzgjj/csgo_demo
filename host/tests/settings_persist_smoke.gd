@@ -17,7 +17,7 @@ func _initialize() -> void:
 		"audio.master.volume": 55.0,
 		"gameplay.crosshair.color": "#ff3300",
 		"gameplay.radar.zoom": 1.4,
-		"controls.mouse.sensitivity": 0.125,
+		"controls.mouse.sensitivity": 0.05,
 		"controls.bind.forward": "UP",
 		"camera.fov": 104.0,
 		"ui.hud.font_size": 20.0,

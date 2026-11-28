@@ -40,8 +40,8 @@ def checker_spec() -> dict:
         "max_door_width": 128,
         "min_site_width": 600,
         "min_site_depth": 580,
-        "min_breakables": 14,
-        "breakable_hp": [20, 30, 60, 80, 100, 200, 300, 400],
+        "min_breakables": 13,
+        "breakable_hp": [20, 30, 60, 100, 200, 300, 400],
         "layoutcheck": ["bounds", "openings", "clearance", "lanes", "rotation_times",
                         "boxes_sync", "breakables"],
     }

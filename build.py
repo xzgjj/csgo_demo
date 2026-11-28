@@ -138,6 +138,7 @@ def do_map():
     """
     checks = [
         ([PY, "-X", "utf8", "tools/mapgen/import_scene_v3.py"], "mapgen"),
+        ([PY, "-X", "utf8", "tools/mapgen/check_site_kits.py"], "site_kits"),
         ([blender_bin(), "--background", "--python", "tools/blender/build_de_dust2.py"], "blender"),
         ([PY, "-X", "utf8", "tools/mapgen/check_dust2.py"], "check_dust2"),
         ([PY, "-X", "utf8", "tools/mapgen/check_glb_boxes.py", "--map", "de_dust2"], "glb_boxes"),

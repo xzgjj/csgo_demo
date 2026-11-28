@@ -41,10 +41,30 @@ bool BodyFree(const NavWorld& world, float x, float y, float z) {
     return true;
 }
 
+// 该点是否落在坡道上；返回坡面标高（不在坡道内返回 found=false）。
+// 坡道不是墙体，导航必须单独采样，否则 128u 平台只能靠台阶到达（spec-debug2 把台阶换成坡后
+// 会出现「地图审计可达、bot 导航为空」的假阴性）。
+bool RampSurfaceAt(const NavWorld& world, float x, float y, float& out_z) {
+    for (int i = 0; i < world.map->ramp_count; ++i) {
+        const Ramp& ramp = world.map->ramps[i];
+        if (x < ramp.bounds.min.x || x > ramp.bounds.max.x || y < ramp.bounds.min.y ||
+            y > ramp.bounds.max.y) {
+            continue;
+        }
+        out_z = RampFloorAt(ramp, x, y);
+        return true;
+    }
+    return false;
+}
+
 // 候选高度必须有实体顶面支撑（防止生成“悬空导航层”，如台阶上方 32u 的假 64 层）。
 bool SupportAt(const NavWorld& world, float x, float y, float z) {
     if (z <= 0.5f) {
         return true;
+    }
+    float ramp_z = 0.0f;
+    if (RampSurfaceAt(world, x, y, ramp_z) && std::fabs(ramp_z - z) <= 0.5f) {
+        return true; // 坡面本身就是可站表面
     }
     const NavGrid& grid = world.grid;
     const int cell = CellIndex(grid, CellX(grid, x), CellY(grid, y));
@@ -106,6 +126,14 @@ void EnsureCellLevels(NavWorld& world, int cell) {
             candidates.push_back(wall.max.z);
         }
     }
+    // 坡面采样：以格心坡高作为该格的可站层；坡面明显高于地面时不要同时保留 0 层，
+    // 否则 A* 会生成「从坡体内部穿过去」的假路径（移动层会把 >32u 的抬脚判成墙）。
+    float ramp_z = 0.0f;
+    if (RampSurfaceAt(world, CenterX(grid, cx), CenterY(grid, cy), ramp_z)) {
+        if (ramp_z > 0.5f) {
+            candidates[0] = ramp_z;
+        }
+    }
     std::sort(candidates.begin(), candidates.end());
     std::vector<Vec3>& levels = world.levels[static_cast<size_t>(cell)];
     for (const float candidate : candidates) {
@@ -162,6 +190,21 @@ bool HasLevelNear(NavWorld& world, int cell, float z) {
         }
     }
     return false;
+}
+
+// 坡道上的相邻格高差可以大于一级台阶（35° 坡在 64u 格距上抬 45u）。
+// 规则：只要有一端贴在坡面上，就按「≤45° 可走斜面」放行，而不是按台阶 32u 判死；
+// 这样地面格 → 坡脚格、坡面格 → 坡顶平台格都能连上。
+bool RampLink(const NavWorld& world, const Vec3& a, const Vec3& b, float rise) {
+    float za = 0.0f;
+    float zb = 0.0f;
+    const bool on_a = RampSurfaceAt(world, a.x, a.y, za) && std::fabs(za - a.z) <= 2.0f;
+    const bool on_b = RampSurfaceAt(world, b.x, b.y, zb) && std::fabs(zb - b.z) <= 2.0f;
+    if (!on_a && !on_b) {
+        return false;
+    }
+    const float run = std::sqrt((b.x - a.x) * (b.x - a.x) + (b.y - a.y) * (b.y - a.y));
+    return rise <= run + 1.0f; // 45° 上限，与 AddRamp / MAX_SLOPE 一致
 }
 
 bool SegmentFree(const NavWorld& world, const Vec3& a, const Vec3& b) {
@@ -252,17 +295,23 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     if (start_cell == goal_cell) {
         return remember({to});
     }
-    if (!BodyFree(world, to.x, to.y, to.z)) {
-        return remember({});
-    }
     const int start_level = NearestLevel(world, start_cell, from.z);
     const int goal_level = NearestLevel(world, goal_cell, to.z);
     if (start_level < 0 || goal_level < 0) {
         return remember({});
     }
-    const float goal_z =
-        world.levels[static_cast<size_t>(goal_cell)][static_cast<size_t>(goal_level)].z;
-    if (std::fabs(goal_z - to.z) > kStepUp + kEpsilon) {
+    // 目标高度允许被吸附到该格最近的可行走层（navmesh 的 3D 投影）：
+    // 调用方常给“包点地面坐标”（z=0），而包点实际是 64/128 平台；旧逻辑按 |Δz|>32 直接拒绝，
+    // 结果 bot 拿不到任何去包点的路径、整局原地不动。这里把终点改写到该层高度再校验净空。
+    const Vec3 snapped_to{
+        to.x, to.y,
+        world.levels[static_cast<size_t>(goal_cell)][static_cast<size_t>(goal_level)].z};
+    // 只允许「目标低于可走层」的向上吸附（包点地面坐标 z=0 → 64/128 平台），
+    // 反向（目标在可走层上方，如屋顶 256）仍判不可达，保住 demo_map 的 roof 断言。
+    if (snapped_to.z < to.z - kStepUp || snapped_to.z > to.z + 128.0f) {
+        return remember({});
+    }
+    if (!BodyFree(world, snapped_to.x, snapped_to.y, snapped_to.z)) {
         return remember({});
     }
     const int node_count = grid.nx * grid.ny * kMaxLevelsPerCell;
@@ -319,7 +368,10 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
                 const int next_node = next_cell * kMaxLevelsPerCell + static_cast<int>(level);
                 const Vec3 b = next_levels[level];
                 const float rise = b.z - a.z;
-                if (rise > kStepUp + kEpsilon || rise < -kMaxDrop) {
+                if (rise < -kMaxDrop) {
+                    continue;
+                }
+                if (rise > kStepUp + kEpsilon && !RampLink(world, a, b, rise)) {
                     continue;
                 }
                 if (!SegmentFree(world, a, b)) {
@@ -339,7 +391,7 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     if (!found) {
         return remember({});
     }
-    return remember(BuildPath(world, parent, cell_of_node, start_node, goal_node, to));
+    return remember(BuildPath(world, parent, cell_of_node, start_node, goal_node, snapped_to));
 }
 
 } // namespace recoil

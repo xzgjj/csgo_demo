@@ -18,6 +18,7 @@ import geom
 import geom_reach
 import geom_shell
 import prop_emit
+import ramp_emit
 import scene_contract
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -215,7 +216,7 @@ TYPE_HANDLERS = {
     "catwalk": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
     "floor": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
     "tunnel": lambda row, pl, st, props, groups: _emit_level_platform(row, pl, props),
-    "ramp": lambda row, pl, st, props, groups: _emit_level_stairs(row, props),
+    "ramp": lambda row, pl, st, props, groups: _emit_ramp(row, props),
     "stairs": lambda row, pl, st, props, groups: _emit_level_stairs(row, props),
     "roof": lambda row, pl, st, props, groups: _emit_roof(row, st),
 }
@@ -240,6 +241,11 @@ def _emit_platform(row, platforms, props):
         "material": MATERIAL.get(row["surface"], "concrete"),
         "walkable": True,
     })
+
+def _emit_ramp(row, props):
+    """坡道落位交给 ramp_emit：这里只传材质查表，保持本文件只负责布局装配。"""
+    ramp_emit.emit_ramp(row, props, lambda surface: MATERIAL.get(surface, "concrete"))
+
 
 def _emit_stairs(row, props):
     x0, y0, x1, y1 = rect_of(row)

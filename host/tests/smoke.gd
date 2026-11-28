@@ -61,7 +61,7 @@ func _page_checks() -> void:
 func _check_de_ash() -> void:
 	_expect(main.world != null, "世界节点应存在")
 	_expect(main.world.object_count > 0, "de_ash 对象数应 > 0，实际 %d" % main.world.object_count)
-	_expect(main.world.source == "de_ash_glb", "应加载 de_ash_glb（GLB 视觉），实际 %s"
+	_expect(main.world.source == "de_dust2_glb", "应加载 de_dust2_glb（GLB 视觉），实际 %s"
 			% main.world.source)
 	_expect(main.world.site_anchors.size() == 2, "包点锚点应为 2")
 	_expect(main.world.spawn_anchors.size() == 2, "出生锚点应为 2")
@@ -118,13 +118,13 @@ func _check_menu_and_pause() -> void:
 func _check_settings_persistence() -> void:
 	var store := SettingsStore.new()
 	store.fov = 100.0
-	store.sensitivity = 0.125
+	store.sensitivity = 0.022
 	store.volume = 55
 	_expect(store.save_settings(), "设置应写入 user://settings.cfg")
 	var reloaded := SettingsStore.new()
 	_expect(reloaded.load_settings(), "设置应能从 user://settings.cfg 读回")
 	_expect(is_equal_approx(reloaded.fov, 100.0), "FOV 持久化失败")
-	_expect(is_equal_approx(reloaded.sensitivity, 0.125), "灵敏度持久化失败")
+	_expect(is_equal_approx(reloaded.sensitivity, 0.022), "灵敏度持久化失败")
 	_expect(reloaded.volume == 55, "音量持久化失败")
 	var bad_config := ConfigFile.new()
 	bad_config.set_value("player", "fov", 500.0)
@@ -137,10 +137,10 @@ func _check_settings_persistence() -> void:
 	_expect(clamped.volume == 80, "非法音量应回退默认 80，实际 %d" % clamped.volume)
 	main.show_settings_page()
 	main.settings_page.fov_slider.value = 104.0
-	main.settings_page.sensitivity_slider.value = 0.15
+	main.settings_page.sensitivity_slider.value = 0.022
 	main.close_settings_page()
 	_expect(is_equal_approx(main.camera.fov, 104.0), "设置页 FOV 应实时生效")
-	_expect(is_equal_approx(main.settings.sensitivity, 0.15), "设置页灵敏度应实时生效")
+	_expect(is_equal_approx(main.settings.sensitivity, 0.022), "设置页灵敏度应实时生效")
 	var saved := SettingsStore.new()
 	saved.load_settings()
 	_expect(is_equal_approx(saved.fov, 104.0), "页面保存后文件应为 104")

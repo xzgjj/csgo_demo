@@ -18,7 +18,7 @@ OUT = ROOT / "host/scenes/de_ash_boxes.json"
 def to_godot(box):
     cx, cy, cz = box["center"]
     sx, sy, sz = box["size"]
-    return {
+    out = {
         "center": [-cy, cz, -cx],
         "size": [sy, sz, sx],
         "color": box["color"],
@@ -27,6 +27,14 @@ def to_godot(box):
         "collision": box["collision"],
         "hp": int(box.get("hp", 0)),
     }
+    slope = box.get("slope")
+    if slope:
+        # sim x → Godot -z（升序取反），sim y → Godot -x（同样取反）。
+        out["slope"] = {
+            "axis": "z" if slope["axis"] == "x" else "x",
+            "ascending": not bool(slope["ascending"]),
+        }
+    return out
 
 
 def build(layout):

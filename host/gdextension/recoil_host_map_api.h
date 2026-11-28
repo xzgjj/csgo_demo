@@ -5,6 +5,12 @@
         return recoil_host::SetMapBoxes(map_, map_report_, boxes);
     }
     void set_map_wall_hp(const PackedInt32Array& hp) { recoil_host::LoadWallHp(map_, hp); }
+    int set_map_ramps(const PackedFloat32Array& ramps) {
+        return recoil_host::SetMapRamps(map_, map_report_, ramps);
+    }
+    int set_map_spawn_slots(const PackedFloat32Array& slots) {
+        return recoil_host::LoadSpawnSlots(map_, slots);
+    }
     void set_map_frame(float min_x, float min_y, float max_x, float max_y, float tx, float ty,
                        float tz, float cx, float cy, float cz) {
         recoil_host::LoadMapFrame(map_, min_x, min_y, max_x, max_y, tx, ty, tz, cx, cy, cz);

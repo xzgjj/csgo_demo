@@ -4190,39 +4190,41 @@
    "id": "A-06",
    "kind": "prop",
    "center": [
-    1540.0,
-    1550.0,
+    1534.0,
+    1554.0,
     128.0
    ],
    "size": [
-    140,
-    120,
-    112.0
+    128,
+    128,
+    128.0
    ],
    "material": "wood",
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 200
+   "hp": 200,
+   "kit": "Kit-crate-large"
   },
   {
    "id": "A-07",
    "kind": "prop",
    "center": [
-    1270.0,
-    1630.0,
+    1294.0,
+    1724.0,
     128.0
    ],
    "size": [
-    120,
-    120,
+    128,
+    128,
     128.0
    ],
    "material": "wood",
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 300
+   "hp": 300,
+   "kit": "Kit-crate-large"
   },
   {
    "id": "A-08",
@@ -4241,14 +4243,15 @@
    "walkable": false,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Kit-car"
   },
   {
    "id": "A-09",
    "kind": "prop",
    "center": [
-    1820.0,
     1790.0,
+    1740.0,
     128.0
    ],
    "size": [
@@ -4260,7 +4263,8 @@
    "walkable": true,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Kit-goose"
   },
   {
    "id": "A-10",
@@ -4279,13 +4283,14 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 200
+   "hp": 200,
+   "kit": "Kit-crate-small"
   },
   {
    "id": "A-11",
    "kind": "prop",
    "center": [
-    1312.0,
+    1482.0,
     1812.0,
     128.0
    ],
@@ -4298,71 +4303,28 @@
    "walkable": false,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Kit-barrel"
   },
   {
-   "id": "A-14_step0",
-   "kind": "stairs",
+   "id": "A-14",
+   "kind": "ramp",
    "center": [
-    797.5,
+    932.0,
     1575.0,
     0.0
    ],
    "size": [
-    115.0,
-    290,
-    32.0
-   ],
-   "material": "concrete",
-   "walkable": true
-  },
-  {
-   "id": "A-14_step1",
-   "kind": "stairs",
-   "center": [
-    912.5,
-    1575.0,
-    0.0
-   ],
-   "size": [
-    115.0,
-    290,
-    64.0
-   ],
-   "material": "concrete",
-   "walkable": true
-  },
-  {
-   "id": "A-14_step2",
-   "kind": "stairs",
-   "center": [
-    1027.5,
-    1575.0,
-    0.0
-   ],
-   "size": [
-    115.0,
-    290,
-    96.0
-   ],
-   "material": "concrete",
-   "walkable": true
-  },
-  {
-   "id": "A-14_step3",
-   "kind": "stairs",
-   "center": [
-    1142.5,
-    1575.0,
-    0.0
-   ],
-   "size": [
-    115.0,
+    384,
     290,
     128.0
    ],
    "material": "concrete",
-   "walkable": true
+   "walkable": true,
+   "slope": {
+    "axis": "x",
+    "ascending": true
+   }
   },
   {
    "id": "A-16",
@@ -4423,12 +4385,12 @@
    "kind": "platform",
    "center": [
     -1510.0,
-    1790.0,
+    1780.5,
     0.0
    ],
    "size": [
     740,
-    580,
+    599,
     64.0
    ],
    "material": "concrete",
@@ -4454,20 +4416,21 @@
    "id": "B-06",
    "kind": "prop",
    "center": [
-    -1355.0,
-    1655.0,
+    -1354.0,
+    1654.0,
     64.0
    ],
    "size": [
-    130,
-    130,
+    128,
+    128,
     128.0
    ],
    "material": "wood",
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 300
+   "hp": 300,
+   "kit": "Kit-crate-large"
   },
   {
    "id": "B-07",
@@ -4480,13 +4443,14 @@
    "size": [
     160,
     130,
-    240.0
+    192.0
    ],
    "material": "wood",
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 100
+   "hp": 100,
+   "kit": "Kit-shed"
   },
   {
    "id": "B-08",
@@ -4505,26 +4469,28 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 200
+   "hp": 200,
+   "kit": "Kit-crate-small"
   },
   {
    "id": "B-09",
    "kind": "prop",
    "center": [
-    -1325.0,
-    1885.0,
+    -1320.0,
+    1890.0,
     128.0
    ],
    "size": [
-    150,
-    170,
+    160,
+    180,
     96.0
    ],
    "material": "metal",
    "walkable": false,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Kit-car"
   },
   {
    "id": "B-10",
@@ -4543,7 +4509,8 @@
    "walkable": false,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Kit-sandbag"
   },
   {
    "id": "B-13",
@@ -4581,7 +4548,8 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 400
+   "hp": 400,
+   "kit": "Reuse-Kenney"
   },
   {
    "id": "L-09",
@@ -4600,7 +4568,8 @@
    "walkable": false,
    "collision": true,
    "breakable": false,
-   "hp": 0
+   "hp": 0,
+   "kit": "Reuse-Conv"
   },
   {
    "id": "L-10",
@@ -4635,7 +4604,8 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 200
+   "hp": 200,
+   "kit": "Reuse-Kenney"
   },
   {
    "id": "M-04",
@@ -4654,7 +4624,8 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 400
+   "hp": 400,
+   "kit": "Reuse-Kenney"
   },
   {
    "id": "M-07",
@@ -4673,7 +4644,8 @@
    "walkable": false,
    "collision": true,
    "breakable": true,
-   "hp": 200
+   "hp": 200,
+   "kit": "Reuse-Kenney"
   },
   {
    "id": "M-10",
@@ -4772,128 +4744,264 @@
    "walkable": true
   },
   {
-   "id": "M-17_1",
+   "id": "M-17a",
    "kind": "prop",
    "center": [
-    323.5,
+    308.0,
     -148.0,
     0.0
    ],
    "size": [
-    127.0,
-    16,
+    96,
+    96,
     96.0
    ],
-   "material": "metal",
+   "material": "stone",
    "walkable": false,
    "collision": true,
-   "breakable": true,
-   "hp": 80
+   "breakable": false,
+   "hp": 0,
+   "kit": "Original"
   },
   {
-   "id": "M-17_2",
+   "id": "M-17b",
    "kind": "prop",
    "center": [
-    454.5,
+    518.0,
     -148.0,
     0.0
    ],
    "size": [
-    127.0,
-    16,
+    96,
+    96,
     96.0
    ],
-   "material": "metal",
+   "material": "stone",
    "walkable": false,
    "collision": true,
-   "breakable": true,
-   "hp": 80
+   "breakable": false,
+   "hp": 0,
+   "kit": "Original"
   },
   {
-   "id": "M-17_3",
+   "id": "M-17c",
    "kind": "prop",
    "center": [
-    585.5,
+    728.0,
     -148.0,
     0.0
    ],
    "size": [
-    127.0,
-    16,
+    96,
+    96,
     96.0
    ],
-   "material": "metal",
+   "material": "stone",
    "walkable": false,
    "collision": true,
-   "breakable": true,
-   "hp": 80
+   "breakable": false,
+   "hp": 0,
+   "kit": "Original"
   },
   {
-   "id": "M-17_4",
-   "kind": "prop",
+   "id": "B-16",
+   "kind": "ramp",
    "center": [
-    716.5,
-    -148.0,
-    0.0
-   ],
-   "size": [
-    127.0,
-    16,
-    96.0
-   ],
-   "material": "metal",
-   "walkable": false,
-   "collision": true,
-   "breakable": true,
-   "hp": 80
-  },
-  {
-   "id": "B-16_step0",
-   "kind": "stairs",
-   "center": [
-    -1090.0,
+    -1079.0,
     1630.0,
     0.0
    ],
    "size": [
-    40,
-    140.0,
-    32.0
-   ],
-   "material": "concrete",
-   "walkable": true
-  },
-  {
-   "id": "B-17_step0",
-   "kind": "stairs",
-   "center": [
-    -1130.0,
-    1595.0,
-    0.0
-   ],
-   "size": [
-    40,
-    70.0,
-    32.0
-   ],
-   "material": "concrete",
-   "walkable": true
-  },
-  {
-   "id": "B-17_step1",
-   "kind": "stairs",
-   "center": [
-    -1130.0,
-    1665.0,
-    0.0
-   ],
-   "size": [
-    40,
-    70.0,
+    90,
+    140,
     64.0
    ],
    "material": "concrete",
-   "walkable": true
+   "walkable": true,
+   "slope": {
+    "axis": "x",
+    "ascending": false
+   }
+  },
+  {
+   "id": "A-26",
+   "kind": "prop",
+   "center": [
+    1564.0,
+    1322.0,
+    128.0
+   ],
+   "size": [
+    128,
+    64,
+    64.0
+   ],
+   "material": "fabric",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-sandbag"
+  },
+  {
+   "id": "A-27",
+   "kind": "prop",
+   "center": [
+    1688.0,
+    1668.0,
+    128.0
+   ],
+   "size": [
+    96,
+    96,
+    64.0
+   ],
+   "material": "stone",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-planter"
+  },
+  {
+   "id": "A-28",
+   "kind": "prop",
+   "center": [
+    1408.0,
+    1728.0,
+    128.0
+   ],
+   "size": [
+    96,
+    96,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-crate-small"
+  },
+  {
+   "id": "A-29",
+   "kind": "prop",
+   "center": [
+    1780.0,
+    1570.0,
+    128.0
+   ],
+   "size": [
+    120,
+    100,
+    96.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-cart"
+  },
+  {
+   "id": "B-18",
+   "kind": "ramp",
+   "center": [
+    -1170.0,
+    1420.0,
+    0.0
+   ],
+   "size": [
+    140,
+    90,
+    64.0
+   ],
+   "material": "concrete",
+   "walkable": true,
+   "slope": {
+    "axis": "y",
+    "ascending": true
+   }
+  },
+  {
+   "id": "B-19",
+   "kind": "prop",
+   "center": [
+    -1232.0,
+    1728.0,
+    64.0
+   ],
+   "size": [
+    96,
+    96,
+    96.0
+   ],
+   "material": "wood",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-crate-small"
+  },
+  {
+   "id": "B-20",
+   "kind": "prop",
+   "center": [
+    -1488.0,
+    2012.0,
+    128.0
+   ],
+   "size": [
+    64,
+    64,
+    88.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-barrel"
+  },
+  {
+   "id": "B-21",
+   "kind": "prop",
+   "center": [
+    -1536.0,
+    1812.0,
+    64.0
+   ],
+   "size": [
+    128,
+    64,
+    64.0
+   ],
+   "material": "fabric",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-sandbag"
+  },
+  {
+   "id": "B-22",
+   "kind": "prop",
+   "center": [
+    -1690.0,
+    1770.0,
+    64.0
+   ],
+   "size": [
+    120,
+    100,
+    96.0
+   ],
+   "material": "metal",
+   "walkable": false,
+   "collision": true,
+   "breakable": false,
+   "hp": 0,
+   "kit": "Kit-cart"
   }
  ],
  "rotation_seconds_target": {
@@ -4915,12 +5023,11 @@
   "max_door_width": 128,
   "min_site_width": 600,
   "min_site_depth": 580,
-  "min_breakables": 14,
+  "min_breakables": 13,
   "breakable_hp": [
    20,
    30,
    60,
-   80,
    100,
    200,
    300,

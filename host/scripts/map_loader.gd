@@ -38,7 +38,12 @@ static func apply_path(sim: RefCounted, path: String) -> int:
 		return 0
 	var flat := PackedFloat32Array()
 	var hp := PackedInt32Array()
+	var ramps := PackedFloat32Array()
 	for item: Dictionary in data.get("boxes", []):
+		# 坡道是斜面图元：进 ramps 通道，不进墙体（盒子当墙会把玩家从斜面里推出去）。
+		if str(item.get("kind", "")) == "ramp" and item.has("slope"):
+			ramps.append_array(_flatten_ramp(item))
+			continue
 		if not bool(item.get("collision", true)):
 			continue
 		flat.append_array(_flatten_box(item))
@@ -46,6 +51,7 @@ static func apply_path(sim: RefCounted, path: String) -> int:
 	var expected := flat.size() / 8
 	var written: int = sim.set_map_boxes(flat)
 	sim.set_map_wall_hp(hp)
+	sim.set_map_ramps(ramps)
 	var rejected: int = sim.get_map_rejected()
 	if rejected > 0:
 		push_error("地图盒被拒绝 %d 个（首个错误码 %d，检查尺寸/旋转/材质/容量）" %
@@ -76,6 +82,7 @@ static func _inject_layout_points(sim: RefCounted, data: Dictionary) -> void:
 			sites.append(point)
 		else:
 			spawns.append(point)
+	_inject_spawn_slots(sim, data)
 	spawns.sort_custom(_sort_by_y)
 	if spawns.size() >= 2:
 		var spawn_t: Vector2 = spawns[0]
@@ -89,6 +96,77 @@ static func _inject_layout_points(sim: RefCounted, data: Dictionary) -> void:
 				site_a = site_b
 				site_b = swap
 			sim.set_sites(site_a.x, site_a.y, site_b.x, site_b.y)
+
+
+## 出生槽：布局里 T/CT 各 5 个点（sim 坐标），内核据此把 5 人排开；
+## 旧清单没有 spawns 字段时，用 kind=spawn 盒的宽度现场生成 5 槽（否则 10 人会在原点挤成一排）。
+static func _inject_spawn_slots(sim: RefCounted, data: Dictionary) -> void:
+	var config: Dictionary = data.get("spawns", {})
+	var fallback := _fallback_spawn_slots(data) if config.is_empty() else []
+	var slots := PackedFloat32Array()
+	for team in ["T", "CT"]:
+		var entry: Dictionary = config.get(team, {})
+		var points: Array = entry.get("slots", [])
+		if points.is_empty() and fallback.size() == 2:
+			points = fallback[0] if team == "T" else fallback[1]
+		for index in 5:
+			if index < points.size() and (points[index] as Array).size() >= 2:
+				var point: Array = points[index]
+				slots.append(float(point[0]))
+				slots.append(float(point[1]))
+				slots.append(0.0)
+			else:
+				slots.append(0.0)
+				slots.append(0.0)
+				slots.append(0.0)
+	if slots.size() == 30:
+		sim.set_map_spawn_slots(slots)
+
+
+## 从 spawn 盒合成 5 槽：T 取 sim y 最小、CT 取最大；沿盒宽（Godot z）均分，步长≤64u。
+static func _fallback_spawn_slots(data: Dictionary) -> Array:
+	var rows: Array = []
+	for item: Dictionary in data.get("boxes", []):
+		if str(item.get("kind", "")) != "spawn":
+			continue
+		var center: Array = item.get("center", [])
+		var size: Array = item.get("size", [])
+		if center.size() >= 3 and size.size() >= 3:
+			rows.append({"x": -float(center[2]), "y": -float(center[0]), "w": float(size[2])})
+	if rows.size() < 2:
+		return []
+	rows.sort_custom(func(a, b): return float(a["y"]) < float(b["y"]))
+	var result: Array = []
+	for row: Dictionary in [rows[0], rows[rows.size() - 1]]:
+		var step := minf(64.0, float(row["w"]) / 4.0)
+		var points: Array = []
+		for index in 5:
+			points.append([float(row["x"]) + (float(index) - 2.0) * step, float(row["y"])])
+		result.append(points)
+	return result
+
+
+
+## 坡道：Godot 盒（center/size/slope）→ 内核 Ramp 的 8 float（min xyz / max xyz / axis / ascending）。
+static func _flatten_ramp(item: Dictionary) -> PackedFloat32Array:
+	var center: Array = item.get("center", [])
+	var size: Array = item.get("size", [])
+	var slope: Dictionary = item.get("slope", {})
+	var out := PackedFloat32Array()
+	if center.size() < 3 or size.size() < 3:
+		return out
+	# Godot → sim：x_sim = -z_g，y_sim = -x_g，高度不变。
+	out.append(-(float(center[2]) + float(size[2]) / 2.0))
+	out.append(-(float(center[0]) + float(size[0]) / 2.0))
+	out.append(float(center[1]) - float(size[1]) / 2.0)
+	out.append(-(float(center[2]) - float(size[2]) / 2.0))
+	out.append(-(float(center[0]) - float(size[0]) / 2.0))
+	out.append(float(center[1]) + float(size[1]) / 2.0)
+	# Godot → sim：x_sim = -z_g，y_sim = -x_g。gen_blockout 生成盒时已把 axis/ascending
+	# 换到 Godot 轴，内核的 ascends_positive 语义与 boxes.json 的 ascending 相反，这里按位取反。
+	out.append(0.0 if str(slope.get("axis", "z")) == "z" else 1.0)
+	out.append(0.0 if bool(slope.get("ascending", true)) else 1.0)
+	return out
 
 
 static func _sort_by_y(a: Vector2, b: Vector2) -> bool:

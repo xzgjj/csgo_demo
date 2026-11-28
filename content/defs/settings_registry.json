@@ -499,6 +499,24 @@
       "icon": "keyboard",
       "groups": [
         {
+          "id": "movement",
+          "title": "移动",
+          "items": [
+            {
+              "id": "controls.move.speed_scale",
+              "label": "移动速度倍率",
+              "type": "slider",
+              "min": 0.7,
+              "max": 1.2,
+              "step": 0.05,
+              "default": 1.0,
+              "apply": "immediate",
+              "target": "input",
+              "note": "1.0 = CS 基准 250 u/s；调到 0.8 约等于 200 u/s"
+            }
+          ]
+        },
+        {
           "id": "mouse",
           "title": "鼠标",
           "items": [
@@ -506,10 +524,10 @@
               "id": "controls.mouse.sensitivity",
               "label": "灵敏度",
               "type": "slider",
-              "min": 0.02,
-              "max": 0.2,
-              "step": 0.005,
-              "default": 0.08,
+              "min": 0.006,
+              "max": 0.08,
+              "step": 0.002,
+              "default": 0.022,
               "apply": "immediate",
               "target": "input"
             },
@@ -517,10 +535,10 @@
               "id": "controls.mouse.zoom_sensitivity",
               "label": "开镜灵敏度",
               "type": "slider",
-              "min": 0.02,
-              "max": 0.2,
-              "step": 0.005,
-              "default": 0.06,
+              "min": 0.006,
+              "max": 0.08,
+              "step": 0.002,
+              "default": 0.016,
               "apply": "immediate",
               "target": "input"
             },
@@ -721,12 +739,12 @@
           "items": [
             {
               "id": "camera.fov",
-              "label": "视野 FOV",
+              "label": "视野 FOV（垂直视角，74 ≈ 16:9 下水平 90°）",
               "type": "slider",
-              "min": 70,
+              "min": 60,
               "max": 110,
               "step": 1,
-              "default": 90,
+              "default": 74,
               "apply": "immediate",
               "target": "camera"
             },

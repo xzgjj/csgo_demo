@@ -4,6 +4,7 @@ extends SceneTree
 ## 产出：<map>_<view>.png（7 机位）与 trace.json（盒子哈希/三角面/材质/相机位姿）。
 
 const MapLoader = preload("res://scripts/map_loader.gd")
+const SiteStyleScript = preload("res://scripts/site_style.gd")
 const VIEWS := {
 	"overview_top": [Vector3(0, 3400, 0), Vector3(0, 0, 0), false],
 	"A_site": [Vector3(-1575, 420, -780), Vector3(-1575, 128, -1500), true],
@@ -12,9 +13,13 @@ const VIEWS := {
 	"T_spawn": [Vector3(1835, 210, 850), Vector3(1200, 60, 300), true],
 	"CT_spawn": [Vector3(-1420, 210, -800), Vector3(-500, 60, -200), true],
 	"long": [Vector3(1500, 210, -1160), Vector3(-1400, 60, -1160), true],
+	"A_ramp": [Vector3(-1575, 190, -610), Vector3(-1575, 64, -920), true],
+	"B_ramp_west": [Vector3(-1620, 170, 960), Vector3(-1620, 32, 1100), true],
+	"B_ramp_south": [Vector3(-1300, 170, 1180), Vector3(-1481, 32, 1180), true],
 }
 var map_id := "de_dust2"
 var out_dir := ""
+var styled := false
 var poses: Array = []
 
 
@@ -25,6 +30,8 @@ func _initialize() -> void:
 			map_id = text.trim_prefix("--map=")
 		elif text.begins_with("--out="):
 			out_dir = text.trim_prefix("--out=")
+		elif text.begins_with("--styled"):
+			styled = true
 	if out_dir.is_empty():
 		out_dir = ProjectSettings.globalize_path("res://captures/%s" % map_id)
 	DirAccess.make_dir_recursive_absolute(out_dir)
@@ -48,6 +55,9 @@ func _run() -> void:
 		quit(2)
 		return
 	root3d.add_child(scene)
+	if styled:
+		SiteStyleScript.apply(root3d, scene, map_id,
+				[Vector3(1510, 128, 1575), Vector3(-1510, 64, 1780)])
 	var cam := Camera3D.new()
 	cam.fov = 75.0
 	cam.near = 1.0

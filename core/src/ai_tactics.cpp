@@ -72,7 +72,31 @@ void AimMove(const WorldState& state, uint8_t self, const Vec3& target, const Ma
     const Vec3& position = state.players[self].position;
     Vec3 waypoint = target;
     if (map != nullptr) {
-        const std::vector<Vec3> path = NavPath(*map, position, target);
+        // 目标点可能落在掩体/箱子正中（如 A 点中心那块箱子）：先吸到最近净空再寻路，
+        // 否则 NavPath 直接返回空、bot 整局原地发呆（等价于标准游戏的 navmesh 目标吸附）。
+        waypoint = FindFreeSpot(*map, target);
+        std::vector<Vec3> path = NavPath(*map, position, waypoint);
+        if (path.empty()) {
+            // 净空点也可能落在导航网格的“空洞”格（如包点中线被长墙盖住）：
+            // 以 48u 为步长向外投影目标，取第一个能走通的方向（同 navmesh 最近多边形投影）。
+            constexpr float kSnapStep = 48.0f;
+            constexpr int kSnapRings = 4;
+            const float dirs[8][2] = {{1, 0}, {-1, 0}, {0, 1},  {0, -1},
+                                      {1, 1}, {1, -1}, {-1, 1}, {-1, -1}};
+            for (int ring = 1; ring <= kSnapRings && path.empty(); ++ring) {
+                const float radius = kSnapStep * static_cast<float>(ring);
+                for (const auto& dir : dirs) {
+                    const Vec3 probe{waypoint.x + dir[0] * radius, waypoint.y + dir[1] * radius,
+                                     waypoint.z};
+                    std::vector<Vec3> candidate = NavPath(*map, position, probe);
+                    if (!candidate.empty()) {
+                        waypoint = probe;
+                        path = candidate;
+                        break;
+                    }
+                }
+            }
+        }
         if (path.empty()) {
             out.state = TacticState::Idle;
             out.command = StopCommand(self);
@@ -292,16 +316,20 @@ TacticalDecision TacticalDecide(const WorldState& state, const Content& content,
     if (self >= state.player_count || !state.players[self].alive) {
         return out;
     }
-    // 非进行中回合（冻结/结算/比赛结束）不做战术移动。
-    if (state.round.phase != RoundPhase::Live) {
+    // 冻结期站定；热身期与进行中允许移动（与 CS 热身一致，避免开局 30 秒队友呆立）。
+    const bool can_move =
+        state.round.phase == RoundPhase::Live || state.round.phase == RoundPhase::Warmup;
+    if (!can_move) {
         return out;
     }
-    // 交战优先：复用既有 BotDecide 的可见敌人开火。
-    const Command combat = BotDecide(state, content, self, map);
-    if (combat.kind == CommandKind::Fire) {
-        out.state = TacticState::Engage;
-        out.command = combat;
-        return out;
+    // 交战优先：复用既有 BotDecide 的可见敌人开火（只在正式回合进行中开火）。
+    if (state.round.phase == RoundPhase::Live) {
+        const Command combat = BotDecide(state, content, self, map);
+        if (combat.kind == CommandKind::Fire) {
+            out.state = TacticState::Engage;
+            out.command = combat;
+            return out;
+        }
     }
     // 炸弹已结算（拆除/爆炸）：保持原地，由回合系统收尾。
     if (state.bomb.exploded || state.bomb.defused) {

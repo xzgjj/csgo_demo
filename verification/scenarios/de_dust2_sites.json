@@ -1,0 +1,40 @@
+{
+  "id": "de_dust2_sites",
+  "map": "content/maps/de_dust2.layout.json",
+  "map_id": "de_dust2",
+  "mode": "match",
+  "description": "A/B 独立重设行为验收：从长道坡脚实走上 A 台（128），从 B 东坡脚实走下 B 台（64）；导航路径与碰撞面一致，且不绕屋顶。",
+  "script": [
+    {
+      "action": "walk_nav",
+      "name": "A_ramp_to_platform",
+      "from": [
+        745,
+        1575,
+        0
+      ],
+      "to": [
+        1550,
+        1450,
+        128
+      ],
+      "max_ticks": 720
+    },
+    {
+      "action": "walk_nav",
+      "name": "B_ramp_to_platform",
+      "from": [
+        -1020,
+        1630,
+        0
+      ],
+      "to": [
+        -1450,
+        1840,
+        64
+      ],
+      "max_ticks": 720
+    }
+  ],
+  "asserts": []
+}

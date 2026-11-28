@@ -352,14 +352,17 @@ TEST_CASE("有墙时沿导航路径首航点推进") {
     CHECK(std::fabs(decision.command.yaw_degrees) > 1.0f); // 不是直线朝包点
 }
 
-TEST_CASE("目标被墙占据导致无路径时原地停止") {
+TEST_CASE("目标格被墙占据时吸附到最近可走点继续推进") {
     WorldState state = LiveFiveOnFive();
     KillTeam(state, Team::CT);
     MapDef map = OpenMap();
     AddWall(map, {500.0f, 0.0f, 0.0f}, {520.0f, 32.0f, 256.0f}); // 覆盖 A 目标格
-    REQUIRE(NavPath(map, {0.0f, 0.0f, 0.0f}, {512.0f, 0.0f, 0.0f}).empty());
+    CHECK(NavPath(map, {0.0f, 0.0f, 0.0f}, {512.0f, 0.0f, 0.0f}).empty());
 
+    // spec-debug2：包点格子被掩体占据时按 navmesh 目标吸附，取最近可走点，
+    // 不能像旧版那样直接 Stop（否则就是「队友一动不动」）。
     const TacticalDecision decision = Decide(state, 0, map);
-    CHECK(decision.command.kind == CommandKind::Stop);
-    CHECK(decision.state == TacticState::Idle);
+    CHECK(decision.command.kind == CommandKind::Move);
+    CHECK(decision.state != TacticState::Idle);
+    CHECK(std::fabs(decision.command.move_forward - 1.0f) <= 0.001f);
 }

@@ -34,6 +34,7 @@ def _panel_record(row, center, size, material, hp):
         "collision": True,
         "breakable": row["breakable"] == "yes",
         "hp": hp,
+        "kit": row.get("reuse", ""),
     }
 
 

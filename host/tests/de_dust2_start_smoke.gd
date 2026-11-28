@@ -14,7 +14,7 @@ func _run() -> void:
 	for i in 3:
 		await physics_frame
 	_expect(main.map_id == "de_dust2", "map_id 应为 de_dust2，实际 %s" % main.map_id)
-	_expect(int(main.sim.get_wall_count()) == 146, "碰撞墙数应为 146，实际 %d" % int(
+	_expect(int(main.sim.get_wall_count()) == 149, "碰撞墙数应为 152，实际 %d" % int(
 			main.sim.get_wall_count()))
 	_expect(int(main.sim.get_map_rejected()) == 0, "地图注入不应有拒绝盒")
 	_expect(int(main.sim.get_map_first_error()) == 0, "地图首错码应为 0，实际 %d" % int(
@@ -24,13 +24,13 @@ func _run() -> void:
 	_expect(int(main.sim.get_round_number()) == 1, "开局回合号应为 1")
 	_expect(bool(main.sim.buy_enabled()), "开局后购买应开启")
 	_expect(main.world.map_id == "de_dust2", "画面世界应为 de_dust2，实际 %s" % main.world.map_id)
-	_expect(int(main.world.object_count) == 175, "画面盒数应为 175，实际 %d" % int(
+	_expect(int(main.world.object_count) == 245, "画面盒数应为 245，实际 %d" % int(
 			main.world.object_count))
 	page.start_requested.emit("de_dust2", "training")
 	for i in 2:
 		await physics_frame
 	_expect(not bool(main.match_mode), "训练模式 match_mode 应为 false")
-	_expect(int(main.sim.get_wall_count()) == 146, "训练模式也应注入 de_dust2 碰撞")
+	_expect(int(main.sim.get_wall_count()) == 149, "训练模式也应注入 de_dust2 碰撞")
 	_expect(main.world.map_id == "de_dust2", "训练模式画面世界应保持 de_dust2")
 	finish("DE_DUST2_START_SMOKE")
 

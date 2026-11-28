@@ -48,6 +48,8 @@
         BIND(get_total_fire_events);
         BIND(set_map_boxes, "boxes");
         BIND(set_map_wall_hp, "hp");
+        BIND(set_map_ramps, "ramps");
+        BIND(set_map_spawn_slots, "slots");
         BIND(set_map_frame, "min_x", "min_y", "max_x", "max_y", "tx", "ty", "tz", "cx", "cy", "cz");
         BIND(get_map_rejected);
         BIND(get_map_first_error);
@@ -64,6 +66,7 @@
         BIND(nav_path_points, "fx", "fy", "fz", "tx", "ty", "tz");
         BIND(nav_points, "fx", "fy", "fz", "tx", "ty", "tz");
         BIND(set_player_position, "player", "x", "y", "z");
+        BIND(set_bot_fire_enabled, "enabled");
         BIND(is_visible, "viewer", "target");
         BIND(buy_weapon, "player", "weapon_id");
         BIND(switch_weapon, "player", "slot");

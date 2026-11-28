@@ -1,0 +1,228 @@
+{
+  "schema": "site-kits/1",
+  "map": "de_dust2",
+  "shared": {
+    "crate_small": {
+      "asset_id": "Kit-crate-small",
+      "size": [
+        96,
+        96,
+        96
+      ],
+      "surface": "wood",
+      "collision": true,
+      "budget_faces": 12
+    },
+    "crate_large": {
+      "asset_id": "Kit-crate-large",
+      "size": [
+        128,
+        128,
+        128
+      ],
+      "surface": "wood",
+      "collision": true,
+      "budget_faces": 12
+    },
+    "barrel": {
+      "asset_id": "Kit-barrel",
+      "size": [
+        64,
+        64,
+        88
+      ],
+      "surface": "metal",
+      "collision": true,
+      "budget_faces": 16
+    },
+    "sandbag": {
+      "asset_id": "Kit-sandbag",
+      "size": [
+        128,
+        64,
+        64
+      ],
+      "surface": "fabric",
+      "collision": true,
+      "budget_faces": 12
+    },
+    "planter": {
+      "asset_id": "Kit-planter",
+      "size": [
+        96,
+        96,
+        64
+      ],
+      "surface": "stone",
+      "collision": true,
+      "budget_faces": 12
+    },
+    "cart": {
+      "asset_id": "Kit-cart",
+      "size": [
+        120,
+        100,
+        96
+      ],
+      "surface": "metal",
+      "collision": true,
+      "budget_faces": 16
+    },
+    "car": {
+      "asset_id": "Kit-car",
+      "size": [
+        160,
+        180,
+        96
+      ],
+      "surface": "metal",
+      "collision": true,
+      "budget_faces": 16
+    },
+    "goose": {
+      "asset_id": "Kit-goose",
+      "size": [
+        120,
+        140,
+        64
+      ],
+      "surface": "stone",
+      "collision": true,
+      "budget_faces": 12
+    },
+    "shed": {
+      "asset_id": "Kit-shed",
+      "size": [
+        160,
+        130,
+        192
+      ],
+      "surface": "wood",
+      "collision": true,
+      "budget_faces": 16
+    }
+  },
+  "sites": {
+    "A": {
+      "rect": [
+        1140,
+        1250,
+        1880,
+        1900
+      ],
+      "floor_z": 128,
+      "theme": "sun_court",
+      "tint": {
+        "concrete": "#E6C79A",
+        "stone": "#D8C19A",
+        "wood": "#A66B42",
+        "metal": "#B9A48C",
+        "fabric": "#D2B98E"
+      },
+      "lights": [
+        {
+          "name": "A_SunBounce",
+          "sim": [
+            1510,
+            1520,
+            260
+          ],
+          "color": "#FFD7A8",
+          "energy": 2.2,
+          "range": 620.0,
+          "shadow": true
+        },
+        {
+          "name": "A_WarmFill",
+          "sim": [
+            1280,
+            1700,
+            210
+          ],
+          "color": "#FFC98E",
+          "energy": 1.1,
+          "range": 420.0,
+          "shadow": false
+        }
+      ],
+      "signature_kits": [
+        "Kit-crate-large",
+        "Kit-crate-small",
+        "Kit-car",
+        "Kit-goose",
+        "Kit-sandbag",
+        "Kit-planter",
+        "Kit-barrel",
+        "Kit-cart"
+      ],
+      "tint_strength": 0.45,
+      "tint_emission": 0.0
+    },
+    "B": {
+      "rect": [
+        -1880,
+        1481,
+        -1140,
+        2080
+      ],
+      "floor_z": 64,
+      "theme": "shade_court",
+      "tint": {
+        "concrete": "#AEBAC6",
+        "stone": "#A8AEB4",
+        "wood": "#6E543F",
+        "metal": "#8E9BA8",
+        "fabric": "#77858C"
+      },
+      "lights": [
+        {
+          "name": "B_CoolFill",
+          "sim": [
+            -1450,
+            1700,
+            210
+          ],
+          "color": "#A9C4DA",
+          "energy": 2.8,
+          "range": 760,
+          "shadow": true
+        },
+        {
+          "name": "B_ShedWarm",
+          "sim": [
+            -1720,
+            1620,
+            230
+          ],
+          "color": "#FFB877",
+          "energy": 1.2,
+          "range": 360.0,
+          "shadow": false
+        },
+        {
+          "name": "B_TunnelSpill",
+          "sim": [
+            -1230,
+            1480,
+            160
+          ],
+          "color": "#92AFC6",
+          "energy": 0.9,
+          "range": 320.0,
+          "shadow": false
+        }
+      ],
+      "signature_kits": [
+        "Kit-crate-large",
+        "Kit-crate-small",
+        "Kit-car",
+        "Kit-shed",
+        "Kit-sandbag",
+        "Kit-barrel",
+        "Kit-cart"
+      ],
+      "tint_strength": 0.9,
+      "tint_emission": 0.1
+    }
+  }
+}

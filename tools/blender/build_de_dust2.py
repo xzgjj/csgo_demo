@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import bpy
+import bmesh
 
 PROJECT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -67,6 +68,49 @@ def reset_collection() -> bpy.types.Collection:
     return collection
 
 
+def ramp_object(box, material, name):
+    """坡道楔形：低边贴地、高边到顶，斜面朝上；Godot (x,y,z) → Blender (x,-z,y)。"""
+    cx, cy, cz = (float(v) for v in box["center"])
+    sx, sy, sz = (abs(float(v)) for v in box["size"])
+    slope = box.get("slope", {})
+    axis = str(slope.get("axis", "x"))
+    ascending = bool(slope.get("ascending", True))
+    lo, hi = cy - sy / 2.0, cy + sy / 2.0
+    x0, x1 = cx - sx / 2.0, cx + sx / 2.0
+    z0, z1 = cz - sz / 2.0, cz + sz / 2.0
+    # 低边/高边：axis=x 时高低边在 x0/x1，axis=z 时在 z0/z1。
+    if axis == "x":
+        x_low, x_high = (x0, x1) if ascending else (x1, x0)
+        low_pair = [(x_low, z0), (x_low, z1)]
+        high_pair = [(x_high, z0), (x_high, z1)]
+    else:
+        z_low, z_high = (z0, z1) if ascending else (z1, z0)
+        low_pair = [(x0, z_low), (x1, z_low)]
+        high_pair = [(x0, z_high), (x1, z_high)]
+    verts = [low_pair[0] + (lo,), low_pair[1] + (lo,),
+             high_pair[0] + (lo,), high_pair[1] + (lo,),
+             high_pair[0] + (hi,), high_pair[1] + (hi,)]
+    # 顶点相对物体原点；原点放在盒中心（Godot → Blender），导出后 node 中心与 boxes 一致。
+    verts = [(gx - cx, -(gz - cz), h - cy) for (gx, gz, h) in verts]
+    faces = [(0, 1, 3, 2), (2, 3, 5, 4), (0, 4, 5, 1), (0, 2, 4), (1, 5, 3)]
+    mesh = bpy.data.meshes.new(name)
+    mesh.from_pydata(verts, [], faces)
+    mesh.validate()
+    # 楔形是闭合体：统一重算外法线，避免 asc/axis 翻转导致斜面背面剔除成“浮空三角”。
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    mesh.update()
+    obj = bpy.data.objects.new(name, mesh)
+    obj.location = (cx, -cz, cy)
+    # 坡道可能因 asc/axis 翻转导致斜面法线朝下；共材质双面化，保留贴图且任何朝向都可见。
+    material.use_backface_culling = False
+    obj.data.materials.append(material)
+    return obj
+
+
 def build() -> int:
     data = json.loads(BOXES_PATH.read_text(encoding="utf-8"))
     boxes = data["boxes"]
@@ -78,15 +122,20 @@ def build() -> int:
         # Godot → Blender： (x, y, z)_G → (x, -z, y)_B
         location = (float(center[0]), -float(center[2]), float(center[1]))
         scale = (float(size[0]), float(size[2]), float(size[1]))
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
-        obj = bpy.context.object
-        obj.name = f"box_{index:03d}_{box['kind']}"
-        obj.scale = scale
-        obj.data.materials.append(materials[box["material"]])
+        if box["kind"] == "ramp" and box.get("slope"):
+            obj = ramp_object(box, materials[box["material"]], f"box_{index:03d}_ramp")
+        else:
+            bpy.ops.mesh.primitive_cube_add(size=1.0, location=location)
+            obj = bpy.context.object
+            obj.name = f"box_{index:03d}_{box['kind']}"
+            obj.scale = scale
+            obj.data.materials.append(materials[box["material"]])
         obj["box_index"] = index
         obj["kind"] = box["kind"]
         obj["material_id"] = box["material"]
         obj["collision"] = bool(box["collision"])
+        if box.get("kit"):
+            obj["kit"] = box["kit"]
         for old in list(obj.users_collection):
             old.objects.unlink(obj)
         collection.objects.link(obj)

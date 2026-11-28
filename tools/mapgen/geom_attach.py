@@ -166,22 +166,24 @@ def prop_boxes(prop):
     sx, sy, sz = prop["size"]
     z0 = float(prop["center"][2]) if len(prop["center"]) > 2 else 0.0
     z0 += float(prop.get("base_z", 0.0))
-    return [
-        make_box(
-            prop["id"],
-            prop.get("kind", "prop"),
-            prop.get("material", "wood"),
-            cx - sx / 2,
-            cx + sx / 2,
-            cy - sy / 2,
-            cy + sy / 2,
-            z0,
-            z0 + sz,
-            walkable=bool(prop.get("walkable", False)),
-            collision=bool(prop.get("collision", True)),
-            hp=int(prop.get("hp", 0)),
-        )
-    ]
+    box = make_box(
+        prop["id"],
+        prop.get("kind", "prop"),
+        prop.get("material", "wood"),
+        cx - sx / 2,
+        cx + sx / 2,
+        cy - sy / 2,
+        cy + sy / 2,
+        z0,
+        z0 + sz,
+        walkable=bool(prop.get("walkable", False)),
+        collision=bool(prop.get("collision", True)),
+        hp=int(prop.get("hp", 0)),
+    )
+    # 坡道额外带上升方向：下游（gen_blockout/宿主/内核 Ramp）靠它算斜面标高。
+    if "slope" in prop:
+        box["slope"] = dict(prop["slope"])
+    return [box]
 
 
 def marker_boxes(layout):

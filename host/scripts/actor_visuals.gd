@@ -23,7 +23,8 @@ static func sync_player(mesh_instance: Node3D, sim: RefCounted) -> void:
 			-sim.get_x(0))
 
 
-static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:	var mesh_instance := MeshInstance3D.new()
+static func make_smoke(parent: Node3D, radius: float = 144.0) -> MeshInstance3D:
+	var mesh_instance := MeshInstance3D.new()
 	var sphere := SphereMesh.new()
 	sphere.radius = radius
 	sphere.height = radius * 2.0

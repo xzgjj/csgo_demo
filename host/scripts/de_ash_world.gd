@@ -2,6 +2,7 @@ class_name DeAshWorld
 extends Node3D
 const MapDecorScript = preload("res://scripts/map_decor.gd")
 const MapLoaderScript = preload("res://scripts/map_loader.gd")
+const SiteStyleScript = preload("res://scripts/site_style.gd")
 ## demo 世界：优先按 host/scenes/de_ash_boxes.json 生成 de_ash（墙 / 车道 / 包点 / 出生 / 道具，
 ## 材质由 MaterialLib 按 kind 选择）；JSON 缺失或非法时回退到与内核 ±800 对齐的 1600 灰盒。
 ## 包点/出生锚点直接取盒子清单里 kind=site/spawn 的中心，保证与布局数据一致。
@@ -63,6 +64,7 @@ func build(boxes_path: String = DEFAULT_BOXES_PATH, id: String = "de_ash") -> bo
 		if blockout.site_anchors.size() >= 2:
 			MapDecorScript.add(self, blockout.site_anchors[0], blockout.site_anchors[1],
 					blockout.boxes)
+		SiteStyleScript.apply(self, glb_world, map_id, blockout.site_anchors)
 		source = "%s_glb" % map_id
 	for anchor: Vector3 in blockout.spawn_anchors:
 		spawn_anchors.append(anchor)

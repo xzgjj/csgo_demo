@@ -27,7 +27,7 @@ func _check_slider(store) -> void:
 	_expect(store.set_value("camera.fov", 500.0), "越界 FOV 应被钳制后接受")
 	_expect(is_equal_approx(float(store.get_value("camera.fov")), 110.0), "FOV 应钳到上限 110")
 	store.set_value("camera.fov", -50.0)
-	_expect(is_equal_approx(float(store.get_value("camera.fov")), 70.0), "FOV 应钳到下限 70")
+	_expect(is_equal_approx(float(store.get_value("camera.fov")), 60.0), "FOV 应钳到下限 60")
 	store.set_value("camera.fov", 92.6)
 	_expect(is_equal_approx(float(store.get_value("camera.fov")), 93.0), "FOV 应按 step=1 取整")
 	_expect(not store.set_value("camera.fov", "90"), "字符串不能写入 slider")
@@ -39,7 +39,7 @@ func _check_type_mismatch(store) -> void:
 	_expect(not store.set_value("controls.mouse.sensitivity", INF), "INF 应拒绝")
 	var before := float(store.get_value("controls.mouse.sensitivity"))
 	store.set_value("controls.mouse.sensitivity", 0.001)
-	_expect(is_equal_approx(float(store.get_value("controls.mouse.sensitivity")), 0.02),
+	_expect(is_equal_approx(float(store.get_value("controls.mouse.sensitivity")), 0.006),
 			"低于下限应钳制（before=%f）" % before)
 	_expect(not store.set_value("no.such.item", 1.0), "未知 id 应拒绝")
 
@@ -74,7 +74,7 @@ func _check_disk_config() -> void:
 	_expect(bool(store.get_value("display.window.vsync")), "bool 类型不符应回退默认 true")
 	_expect(int(store.get_value("display.window.max_fps")) == 240, "越界 max_fps 应钳到 240")
 	_expect(int(store.get_value("audio.master.volume")) == 80, "非法音量应回退默认 80")
-	_expect(is_equal_approx(float(store.get_value("controls.mouse.sensitivity")), 0.02),
+	_expect(is_equal_approx(float(store.get_value("controls.mouse.sensitivity")), 0.006),
 			"负灵敏度应钳到下限")
 
 
