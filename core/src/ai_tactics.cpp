@@ -6,6 +6,7 @@
 #include "recoil/ai/bot.h"
 #include "recoil/ai/nav.h"
 #include "recoil/base/vec3.h"
+#include "recoil/world/placement.h"
 
 namespace recoil {
 namespace {
@@ -89,10 +90,14 @@ void AimMove(const WorldState& state, uint8_t self, const Vec3& target, const Ma
 void PatrolHold(const WorldState& state, uint8_t self, const SiteLayout& layout, BombSite site,
                 TeamRole role, const MapDef* map, TacticalDecision& out) {
     out.state = TacticState::Hold;
-    const Vec3 hold = HoldPoint(layout, site, role);
+    Vec3 hold = HoldPoint(layout, site, role);
+    // 守点是设计坐标：若被道具/台阶占了净空，就地吸到最近的空位，避免 bot 直架在箱子里。
+    if (map != nullptr) {
+        hold = FindFreeSpot(*map, hold);
+    }
     if (FlatDistance(state.players[self].position, hold) > layout.patrol_radius) {
         // 已在包点 hold_radius 内，落位属于几十 u 的微调；直接朝点走，避免每 tick 跑一次全图 A*。
-        AimMove(state, self, hold, nullptr, out);
+        AimMove(state, self, hold, map, out);
     } else {
         out.command = StopCommand(self);
     }

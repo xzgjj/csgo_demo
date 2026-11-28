@@ -8,6 +8,7 @@
 #include "recoil/sim/buy.h"
 #include "recoil/sim/match.h"
 #include "recoil/sim/reject.h"
+#include "recoil/world/placement.h"
 
 namespace recoil {
 namespace {
@@ -122,6 +123,8 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
         }
         player.position = is_t ? TeamSpawn(TSpawnCenter(map, state), t_slot++)
                                : TeamSpawn(CTSpawnCenter(map, state), ct_slot++);
+        // 出生点是“意图坐标”，道具可能吃掉净空：贴回最近可站立处（确定性）。
+        player.position = map ? FindFreeSpot(*map, player.position) : player.position;
     }
     // C4 给 T 侧第一名玩家，拆弹器给 CT 侧第一名（不重置经济）。
     uint8_t carrier = 0xFF;

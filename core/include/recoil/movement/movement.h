@@ -18,7 +18,9 @@ struct MovementDef {
     float friction = 5.2f;
     float stop_speed = 80.0f;
     float gravity = 800.0f;
-    float jump_impulse = 301.993f;
+    // 跳高 72u：v = sqrt(2 * 800 * 72) ≈ 339.411。64u 箱/72u 台面均可直接上（旧 301.993 只有
+    // 57u）。
+    float jump_impulse = 339.4113f;
     float tick_dt = 1.0f / 64.0f;
     float half_width = 16.0f;
     float stand_height = 72.0f;

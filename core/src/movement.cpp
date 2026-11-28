@@ -10,7 +10,7 @@ namespace {
 
 constexpr float kEpsilon = 1.0e-4f;
 constexpr float kMaxSubstepDistance = 8.0f;
-// 可直接迈上的台阶高度（与地图/导航规则一致：step 32 / jump 54，+64 需先上 +32）。
+// 可直接迈上的台阶高度（与地图/导航规则一致：step 32 / jump 72，≥73 的台面设计上不可达）。
 constexpr float kStepHeight = 32.0f;
 constexpr float kSupportEpsilon = 0.6f;
 

@@ -5,6 +5,7 @@
 
 #include "doctest/doctest.h"
 #include "recoil/content/content.h"
+#include "recoil/movement/movement.h"
 #include "recoil/sim/step.h"
 #include "recoil/world/map.h"
 
@@ -345,4 +346,11 @@ TEST_CASE("猫道边缘到桥面：高台行走不被台阶侧面卡住") {
 
     CHECK(result.state.players[0].position.x < 40.0f);
     CHECK(result.state.players[0].position.y < 40.0f);
+}
+
+TEST_CASE("跳跃冲量能上 72u 台面且不超过 76u") {
+    recoil::MovementDef def;
+    const float apex = def.jump_impulse * def.jump_impulse / (2.0f * def.gravity);
+    CHECK(apex >= 72.0f);
+    CHECK(apex <= 76.0f);
 }
