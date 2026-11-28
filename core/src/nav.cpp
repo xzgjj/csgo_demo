@@ -194,8 +194,7 @@ float CellHeuristic(const NavGrid& grid, int a, int b) {
            0.41421356f * static_cast<float>(std::min(dx, dy));
 }
 
-std::vector<Vec3> BuildPath(NavWorld& world, const std::vector<int>& parent,
-                            const std::vector<int>& cell_of_node, int start, int goal,
+std::vector<Vec3> BuildPath(NavWorld& world, const std::vector<int>& parent, int start, int goal,
                             const Vec3& to) {
     std::vector<int> chain;
     for (int node = goal; node != start && node >= 0; node = parent[static_cast<size_t>(node)]) {
@@ -205,7 +204,8 @@ std::vector<Vec3> BuildPath(NavWorld& world, const std::vector<int>& parent,
     std::vector<Vec3> path;
     path.reserve(chain.size() + 1);
     for (const int node : chain) {
-        const int cell = cell_of_node[static_cast<size_t>(node)];
+        // 节点编号 = 格索引 * kMaxLevelsPerCell + 层号，格索引可反解，无需额外数组。
+        const int cell = node / kMaxLevelsPerCell;
         const int level = node % kMaxLevelsPerCell;
         EnsureCellLevels(world, cell);
         const std::vector<Vec3>& levels = world.levels[static_cast<size_t>(cell)];
@@ -236,18 +236,11 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     }
     const int start_cell = CellIndex(grid, CellX(grid, from.x), CellY(grid, from.y));
     const int goal_cell = CellIndex(grid, CellX(grid, to.x), CellY(grid, to.y));
-    if (world.cache_start == start_cell && world.cache_goal == goal_cell &&
-        std::fabs(world.cache_from.z - from.z) < 1.0f &&
-        std::fabs(world.cache_to.z - to.z) < 1.0f) {
-        return world.cache_path;
+    if (const std::vector<Vec3>* cached = NavCacheLookup(world, start_cell, goal_cell, from, to)) {
+        return *cached;
     }
     auto remember = [&](std::vector<Vec3> path) {
-        world.cache_start = start_cell;
-        world.cache_goal = goal_cell;
-        world.cache_from = from;
-        world.cache_to = to;
-        world.cache_path = path;
-        return path;
+        return NavCacheStore(world, start_cell, goal_cell, from, to, std::move(path));
     };
     if (start_cell == goal_cell) {
         return remember({to});
@@ -265,20 +258,22 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     if (std::fabs(goal_z - to.z) > kStepUp + kEpsilon) {
         return remember({});
     }
-    const int node_count = grid.nx * grid.ny * kMaxLevelsPerCell;
     const int start_node = start_cell * kMaxLevelsPerCell + start_level;
     const int goal_node = goal_cell * kMaxLevelsPerCell + goal_level;
     if (start_node == goal_node) {
         return remember({to});
     }
-    std::vector<int> parent(static_cast<size_t>(node_count), -1);
-    std::vector<int> cell_of_node(static_cast<size_t>(node_count), -1);
-    std::vector<float> g_score(static_cast<size_t>(node_count), std::numeric_limits<float>::max());
-    std::vector<uint8_t> closed(static_cast<size_t>(node_count), 0);
+    // 复用搜索缓冲 + epoch 标记：不再每次分配/清零 4 条 O(节点数) 数组。
+    const uint32_t epoch = BeginSearch(world);
+    std::vector<int>& parent = world.parent;
+    std::vector<float>& g_score = world.g_score;
+    std::vector<uint32_t>& node_stamp = world.node_stamp;
+    std::vector<uint32_t>& closed_stamp = world.closed_stamp;
     using QueueItem = std::pair<float, int>;
     std::priority_queue<QueueItem, std::vector<QueueItem>, std::greater<QueueItem>> open;
     g_score[static_cast<size_t>(start_node)] = 0.0f;
-    cell_of_node[static_cast<size_t>(start_node)] = start_cell;
+    node_stamp[static_cast<size_t>(start_node)] = epoch;
+    parent[static_cast<size_t>(start_node)] = -1;
     open.push({CellHeuristic(grid, start_cell, goal_cell), start_node});
     const int kDx[9] = {1, -1, 0, 0, 1, 1, -1, -1, 0};
     const int kDy[9] = {0, 0, 1, -1, 1, -1, 1, -1, 0};
@@ -286,15 +281,15 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     while (!open.empty() && !found) {
         const int current = open.top().second;
         open.pop();
-        if (closed[static_cast<size_t>(current)] != 0) {
+        if (closed_stamp[static_cast<size_t>(current)] == epoch) {
             continue;
         }
-        closed[static_cast<size_t>(current)] = 1;
+        closed_stamp[static_cast<size_t>(current)] = epoch;
         if (current == goal_node) {
             found = true;
             break;
         }
-        const int current_cell = cell_of_node[static_cast<size_t>(current)];
+        const int current_cell = current / kMaxLevelsPerCell;
         const Vec3 a = NodePoint(world, current);
         const int cx = current_cell % grid.nx;
         const int cy = current_cell / grid.nx;
@@ -326,12 +321,13 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
                     continue;
                 }
                 const float tentative = g_score[static_cast<size_t>(current)] + step_cost;
-                if (tentative >= g_score[static_cast<size_t>(next_node)]) {
+                const bool seen = node_stamp[static_cast<size_t>(next_node)] == epoch;
+                if (seen && tentative >= g_score[static_cast<size_t>(next_node)]) {
                     continue;
                 }
+                node_stamp[static_cast<size_t>(next_node)] = epoch;
                 g_score[static_cast<size_t>(next_node)] = tentative;
                 parent[static_cast<size_t>(next_node)] = current;
-                cell_of_node[static_cast<size_t>(next_node)] = next_cell;
                 open.push({tentative + CellHeuristic(grid, next_cell, goal_cell), next_node});
             }
         }
@@ -339,7 +335,7 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     if (!found) {
         return remember({});
     }
-    return remember(BuildPath(world, parent, cell_of_node, start_node, goal_node, to));
+    return remember(BuildPath(world, parent, start_node, goal_node, to));
 }
 
 } // namespace recoil

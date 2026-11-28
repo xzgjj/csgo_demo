@@ -2,16 +2,33 @@
 #define RECOIL_SRC_NAV_WORLD_H
 
 // 导航世界缓存（仅在 nav.cpp 的匿名命名空间内 include）：
-// 墙体按格分桶 + 每格可站层懒计算 + 单条路径缓存，避免每次 NavPath 重建全图。
+// 墙体按格分桶 + 每格可站层懒计算 + 多槽路径缓存 + 复用搜索缓冲。
+// 目标：稳态寻路不再 malloc/清零 4 条 O(节点数) 的数组，也不再被单槽缓存互相挤掉。
 
+#include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <utility>
 #include <vector>
 
 #include "nav_grid.h"
 #include "recoil/base/vec3.h"
 #include "recoil/world/map.h"
+
+// 路径缓存槽数：覆盖 5v5 两路包点 + 守点/回防的不同目标，避免稳态抖动。
+constexpr size_t kNavCacheSlots = 8;
+
+// 一条缓存记录：起点/终点格 + 两端坐标（z 容差 1u，与旧单槽语义一致）。
+struct NavCacheEntry {
+    int start_cell = -1;
+    int goal_cell = -1;
+    Vec3 from{};
+    Vec3 to{};
+    uint32_t used = 0;
+    std::vector<Vec3> path;
+};
 
 struct NavWorld {
     const MapDef* map = nullptr;
@@ -19,13 +36,39 @@ struct NavWorld {
     std::vector<std::vector<int>> buckets;
     std::vector<std::vector<Vec3>> levels;
     std::vector<int8_t> built;
-    // 单条路径缓存：AI 卡住时会用同一 (起点格, 目标格) 每 tick 重算，缓存空结果避免稳态抖动。
-    int cache_start = -1;
-    int cache_goal = -1;
-    Vec3 cache_from{};
-    Vec3 cache_to{};
-    std::vector<Vec3> cache_path;
+    // 复用搜索缓冲：node_stamp/closed_stamp 记“本次搜索是否碰过”，用 epoch 代替逐次清零。
+    std::vector<int> parent;
+    std::vector<float> g_score;
+    std::vector<uint32_t> node_stamp;
+    std::vector<uint32_t> closed_stamp;
+    uint32_t epoch = 0;
+    // 多槽 LRU 路径缓存：不同 bot 目标各自命中，不互相驱逐。
+    NavCacheEntry cache[kNavCacheSlots];
+    uint32_t use_counter = 0;
 };
+
+// 搜索缓冲随节点数定型；地图换表但节点数不变时无需重建（epoch 已能隔开旧值）。
+inline void EnsureSearchBuffers(NavWorld& world, int node_count) {
+    if (static_cast<int>(world.g_score.size()) == node_count) {
+        return;
+    }
+    world.parent.assign(static_cast<size_t>(node_count), -1);
+    world.g_score.assign(static_cast<size_t>(node_count), 0.0f);
+    world.node_stamp.assign(static_cast<size_t>(node_count), 0u);
+    world.closed_stamp.assign(static_cast<size_t>(node_count), 0u);
+    world.epoch = 0;
+}
+
+// 清空缓存：地图内容变化（换图/破坏墙）后旧路径不再成立。
+inline void ClearPathCache(NavWorld& world) {
+    world.use_counter = 0;
+    for (NavCacheEntry& entry : world.cache) {
+        entry.start_cell = -1;
+        entry.goal_cell = -1;
+        entry.used = 0;
+        entry.path.clear();
+    }
+}
 
 inline void EnsureWorld(NavWorld& world, const MapDef& map) {
     world.map = &map;
@@ -37,9 +80,8 @@ inline void EnsureWorld(NavWorld& world, const MapDef& map) {
     world.buckets.assign(static_cast<size_t>(cells), {});
     world.levels.assign(static_cast<size_t>(cells), {});
     world.built.assign(static_cast<size_t>(cells), 0);
-    world.cache_start = -1;
-    world.cache_goal = -1;
-    world.cache_path.clear();
+    EnsureSearchBuffers(world, cells * kMaxLevelsPerCell);
+    ClearPathCache(world);
     // 墙体按“扩展后覆盖的格”入桶：查询点所在格即可覆盖玩家 AABB。
     for (int i = 0; i < map.wall_count; ++i) {
         const Wall& wall = map.walls[i];
@@ -90,6 +132,56 @@ inline NavWorld& SharedWorld(const MapDef& map) {
         cached_key = key;
     }
     return world;
+}
+
+// 开始一次搜索：拿到本轮 epoch。32 位序号回绕时清表重来（极低频，代价可接受）。
+inline uint32_t BeginSearch(NavWorld& world) {
+    ++world.epoch;
+    if (world.epoch == 0u) {
+        std::fill(world.node_stamp.begin(), world.node_stamp.end(), 0u);
+        std::fill(world.closed_stamp.begin(), world.closed_stamp.end(), 0u);
+        world.epoch = 1u;
+    }
+    return world.epoch;
+}
+
+// 命中判定与旧单槽一致：同起终点格 + z 差 <1u；命中即刷新 LRU 时间戳。
+inline const std::vector<Vec3>* NavCacheLookup(NavWorld& world, int start_cell, int goal_cell,
+                                               const Vec3& from, const Vec3& to) {
+    for (NavCacheEntry& entry : world.cache) {
+        if (entry.start_cell != start_cell || entry.goal_cell != goal_cell) {
+            continue;
+        }
+        if (std::fabs(entry.from.z - from.z) >= 1.0f || std::fabs(entry.to.z - to.z) >= 1.0f) {
+            continue;
+        }
+        entry.used = ++world.use_counter;
+        return &entry.path;
+    }
+    return nullptr;
+}
+
+// 写入缓存并返回槽内副本引用：优先空槽，否则驱逐最久未用。
+inline const std::vector<Vec3>& NavCacheStore(NavWorld& world, int start_cell, int goal_cell,
+                                              const Vec3& from, const Vec3& to,
+                                              std::vector<Vec3> path) {
+    NavCacheEntry* slot = nullptr;
+    for (NavCacheEntry& entry : world.cache) {
+        if (entry.start_cell < 0) {
+            slot = &entry;
+            break;
+        }
+        if (slot == nullptr || entry.used < slot->used) {
+            slot = &entry;
+        }
+    }
+    slot->start_cell = start_cell;
+    slot->goal_cell = goal_cell;
+    slot->from = from;
+    slot->to = to;
+    slot->used = ++world.use_counter;
+    slot->path = std::move(path);
+    return slot->path;
 }
 
 #endif

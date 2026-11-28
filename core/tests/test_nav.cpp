@@ -173,3 +173,82 @@ TEST_CASE("导航范围随地图 bounds 收缩后越界点被拒绝") {
 
     CHECK(NavPath(map, from, to).empty());
 }
+
+// 多槽路径缓存：交替目标不能互相串味（旧单槽实现会把前一条挤掉，这里锁定语义）。
+TEST_CASE("交替两个目标点时各自返回正确路线") {
+    MapDef map = OpenMap();
+    AddWall(map, {-96.0f, 128.0f, 0.0f}, {96.0f, 192.0f, 256.0f});
+    const Vec3 from{0.0f, -300.0f, 0.0f};
+    const Vec3 goal_a{0.0f, 300.0f, 0.0f};
+    const Vec3 goal_b{-300.0f, 300.0f, 0.0f};
+
+    const std::vector<Vec3> a_first = NavPath(map, from, goal_a);
+    const std::vector<Vec3> b_first = NavPath(map, from, goal_b);
+    REQUIRE(!a_first.empty());
+    REQUIRE(!b_first.empty());
+    CHECK(SamePoint(a_first.back(), goal_a));
+    CHECK(SamePoint(b_first.back(), goal_b));
+
+    // 第二次查询分别命中两个不同缓存槽，结果必须与首次逐点一致。
+    const std::vector<Vec3> a_second = NavPath(map, from, goal_a);
+    const std::vector<Vec3> b_second = NavPath(map, from, goal_b);
+    REQUIRE(a_second.size() == a_first.size());
+    REQUIRE(b_second.size() == b_first.size());
+    for (size_t i = 0; i < a_first.size(); ++i) {
+        CHECK(SamePoint(a_first[i], a_second[i]));
+    }
+    for (size_t i = 0; i < b_first.size(); ++i) {
+        CHECK(SamePoint(b_first[i], b_second[i]));
+    }
+    CHECK(!SamePoint(a_second.back(), goal_b));
+}
+
+// 地图内容变化（可破坏墙被移除）后缓存必须失效，否则会沿旧绕行路线走。
+TEST_CASE("移除墙体后缓存失效并改走更短路线") {
+    MapDef map = OpenMap();
+    AddWall(map, {-96.0f, 128.0f, 0.0f}, {96.0f, 192.0f, 256.0f});
+    const Vec3 from{0.0f, -300.0f, 0.0f};
+    const Vec3 to{0.0f, 300.0f, 0.0f};
+
+    const std::vector<Vec3> detour = NavPath(map, from, to);
+    REQUIRE(!detour.empty());
+    REQUIRE(recoil::RemoveWall(map, 0));
+    const std::vector<Vec3> straight = NavPath(map, from, to);
+
+    REQUIRE(!straight.empty());
+    CHECK(SamePoint(straight.back(), to));
+    CHECK(straight.size() < detour.size());
+}
+
+// 空结果也进缓存：围死/无解的目标连续查询必须保持为空，不能被上一次成功路径污染。
+TEST_CASE("空路径进缓存后重复查询仍为空") {
+    MapDef map = OpenMap();
+    AddWall(map, {-64.0f, 0.0f, 0.0f}, {0.0f, 64.0f, 256.0f});
+    AddWall(map, {64.0f, 0.0f, 0.0f}, {128.0f, 64.0f, 256.0f});
+    AddWall(map, {0.0f, -64.0f, 0.0f}, {64.0f, 0.0f, 256.0f});
+    AddWall(map, {0.0f, 64.0f, 0.0f}, {64.0f, 128.0f, 256.0f});
+    const Vec3 from{-400.0f, -400.0f, 0.0f};
+    const Vec3 sealed{32.0f, 32.0f, 0.0f};
+
+    CHECK(NavPath(map, from, sealed).empty());
+    CHECK(NavPath(map, from, sealed).empty());
+    CHECK(NavPath(map, {600.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}).empty());
+    CHECK(NavPath(map, {600.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 0.0f}).empty());
+}
+
+// 缓存命中条件沿用旧语义：同起终点格、两端 z 差 < 1u 视为同一条路径。
+TEST_CASE("同格不同 z 在容差内复用缓存且点位一致") {
+    MapDef map = OpenMap();
+    AddWall(map, {-96.0f, 128.0f, 0.0f}, {96.0f, 192.0f, 256.0f});
+    const Vec3 from{0.0f, -300.0f, 0.0f};
+    const Vec3 to{0.0f, 300.0f, 0.0f};
+
+    const std::vector<Vec3> ground = NavPath(map, from, to);
+    const std::vector<Vec3> offset = NavPath(map, {0.0f, -300.0f, 0.5f}, {0.0f, 300.0f, 0.5f});
+
+    REQUIRE(!ground.empty());
+    REQUIRE(ground.size() == offset.size());
+    for (size_t i = 0; i < ground.size(); ++i) {
+        CHECK(SamePoint(ground[i], offset[i]));
+    }
+}

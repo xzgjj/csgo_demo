@@ -83,11 +83,22 @@ TraceHit TraceHull(const MapDef& map, const Aabb& hull, const Vec3& from, const 
     if ((filter.mask & kTraceWorld) == 0) {
         return best;
     }
+    // 扫掠体包围盒预剔除：线段 AABB 按 hull 的 min/max 扩张后，与墙不相交的盒子无需进 slab 计算。
+    // 只是加速，不改变判定：被剔除的盒子在 SweepBox 里本来也必然 miss。
+    const Vec3 to = from + delta;
+    const Vec3 sweep_lo{std::min(from.x, to.x) + hull.min.x, std::min(from.y, to.y) + hull.min.y,
+                        std::min(from.z, to.z) + hull.min.z};
+    const Vec3 sweep_hi{std::max(from.x, to.x) + hull.max.x, std::max(from.y, to.y) + hull.max.y,
+                        std::max(from.z, to.z) + hull.max.z};
     for (int i = 0; i < map.wall_count; ++i) {
         if (i == filter.ignore_brush) {
             continue;
         }
         const Wall& wall = map.walls[i];
+        if (wall.max.x < sweep_lo.x || wall.min.x > sweep_hi.x || wall.max.y < sweep_lo.y ||
+            wall.min.y > sweep_hi.y || wall.max.z < sweep_lo.z || wall.min.z > sweep_hi.z) {
+            continue;
+        }
         const Vec3 lo = wall.min - hull.max;
         const Vec3 hi = wall.max - hull.min;
         const BoxSweep sweep = SweepBox(from, delta, lo, hi);
