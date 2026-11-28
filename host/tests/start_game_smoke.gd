@@ -17,6 +17,13 @@ func _run() -> void:
 	await process_frame
 	_check("菜单开始按钮应隐藏主菜单", not bool(menu.visible))
 	_check("菜单开始按钮应打开部署页", bool(page.visible))
+	page.back_button.pressed.emit()
+	await process_frame
+	_check("返回应关闭部署页", not bool(page.visible))
+	_check("返回应回到主菜单", bool(menu.visible))
+	menu.start_button.pressed.emit()
+	await process_frame
+	_check("返回后应能再次进入部署页", bool(page.visible))
 	var picked: Array = []
 	page.start_requested.connect(func(map_id: String, mode_id: String) -> void:
 		picked.append([map_id, mode_id]))

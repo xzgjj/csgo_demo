@@ -4,6 +4,7 @@ extends CanvasLayer
 ## 只发 start_requested(map_id, mode_id)，不直接改 main 状态。
 
 signal start_requested(map_id: String, mode_id: String)
+signal back_requested
 
 const MODES := {
 	"match": ["5v5 匹配", "10 人 · 炸弹模式 · 完整经济"],
@@ -41,7 +42,7 @@ func build() -> void:
 	play_button = MenuSkin.primary_button(box, "进入对局   →")
 	back_button = MenuSkin.nav_button(box, "返回指挥中心")
 	play_button.pressed.connect(_on_play)
-	back_button.pressed.connect(close)
+	back_button.pressed.connect(_on_back)
 	_build_brief(root)
 
 
@@ -84,9 +85,15 @@ func _on_play() -> void:
 	start_requested.emit(selected_map(), selected_mode())
 
 
+## 返回必须回到指挥中心；只隐藏本页会让主菜单一直不可见，表现为“卡住”。
+func _on_back() -> void:
+	close()
+	back_requested.emit()
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
 		get_viewport().set_input_as_handled()
-		close()
+		_on_back()

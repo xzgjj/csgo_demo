@@ -40,6 +40,7 @@ static func build(main: Node) -> void:
 	menu.start_button.pressed.connect(func() -> void:
 		menu.visible = false
 		start_page.open())
+	start_page.back_requested.connect(Callable(main, "_show_menu"))
 	start_page.start_requested.connect(func(map_id: String, mode_id: String) -> void:
 		main.set("map_id", map_id)
 		if mode_id == "training":
