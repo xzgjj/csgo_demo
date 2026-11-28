@@ -1,6 +1,7 @@
 #include <cstdint>
 
 #include "doctest/doctest.h"
+#include "recoil/ai/reaction.h"
 #include "recoil/ai/vision.h"
 #include "recoil/sim/state.h"
 #include "recoil/world/map.h"
@@ -109,4 +110,85 @@ TEST_CASE("队友也满足几何可见（阵营过滤由调用方决定）") {
 
     CHECK(HasLineOfSight(state, nullptr, 0, 1));
     CHECK(NearestVisibleEnemy(state, nullptr, 0) == -1);
+}
+
+TEST_CASE("视线备忘录与直接 trace 逐对一致（含墙遮挡与阵亡）") {
+    WorldState state = Duel();
+    const MapDef map = WallBetween();
+    for (uint8_t v = 0; v < state.player_count; ++v) {
+        for (uint8_t t = 0; t < state.player_count; ++t) {
+            CHECK(recoil::SeesMemo(state, &map, v, t) == HasLineOfSight(state, &map, v, t));
+            CHECK(recoil::Sees(state, &map, v, t) == HasLineOfSight(state, &map, v, t));
+        }
+    }
+    state.players[1].alive = false;
+    for (uint8_t v = 0; v < state.player_count; ++v) {
+        CHECK(recoil::SeesMemo(state, &map, v, 1) == false);
+        CHECK(recoil::Sees(state, &map, v, 1) == false);
+    }
+}
+
+TEST_CASE("同一 tick 内重复查询结论稳定并写回备忘录") {
+    WorldState state = Duel();
+    const MapDef map = WallBetween();
+
+    const bool first = recoil::SeesMemo(state, &map, 0, 1);
+    const bool second = recoil::SeesMemo(state, &map, 0, 1);
+    CHECK(first == second);
+    CHECK(first == HasLineOfSight(state, &map, 0, 1));
+    CHECK(state.visibility.tick == state.tick);
+    CHECK(state.visibility.cells[0][1] == (first ? 1 : 2));
+
+    // 只读版本必须复用同一结论，而不是另算一次后给出相反结果。
+    CHECK(recoil::Sees(state, &map, 0, 1) == first);
+}
+
+TEST_CASE("tick 递增后视线备忘录整体失效并跟随新位置") {
+    WorldState state = Duel();
+    MapDef map;
+    map.walls[0] = Wall{{-64.0f, 400.0f, 0.0f}, {64.0f, 432.0f, 128.0f}};
+    map.wall_count = 1;
+
+    CHECK(recoil::SeesMemo(state, &map, 0, 1) == false);
+    state.players[1].position = {0.0f, -500.0f, 0.0f}; // 换到墙的另一侧
+    state.tick += 1;                                   // 新 tick：备忘录不得沿用旧结论
+    CHECK(recoil::SeesMemo(state, &map, 0, 1));
+    CHECK(recoil::Sees(state, &map, 0, 1));
+}
+
+TEST_CASE("UpdateReactions 填充的备忘录与逐对视线一致") {
+    WorldState state = Duel();
+    const MapDef map = WallBetween();
+
+    recoil::UpdateReactions(state, &map);
+
+    REQUIRE(state.visibility.tick == state.tick);
+    for (uint8_t v = 0; v < state.player_count; ++v) {
+        for (uint8_t t = 0; t < state.player_count; ++t) {
+            if (v == t) {
+                CHECK(state.visibility.cells[v][t] == 0);
+                continue;
+            }
+            CHECK(state.visibility.cells[v][t] != 0);
+            CHECK((state.visibility.cells[v][t] == 1) == HasLineOfSight(state, &map, v, t));
+        }
+    }
+    CHECK(state.players[0].reaction_target == recoil::kNoReactionTarget);
+}
+
+TEST_CASE("UpdateReactions 的目标选择与 NearestVisibleEnemy 一致") {
+    WorldState state;
+    state.player_count = 3;
+    PlacePlayer(state, 0, Team::T, {0.0f, 0.0f, 0.0f});
+    PlacePlayer(state, 1, Team::CT, {0.0f, 300.0f, 0.0f});
+    PlacePlayer(state, 2, Team::CT, {0.0f, -400.0f, 0.0f});
+    MapDef map;
+    map.walls[0] = Wall{{-64.0f, 120.0f, 0.0f}, {64.0f, 152.0f, 128.0f}};
+    map.wall_count = 1;
+
+    recoil::UpdateReactions(state, &map);
+
+    CHECK(state.players[0].reaction_target == 2);
+    CHECK(state.players[0].reaction_ticks == 1);
+    CHECK(NearestVisibleEnemy(state, &map, 0) == 2);
 }

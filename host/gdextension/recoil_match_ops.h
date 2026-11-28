@@ -86,6 +86,8 @@ inline void SetPlayerPosition(recoil::WorldState& state, int player, float x, fl
     state.players[player].on_ground = false;
     state.players[player].alive = true;
     state.players[player].health = 100;
+    // tick 未变但位置/存活已变：视线备忘录必须作废，否则 bot 会读到上一 tick 的结论。
+    state.visibility.tick = recoil::kVisibilityInvalidTick;
 }
 
 } // namespace recoil_host

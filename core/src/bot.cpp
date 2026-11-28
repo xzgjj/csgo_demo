@@ -38,7 +38,7 @@ EnemyPick PickEnemies(const WorldState& state, uint8_t self, const MapDef* map) 
             nearest_dist = dist;
             pick.nearest = i;
         }
-        if (dist < visible_dist && HasLineOfSight(state, map, self, i)) {
+        if (dist < visible_dist && Sees(state, map, self, i)) {
             visible_dist = dist;
             pick.visible = i;
         }

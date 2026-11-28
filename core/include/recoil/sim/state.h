@@ -169,6 +169,16 @@ struct PlayerState {
     uint16_t last_buy_mask = 0;
 };
 
+// 视线备忘录：0=本 tick 未算，1=可见，2=被墙/烟雾遮挡。
+// 只由位置派生，不进 HashState；tick 变化即整体失效（UpdateReactions 每 tick 复位一次）。
+// 作用：同一 tick 内 reaction 与 bot 对同一对玩家最多各算一次 trace，且结论一致。
+constexpr uint64_t kVisibilityInvalidTick = 0xFFFFFFFFFFFFFFFFull;
+
+struct VisibilityMemo {
+    uint64_t tick = kVisibilityInvalidTick;
+    std::array<std::array<uint8_t, kMaxPlayers>, kMaxPlayers> cells{};
+};
+
 struct WorldState {
     uint64_t tick = 0;
     uint64_t rng = 0x9E3779B97F4A7C15ull;
@@ -187,6 +197,7 @@ struct WorldState {
     RoundState round{};
     BombState bomb{};
     SmokeZone smoke{};
+    VisibilityMemo visibility{};
     std::array<GrenadeState, kMaxGrenades> grenades{};
     std::array<GroundWeapon, kMaxDrops> ground_weapons{};
     std::array<PlayerState, kMaxPlayers> players{};

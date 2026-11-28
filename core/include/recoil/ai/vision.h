@@ -26,6 +26,12 @@ bool SegmentBlocked(const WorldState& state, const MapDef* map, const Vec3& from
 // viewer 能否看到 target：任一方阵亡/越界/自己 → false；不含阵营过滤（队友同样几何可见）。
 bool HasLineOfSight(const WorldState& state, const MapDef* map, uint8_t viewer, uint8_t target);
 
+// 带每 tick 视线备忘录（VisibilityMemo）的同一判定：
+// Sees 只读——备忘录命中则 O(1)，未命中直接 trace 但不写回（给 const 调用方用）；
+// SeesMemo 可写回——同一 tick 内同一对玩家只 trace 一次（供 UpdateReactions 去重）。
+bool Sees(const WorldState& state, const MapDef* map, uint8_t viewer, uint8_t target);
+bool SeesMemo(WorldState& state, const MapDef* map, uint8_t viewer, uint8_t target);
+
 // 最近的可见敌人；没有可见敌人返回 -1。
 int NearestVisibleEnemy(const WorldState& state, const MapDef* map, uint8_t viewer);
 
