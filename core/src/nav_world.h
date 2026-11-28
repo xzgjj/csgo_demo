@@ -41,6 +41,9 @@ struct NavWorld {
     std::vector<float> g_score;
     std::vector<uint32_t> node_stamp;
     std::vector<uint32_t> closed_stamp;
+    // 开放表：用 push_heap/pop_heap 配合同一个 greater 比较器，弹出顺序与 std::priority_queue
+    // 完全一致，但容器容量跨调用保留，稳态零分配。
+    std::vector<std::pair<float, int>> open;
     uint32_t epoch = 0;
     // 多槽 LRU 路径缓存：不同 bot 目标各自命中，不互相驱逐。
     NavCacheEntry cache[kNavCacheSlots];
@@ -49,6 +52,9 @@ struct NavWorld {
 
 // 搜索缓冲随节点数定型；地图换表但节点数不变时无需重建（epoch 已能隔开旧值）。
 inline void EnsureSearchBuffers(NavWorld& world, int node_count) {
+    if (world.open.capacity() < 256) {
+        world.open.reserve(256);
+    }
     if (static_cast<int>(world.g_score.size()) == node_count) {
         return;
     }

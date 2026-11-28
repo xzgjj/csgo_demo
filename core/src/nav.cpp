@@ -270,17 +270,21 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
     std::vector<uint32_t>& node_stamp = world.node_stamp;
     std::vector<uint32_t>& closed_stamp = world.closed_stamp;
     using QueueItem = std::pair<float, int>;
-    std::priority_queue<QueueItem, std::vector<QueueItem>, std::greater<QueueItem>> open;
+    // 复用同一容器 + 同一 std::greater<QueueItem>：弹出顺序与 priority_queue 逐位一致。
+    std::vector<QueueItem>& open = world.open;
+    open.clear();
     g_score[static_cast<size_t>(start_node)] = 0.0f;
     node_stamp[static_cast<size_t>(start_node)] = epoch;
     parent[static_cast<size_t>(start_node)] = -1;
-    open.push({CellHeuristic(grid, start_cell, goal_cell), start_node});
+    open.emplace_back(CellHeuristic(grid, start_cell, goal_cell), start_node);
+    std::push_heap(open.begin(), open.end(), std::greater<QueueItem>());
     const int kDx[9] = {1, -1, 0, 0, 1, 1, -1, -1, 0};
     const int kDy[9] = {0, 0, 1, -1, 1, -1, 1, -1, 0};
     bool found = false;
     while (!open.empty() && !found) {
-        const int current = open.top().second;
-        open.pop();
+        std::pop_heap(open.begin(), open.end(), std::greater<QueueItem>());
+        const int current = open.back().second;
+        open.pop_back();
         if (closed_stamp[static_cast<size_t>(current)] == epoch) {
             continue;
         }
@@ -328,7 +332,8 @@ std::vector<Vec3> NavPath(const MapDef& map, const Vec3& from, const Vec3& to) {
                 node_stamp[static_cast<size_t>(next_node)] = epoch;
                 g_score[static_cast<size_t>(next_node)] = tentative;
                 parent[static_cast<size_t>(next_node)] = current;
-                open.push({tentative + CellHeuristic(grid, next_cell, goal_cell), next_node});
+                open.emplace_back(tentative + CellHeuristic(grid, next_cell, goal_cell), next_node);
+                std::push_heap(open.begin(), open.end(), std::greater<QueueItem>());
             }
         }
     }
