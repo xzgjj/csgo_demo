@@ -110,5 +110,6 @@
         BIND(refund_entry, "player", "entry");
         BIND(rebuy, "player");
         BIND(buy_catalog_entries);
+        BIND(get_snapshot);
 #undef BIND
 // clang-format on

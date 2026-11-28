@@ -21,6 +21,7 @@
 #include "recoil/sim/command.h"
 #include "recoil/sim/ground.h"
 #include "recoil/sim/round.h"
+#include "recoil/sim/snapshot.h"
 #include "recoil/sim/step.h"
 #include "recoil/world/breakable.h"
 #include "recoil/world/map.h"
@@ -322,6 +323,7 @@ public:
 #include "recoil_host_buy_ops.h"
 #include "recoil_host_getters.h"
 #include "recoil_host_map_api.h"
+#include "recoil_host_snapshot.h"
 };
 
 namespace {
