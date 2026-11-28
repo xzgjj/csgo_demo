@@ -1,4 +1,5 @@
 #include "recoil/sim/grenades.h"
+#include "recoil/sim/mode.h"
 
 #include <algorithm>
 #include <cmath>
@@ -150,7 +151,7 @@ void ThrowGrenade(WorldState& state, const Content& content, const Command& comm
                      static_cast<int32_t>(RejectReason::MatchEnded)});
         return;
     }
-    if (content.buy.enabled) {
+    if (CatalogBuyOn(content)) {
         const uint8_t index = static_cast<uint8_t>(command.grenade);
         if (index >= player.grenade_counts.size() || player.grenade_counts[index] == 0) {
             events.Push({EventKind::CommandRejected, command.player, 0,

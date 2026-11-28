@@ -6,6 +6,7 @@
 #include "recoil/content/content.h"
 #include "recoil/content/rules_table.gen.h"
 #include "recoil/sim/match.h"
+#include "recoil/sim/mode.h"
 #include "recoil/sim/round.h"
 
 namespace {
@@ -270,4 +271,76 @@ TEST_CASE("红线 4：EndRound 幂等，不重复记分与发钱") {
     MatchEndRound(state, Content{}, kSideT, RoundEndReason::Elimination, Events());
     CHECK_EQ(state.players[0].money, after_first);
     CHECK_EQ(state.round.score_team[0], score_first);
+}
+
+// 模式预置（mode.h）：开关的唯一映射 + 语义谓词 + 一致性自检。
+TEST_CASE("模式预置只写开关，三种组合与谓词一致") {
+    using recoil::ApplyModePreset;
+    using recoil::IsCompetitive;
+    using recoil::IsLegacyDemo;
+    using recoil::IsTraining;
+    using recoil::PlayMode;
+
+    WorldState state;
+    Content content = DefaultContent();
+
+    ApplyModePreset(state, content, PlayMode::kLegacyDemo);
+    CHECK_FALSE(state.match.enabled);
+    CHECK_FALSE(content.buy.enabled);
+    CHECK(IsLegacyDemo(state, content));
+    CHECK_FALSE(IsTraining(state, content));
+
+    ApplyModePreset(state, content, PlayMode::kTraining);
+    CHECK_FALSE(state.match.enabled);
+    CHECK(content.buy.enabled);
+    CHECK(IsTraining(state, content));
+    CHECK_FALSE(IsLegacyDemo(state, content));
+    CHECK_FALSE(IsCompetitive(state));
+
+    ApplyModePreset(state, content, PlayMode::kCompetitive, ModeId::Squad3v3);
+    CHECK(state.match.enabled);
+    CHECK(content.buy.enabled);
+    CHECK(IsCompetitive(state));
+    CHECK(state.match.mode == ModeId::Squad3v3);
+    CHECK_EQ(state.match.team_size, 3);
+    CHECK_EQ(state.match.win_score, 9); // Squad3v3 按 rules.json：win_score=9
+}
+
+TEST_CASE("competitive 预置与 BeginMatchWithRules 自洽，不会 RosterMismatch") {
+    using recoil::ApplyModePreset;
+    using recoil::PlayMode;
+
+    WorldState state;
+    Content content = DefaultContent();
+    ApplyModePreset(state, content, PlayMode::kCompetitive, ModeId::Comp5v5);
+    state.player_count = 10;
+    EventList events;
+    const MatchError error = BeginMatchWithRules(state, state.match, events);
+    CHECK(error == MatchError::Ok);
+    CHECK(state.match.enabled);
+    CHECK_EQ(state.player_count, 10);
+}
+
+TEST_CASE("谓词逐项等价旧开关（四种布尔组合穷举）") {
+    using recoil::ApplyModePreset;
+    using recoil::IsCompetitive;
+    using recoil::IsLegacyDemo;
+    using recoil::IsTraining;
+    using recoil::PlayMode;
+
+    for (int mask = 0; mask < 4; ++mask) {
+        WorldState state;
+        Content content = DefaultContent();
+        state.match.enabled = (mask & 1) != 0;
+        content.buy.enabled = (mask & 2) != 0;
+        CHECK(IsCompetitive(state) == state.match.enabled);
+        CHECK(recoil::CatalogBuyOn(content) == content.buy.enabled);
+        CHECK(IsTraining(state, content) == (!state.match.enabled && content.buy.enabled));
+        CHECK(IsLegacyDemo(state, content) == (!state.match.enabled && !content.buy.enabled));
+    }
+    // 预置应用不得改变旧的默认态（DefaultContent 目录购买为关）。
+    Content content = DefaultContent();
+    WorldState state;
+    ApplyModePreset(state, content, PlayMode::kLegacyDemo);
+    CHECK_FALSE(content.buy.enabled);
 }

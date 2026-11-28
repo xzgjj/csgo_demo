@@ -3,6 +3,7 @@
 #include <cmath>
 
 #include "recoil/content/weapon_table.h"
+#include "recoil/sim/mode.h"
 #include "recoil/sim/round.h"
 
 namespace recoil {
@@ -292,12 +293,12 @@ BuyResult ApplyRefund(WorldState& state, const Content& content, BuyRequest requ
 void ApplyCatalogCommand(WorldState& state, const Content& content, const Command& command,
                          EventList& events) {
     if (command.kind == CommandKind::Rebuy) {
-        if (content.buy.enabled) {
+        if (CatalogBuyOn(content)) {
             ApplyRebuy(state, content, command.player, events);
         }
         return;
     }
-    if (!content.buy.enabled) {
+    if (!CatalogBuyOn(content)) {
         events.Push({EventKind::BuyFailed, command.player, command.entry,
                      static_cast<int32_t>(BuyResult::NotAllowed)});
         return;

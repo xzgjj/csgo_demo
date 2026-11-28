@@ -108,15 +108,19 @@ void AdvanceAfterRoundEnd(WorldState& state, const Content& content, EventList& 
 } // namespace
 
 MatchError BeginMatchWithRules(WorldState& state, const MatchRules& rules, EventList& events) {
-    const int mode = static_cast<int>(rules.mode);
-    if (!rules.enabled || mode < 0 || mode > 2 || rules.team_size == 0 || rules.team_size > 5) {
+    // 入参快照：调用方可能直接传 state.match 自身，而下方要 state = WorldState{}；
+    // 沿用引用会读到重置后的默认规则（enabled=false），静默丢掉赛制配置。
+    const MatchRules rules_snapshot = rules;
+    const int mode = static_cast<int>(rules_snapshot.mode);
+    if (!rules_snapshot.enabled || mode < 0 || mode > 2 || rules_snapshot.team_size == 0 ||
+        rules_snapshot.team_size > 5) {
         return MatchError::ModeInvalid;
     }
-    const bool comp = rules.mode == ModeId::Comp5v5;
-    if ((comp && rules.site_count != 2) || (!comp && rules.site_count != 1)) {
+    const bool comp = rules_snapshot.mode == ModeId::Comp5v5;
+    if ((comp && rules_snapshot.site_count != 2) || (!comp && rules_snapshot.site_count != 1)) {
         return MatchError::SiteConflict;
     }
-    const uint8_t roster = static_cast<uint8_t>(rules.team_size * 2);
+    const uint8_t roster = static_cast<uint8_t>(rules_snapshot.team_size * 2);
     if (state.player_count == 0) {
         state.player_count = roster;
     } else if (state.player_count != roster) {
@@ -131,27 +135,27 @@ MatchError BeginMatchWithRules(WorldState& state, const MatchRules& rules, Event
     state.spawn_t = spawn_t;
     state.spawn_ct = spawn_ct;
     state.spawn_from_map = spawn_from_map;
-    state.match = rules;
+    state.match = rules_snapshot;
     state.round.side = {{static_cast<uint8_t>(Team::T), static_cast<uint8_t>(Team::CT)}};
     state.round.score_team = {{0, 0}};
     state.round.loss_streak = {{1, 1}};
-    state.round.timeout_left = {{rules.timeout_count, rules.timeout_count}};
+    state.round.timeout_left = {{rules_snapshot.timeout_count, rules_snapshot.timeout_count}};
     state.round.half = 1;
     state.round.number = 0;
     state.round.halves_done = false;
     for (uint8_t i = 0; i < count; ++i) {
         PlayerState& player = state.players[i];
-        player.team_id = static_cast<uint8_t>(i < rules.team_size ? 0 : 1);
+        player.team_id = static_cast<uint8_t>(i < rules_snapshot.team_size ? 0 : 1);
         player.team = SideOfTeam(state, player.team_id);
         player.alive = true;
         player.health = 100;
-        player.money = static_cast<uint16_t>(rules.money_start);
+        player.money = static_cast<uint16_t>(rules_snapshot.money_start);
         player.kills = 0;
     }
     StartRound(state, Content{}, events, false);
     state.round.number = 1;
     state.round.phase = RoundPhase::Warmup;
-    state.round.phase_ticks = rules.warmup_ticks;
+    state.round.phase_ticks = rules_snapshot.warmup_ticks;
     events.Push({EventKind::MatchStarted, 0, 0, 0});
     SyncScores(state);
     return MatchError::Ok;

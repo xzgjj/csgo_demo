@@ -7,6 +7,7 @@
 #include "recoil/content/weapon_table.h"
 #include "recoil/sim/buy.h"
 #include "recoil/sim/match.h"
+#include "recoil/sim/mode.h"
 #include "recoil/sim/reject.h"
 #include "recoil/world/placement.h"
 
@@ -94,7 +95,7 @@ void StartRound(WorldState& state, const Content& content, EventList& events, bo
         player.refunded_mask = 0;
         player.refund_count = 0;
         player.buy_fire_marks = {{player.fire_count, player.fire_count}};
-        if (content.buy.enabled) {
+        if (CatalogBuyOn(content)) {
             ApplyLoadoutInheritance(player, survived, side);
             if (!survived && round.number <= 1) {
                 GiveDefaultLoadout(player, player.team);
@@ -189,7 +190,7 @@ void AssignTeams(WorldState& state) {
 }
 
 void EndRound(WorldState& state, const Content& content, uint8_t winner, EventList& events) {
-    if (state.match.enabled) {
+    if (IsCompetitive(state)) {
         MatchEndRound(state, content, winner, RoundEndReason::Elimination, events);
         return;
     }
@@ -228,7 +229,7 @@ void AwardMoney(PlayerState& player, uint16_t amount, const RoundDef& def) {
 }
 
 void AdvanceRound(WorldState& state, const Content& content, EventList& events, const MapDef* map) {
-    if (state.match.enabled) {
+    if (IsCompetitive(state)) {
         TickMatch(state, content, events);
         return;
     }
@@ -280,7 +281,7 @@ void AdvanceRound(WorldState& state, const Content& content, EventList& events, 
 }
 
 bool CanBuy(const WorldState& state, const Content& content) {
-    if (state.match.enabled) {
+    if (IsCompetitive(state)) {
         return CanBuyInMatch(state);
     }
     const RoundState& round = state.round;
