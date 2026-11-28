@@ -27,6 +27,7 @@ add_library(recoil_core STATIC
     src/nav.cpp
     src/reaction.cpp
     src/round.cpp
+    src/round_shop.cpp
     src/step.cpp
     src/trace.cpp
     src/vision.cpp
@@ -67,6 +68,7 @@ add_executable(recoil_tests
     tests/test_recovery.cpp
     tests/test_round.cpp
     tests/test_step.cpp
+    tests/test_snapshot.cpp
     tests/test_tactics.cpp
     tests/test_trace.cpp
     tests/test_vision.cpp
